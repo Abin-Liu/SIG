@@ -1,0 +1,109 @@
+<head>
+<title></title>
+</head>
+
+<body background="bkgnd.gif">
+
+<h2><b><a name="top"></a>SIG使用帮助</b></h2>
+<hr>
+<ul>
+  <li><a href="#settings">选项与设置</a></li>
+  <li><a href="#general">一般</a></li>
+  <li><a href="#login">登录</a></li>
+  <li><a href="#create">游戏</a></li>
+  <li><a href="#delay">延迟</a></li>
+  <li><a href="#mulemode">Mule模式</a></li>
+  <li><a href="#hacks">Hacks</a></li>
+  <li><a href="#d2jsp">D2JSP</a></li>
+</ul>
+<p><a name="settings"></a><b>设置与选项</b></p>
+<p>&nbsp;&nbsp;&nbsp; SIG提供了强大灵活的参数设置系统，用户可以根据自己的实际需要对SIG的各项运行参数进行详尽的配置。以下为SIG设置界面各属性页的使用参考。</p>              
+<p><a href="#top">返回页顶</a></p>       
+<p><a name="general"></a><b>一般</b></p>
+<p>&nbsp;&nbsp;&nbsp; 用以配置与Diablo II游戏程序运行相关的各项参数。</p>             
+<p>&nbsp;&nbsp;&nbsp;&nbsp;<img border="0" src="settin1.gif" width="371" height="515"><br>       
+&nbsp;&nbsp;&nbsp; (图1：一般设置界面)</p>             
+<ul>
+  <li><u>Diablo II游戏可执行文件</u>：选择游戏文件路径，SIG需要据此来正确启动Diablo              
+    II。</li>
+  <li><u>可选运行参数</u>：根据您的实际软硬件状况何使用需要来进行调整，但初学者一般不推荐进行参数设置的改变。</li>        
+  <li><u>程序启动后立即开始运行</u>：如果此项选中，则SIG启动后将立即开始运行，而无需用户点击&quot;开始&quot;按钮。</li>        
+  <li><u>进程限制</u>：限制系统中的Diablo II进程数量，防止系统资源耗竭。</li>        
+  <li><u>自动关闭</u>：可选择各种自动关闭方式，也可指定在自动关闭时连用户的电脑也一并关闭。&quot;自动关闭&quot;功能加上&quot;程序启动后立即开始运行&quot;功能，结合Windows的&quot;计划任务&quot;功能，可完全实现程序运行的自动化。</li>        
+</ul>
+<p><a href="#top">返回页顶</a></p> 
+<p><a name="login"></a><b>登录</b></p>
+<p>&nbsp;&nbsp;&nbsp; 用以配置国度、账号、密码与角色的选定。</p>             
+<p>&nbsp;&nbsp;&nbsp; <img border="0" src="settin2.gif" width="371" height="515"><br>             
+&nbsp;&nbsp;&nbsp; (图2：登录设置界面)</p>             
+<ul>
+  <li><u>登录国度</u>：可从下拉列表中选取一个国度，也可以点击&quot;编辑&quot;按钮启动笔者的另一个拙作&quot;D2Gateway&quot;，用其来任意地添加、编辑和删除Diablo              
+    II国度服务器数据。注意，选择错误的国度将导致登录失败。</li>
+  <li><u>账号</u>：预设账号名与登录密码，密码经加密处理后才被保存到&quot;Sig.ini&quot;文件中。</li>
+  <li><u>角色位置</u>：请参照角色在Diablo II游戏角色选择界面中的对应位置进行选取。</li>             
+</ul>
+<p><a href="#top">返回页顶</a></p> 
+<p><a name="create"></a><b>游戏</b></p>
+<p>&nbsp;&nbsp;&nbsp; 用以配置与创建游戏相关的各项参数。</p>             
+<p>&nbsp;&nbsp;&nbsp; <img border="0" src="settin3.gif" width="371" height="515"><br>           
+&nbsp;&nbsp;&nbsp; (图3：游戏设置界面)</p>             
+<ul>
+  <li><u>登录后进入频道</u>：指定希望角色登录后进入的频道，如果频道不存在，它将被创建。如果此项为空，则角色不改变所在的频道。</li>
+  <li><u>自动回复语句</u>：当收到别人发来的讯息后希望角色自动回复的语句。如果此项为空，角色将忽略收到的任何讯息。</li>
+  <li><u>使用随机游戏名</u>：由程序生成随机字符串来作为游戏名。</li>
+  <li><u>固定游戏名前缀</u>：指定创建游戏的命名规则，角色将使用&quot;固定前缀              
+    + 数字后缀&quot;的游戏名格式。如果此项为空，则使用随机字符串作为游戏名。</li>             
+  <li><u>使用自定义词典</u>：从用户创建的游戏名词典中依序选取词条作为游戏名。</li>        
+  <li><u>编辑词典</u>：编辑游戏名词典中的内容。</li>        
+  <li><u>密码长度</u>：指定游戏密码的长度。如果两项均为0，则不使用任何密码。</li>
+  <li><u>创建失败后重试次数</u>：当一个游戏因种种原因而创建失败，程序将重试的次数。</li>
+  <li><u>游戏难度</u>：指定创建游戏室选择何种难度。如果选择&quot;N/A&quot;，则不进行游戏难度的选择。</li>
+  <li><u>角色静止时执行Anti-Idle指令</u>：如果选中此项，则一旦角色在游戏中长时间静止不动，SIG会对周期性地对角色下达Anti-Idle指令以防被踢出游戏。而如果角色在进行行走、跑动、攻击等动作时，则无论是否选中该选项，SIG都不会下达Anti-Idle指令。</li>
+</ul>
+<p><a href="#top">返回页顶</a></p> 
+<p><a name="delay"></a><b>延迟</b></p>
+<p>&nbsp;&nbsp;&nbsp; 用以配置各项延迟值。</p>             
+<p>&nbsp;&nbsp;&nbsp; <img border="0" src="settin4.gif" width="371" height="515"><br>           
+&nbsp;&nbsp;&nbsp; (图4：延迟设置界面)</p>             
+<p>&nbsp;&nbsp;&nbsp;     
+延迟分为“最大等待时限”与“绝对等待时限”两种：</p>        
+<ul>
+  <li><u>最大等待时限</u>：是一个上限，程序在实际执行中并不一定会等待那么久，而是根据实际情况动态地进行调整，并随时可能转入下一项操作。只有当一项操作在最大时限内仍未能完成才被视为失败。</li>
+  <li><u>绝对等待时限</u>：时程序在转入下一项操作之前必须等待的时间，用于某些无法准确预计的或极其关键的选项。</li>
+</ul>
+<p>&nbsp;&nbsp;&nbsp;     
+本页的具体设置无需多加解释，请根据实际的硬件和网络状况进行配置，原则是宁可过长，不可过短。</p>
+<p><a href="#top">返回页顶</a></p> 
+<p><a name="mulemode"></a><b>Mule模式</b></p>
+<p>&nbsp;&nbsp;&nbsp; 用以设置在Mule模式下运行的账号和角色。</p>             
+<p>&nbsp;&nbsp;&nbsp; <img border="0" src="settin5.gif" width="371" height="515"><br>           
+&nbsp;&nbsp;&nbsp; (图5：Mule设置界面)</p>             
+<p>&nbsp;&nbsp;&nbsp;    
+列表中将列出所有已经配置好的账号，您也可以通过列表框下方的操作按钮进行账号的选择、编辑和移除。下图为账号配置界面示意：</p>
+<p>&nbsp;&nbsp;&nbsp; <img border="0" src="settin6.gif" width="351" height="339"><br>             
+&nbsp;&nbsp;&nbsp; (图6：Mule模式账号配置界面)</p>             
+<p>&nbsp;&nbsp;&nbsp; 其中&quot;登录国度&quot;和&quot;账号&quot;设置均与图2相仿，角色数量指在该账号中您希望登录总共几个角色。&nbsp;&nbsp;&nbsp;              
+</p>
+<p><a href="#top">返回页顶</a>       
+</p>
+<p><a name="hacks"></a><b>Hacks</b></p>
+<p>&nbsp;&nbsp;&nbsp; 用以选择需要加载的D2Hackit模块。</p>             
+<p>&nbsp;&nbsp;&nbsp; <img border="0" src="settin7.gif" width="371" height="515"><br>             
+&nbsp;&nbsp;&nbsp; (图7：Hacks设置界面)</p>             
+<p>&nbsp;&nbsp;&nbsp; 用鼠标点击列表中各个Hack模块前面的选择框即可对它们进行选取和去除，就这么简单。</p>             
+<p>&nbsp;&nbsp;&nbsp;              
+注：上图中的模块仅为示例用，它们中的部分或全部可能并不存在，请不要向笔者索取。</p>
+<p><a href="#top">返回页顶</a></p> 
+<p><a name="d2jsp"></a><b>D2JSP</b></p>
+<p>&nbsp;&nbsp;&nbsp; 用以选择需要加载的D2JSP脚本。</p>       
+<p>&nbsp;&nbsp;&nbsp; <img border="0" src="settin8.gif" width="371" height="478"><br>    
+&nbsp;&nbsp;&nbsp; (图8：D2JSP设置界面)</p>       
+<ul>
+  <li><u>加载D2JSP引擎</u>：选择是否加载D2JSP。</li>
+  <li><u>自动模式</u>：SIG将根据您从列表中选定的脚本来自动为您生成&quot;Default.d2j&quot;文件，适合于新手使用。</li>
+  <li><u>手动模式</u>：SIG将不会更改您的&quot;Default.d2j&quot;文件，您必须亲自正确撰写。适合于熟练用户使用。</li>
+  <li><u>可用脚本列表</u>：列出所有位于SIG安装目录的&quot;Hacks\D2JSP\Scripts\Bots&quot;目录下的&quot;*.d2j&quot;文件。用鼠标点击列表中各个脚本前面的选择框即可对它们进行选取和去除。</li>
+</ul>
+<p>&nbsp;&nbsp;&nbsp;    
+注：上图中的脚本仅为示例用，它们中的部分或全部可能并不存在，请不要向笔者索取。</p>
+<p><a href="#top">返回页顶</a></p>

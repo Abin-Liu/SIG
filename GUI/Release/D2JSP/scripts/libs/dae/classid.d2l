@@ -1,0 +1,12 @@
+
+
+// monster ID
+c_DaeClassID_Mephisto = 242; // attackable
+
+c_DaeClassID_Nihlathak = 526; // attackable
+
+c_MonsterClassID_Baal_Throne = 543; // unattackable
+c_DaeClassID_Baal = 544; // attackable
+
+// objects
+c_ObjClassID_The_Worldstone_Chamber = 563;

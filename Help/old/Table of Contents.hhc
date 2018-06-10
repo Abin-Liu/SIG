@@ -1,0 +1,158 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<HTML>
+<HEAD>
+<meta name="GENERATOR" content="Microsoft&reg; HTML Help Workshop 4.1">
+<!-- Sitemap 1.0 -->
+</HEAD><BODY>
+<OBJECT type="text/site properties">
+	<param name="Background" value="0xffffff">
+	<param name="Foreground" value="0x400040">
+	<param name="Window Styles" value="0x800025">
+</OBJECT>
+<UL>
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Name" value="程序简介">
+		<param name="Local" value="intro.htm">
+		</OBJECT>
+	<UL>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="程序简介">
+			<param name="Local" value="intro.htm#intro">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="系统要求">
+			<param name="Local" value="intro.htm#req">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="用户界面(GUI)">
+			<param name="Local" value="index.htm#gui">
+			</OBJECT>
+	</UL>
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Name" value="使用与操作">
+		<param name="Local" value="control.htm">
+		</OBJECT>
+	<UL>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="使用方法">
+			<param name="Local" value="control.htm#howto">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="基本操作">
+			<param name="Local" value="control.htm#operations">
+			</OBJECT>
+	</UL>
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Name" value="参数设置指南">
+		<param name="Local" value="settings.htm">
+		</OBJECT>
+	<UL>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="选项与设置">
+			<param name="Local" value="settings.htm#settings">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="一般">
+			<param name="Local" value="settings.htm#general">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="登录">
+			<param name="Local" value="settings.htm#login">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="游戏">
+			<param name="Local" value="settings.htm#create">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="延迟">
+			<param name="Local" value="settings.htm#delay">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="Mule模式">
+			<param name="Local" value="settings.htm#mulemode">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="Hacks">
+			<param name="Local" value="settings.htm#hacks">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="D2JSP">
+			<param name="Local" value="settings.htm#d2jsp">
+			</OBJECT>
+	</UL>
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Name" value="Hack模块与脚本的使用">
+		<param name="Local" value="hacks.htm">
+		</OBJECT>
+	<UL>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="在SIG中使用D2Hackit模块">
+			<param name="Local" value="hacks.htm#d2hackit">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="在SIG中使用D2JSP脚本">
+			<param name="Local" value="hacks.htm#d2jsp">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="在SIG中使用Maphack">
+			<param name="Local" value="hacks.htm#maphack">
+			</OBJECT>
+	</UL>
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Name" value="应用开发接口">
+		<param name="Local" value="api.htm">
+		</OBJECT>
+	<UL>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="开发接口">
+			<param name="Local" value="api.htm#api">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="PostString">
+			<param name="Local" value="api.htm#poststring">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="Pause">
+			<param name="Local" value="api.htm#pause">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="Resume">
+			<param name="Local" value="api.htm#resume">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="Stop">
+			<param name="Local" value="api.htm#stop">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="Leave">
+			<param name="Local" value="api.htm#leave">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="QuitD2">
+			<param name="Local" value="api.htm#quitd2">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="Key">
+			<param name="Local" value="api.htm#key">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="Next...命令组">
+			<param name="Local" value="api.htm#next">
+			</OBJECT>
+	</UL>
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Name" value="作者信息">
+		<param name="Local" value="author.htm">
+		</OBJECT>
+	<UL>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="关于作者">
+			<param name="Local" value="author.htm#about">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="联系信息">
+			<param name="Local" value="author.htm#contact">
+			</OBJECT>
+	</UL>
+</UL>
+</BODY></HTML>

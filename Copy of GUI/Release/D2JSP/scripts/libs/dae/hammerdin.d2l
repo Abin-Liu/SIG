@@ -1,0 +1,1664 @@
+/*************************************************
+               Hammerdin Pally Library
+             For Daemon Multi-MF Bot
+               Version : 0.1.0 Alpha
+               
+                           Created by Killkeeper
+**************************************************/
+
+var WEA_BH,WEA_ZEAL;
+
+function CheckSelf() {
+	CheckMe();
+};
+
+// aha,very simple
+function PreSkill( bBeforeAttack, bBeforeTown )
+{
+	if (me.getSkill("Holy Shield",0))
+		DoCasting("Holy Shield",0);
+
+		DoDel(100);
+		
+	if (me.getSkill("Concentration",0))
+		me.setSkill("Concentration",0);
+}
+
+// need a better check of unique
+function FindEnemyOnPath(x,y)
+{
+	var pos = new coord(me);
+	var path_dir = pos.dir(x,y);
+	
+	var npc = getUnit(1);
+	if ( npc ) do {
+		var TypeMonster = CheckMonster( npc );
+        if ( TypeMonster <= 0 || npc.mode == 12 || npc.hp <= 0 ) 
+			continue;
+		if ( CheckIsSuper( npc ) ) 
+			continue;
+			
+		var dist = pos.dist2(npc);
+		if (dist < 100) { // in range
+			var dir = pos.dir(npc);
+			var angle = dir.angle(path_dir);
+			if (angle < 30) {
+				return npc;
+			}
+		}
+	}while(npc && npc.getNext());
+	
+	return null;
+}
+
+//----------------------------------------------------------------------------
+// callback from Shrine Lib to goto to coord x,y
+function BarbShrineMove( x, y ) {
+    if (myDist(x,y)<4) return true;
+    
+    room=getRoom(0);
+    if (room.getCollision(x,y) & 1)
+        MoveTo( x, y ,0,true);
+    else
+    	MoveTo(x,y,1);
+
+}
+
+var killedlist=new Array();	//use to store killed enemies.
+var myArea=0;
+
+function walkcalls(x,y, currentpoint, databack)
+{
+	if (me.area!=myArea)
+	{
+		//Area changed,need to release killedlist
+		myArea=me.area;
+		killedlist=new Array();
+		runGC();
+	}
+	
+	CheckSelf();
+	
+	if ( databack["destx"] ) 
+		if ( Dist2( me.x, me.y, databack["destx"], databack["desty"] ) <= databack["mindist"]*databack["mindist"] ) 
+			return mlSTOP;
+
+	if ( databack["monster"] )
+		if ( Dist2( me.x, me.y, databack["monster"].x, databack["monster"].y ) <= databack["m_mindist"]*databack["m_mindist"] ) 
+			return mlSTOP;
+
+		if ( databack["bossname"] ) {
+			var boss = getUnit( 1,  databack["bossname"] );
+			var maxdist = databack["bossdist"];
+			if ( !maxdist )
+				maxdist = 15;
+			if ( boss && Dist2( me.x, me.y, boss.x, boss.y ) < maxdist*maxdist )
+				return mlSTOP;
+		};
+
+	if ( databack["noattack"] )
+		return 	mlCONTINUE;
+
+	if ( CheckIsBadThingThere( me, 10 ) == 2 ) {
+		return 	mlCONTINUE;
+	};
+	
+	var mypos = new coord( me );
+	//PreSkill();
+		
+	var enemyrange=databack["monsterrange"];
+	if (!enemyrange) enemyrange=5;
+	
+	var e = FindEnemyOnPath(x, y);
+	if ( e && !checkCollision(me,e,1) ) {
+		CheckObjects( false, BarbShrineMove );  
+		var bosskilled = KillAllNearUniqueBoss( 10 );
+		mypos.set(me);
+		e = FindEnemyOnPath(x, y);
+	};
+	var nmonsterattacked = 0;
+	
+	if (!e) e = FindEnemyNear(mypos,enemyrange);
+	
+	while(e) {
+		if ( databack["bossname"] ) {
+			var boss = getUnit( 1,  databack["bossname"] );
+			var maxdist = databack["bossdist"];
+			if ( !maxdist )
+				maxdist = 10;
+			if ( boss && Dist2( me.x, me.y, boss.x, boss.y ) < maxdist*maxdist )
+				return mlSTOP;
+		};
+		
+		if ( CheckMonster( e ) == 2 && !checkCollision(me,e,1) ) {
+			if ( BossIsWrongClassID( e ) || CheckIsKilled( e ) )
+				break;
+			KillNormalBoss( e );	
+			mypos.set(me);
+			var b = CheckIsBadThingThere( me, 10 );
+			if ( b == 2 ) 
+				return 	mlCONTINUE;
+			else if ( b == 1 )
+				break;
+			e = FindEnemyNear(mypos,enemyrange);
+		};
+		
+		
+		if (!e) break;
+		if ( !IsEnemyKilled( e ) && !checkCollision(me,e,1) )
+		{
+			killedlist.push(e.gid);
+			if ( KillMonster(e,8) ) {
+				nmonsterattacked++;
+				mypos.set(me);
+				e = FindEnemyNear(mypos,enemyrange);
+			}
+			else
+				e = null;
+		}
+		else
+			break;
+		
+	}
+
+	//var door=FindDoorOnPath(x,y);
+	
+	if ( nmonsterattacked > 0 )
+		Pick();
+
+	if ( databack["tile"] ) {
+		databack["tilefound"] = GetStairs(databack["tile"][0], databack["tile"][1], me.area);
+		if ( databack["tilefound"] ) {
+			print("tile found");
+			return mlSTOP;
+		};
+	};
+
+	if (!databack["nochest"]) CheckObjects( sets["use_shrine"], BarbShrineMove );  
+
+	return 	mlCONTINUE;
+};
+
+function IsEnemyKilled(target)
+{
+	for(i=0;i<killedlist.length;i++)
+	{
+		if (target.gid==killedlist[i]) return true;
+	}
+	return false;
+}
+
+function KillBoss( target, MaxAttacks, pathbeforeattack, attackskill, bswitch, min_dist )
+{
+	var result=false;
+    //PreSkill( true );	
+	//print("got here");
+		
+	var merc=Town.GetMerc();
+	if (merc){
+		if (getDistance(merc,me)>5) delay(1000);
+	}
+	
+	var i=0;
+	while(target.hp>0 && i<MaxAttacks[0]){
+		i++;
+		
+		if (i<4 && GetEnemyCountNear(target,8)>4 && CheckMonster(target)==2){
+			doWeaponSwitch(WEA_BH);
+			DoCasting("Blessed Hammer",1,target);
+		}
+		else{
+			if (getDistance(me,target) >= 8 )
+				moveHalfWay(me,target);
+			
+			attackskill=GetAutoSkill(target)
+			if (!attackskill) return false;
+			
+			if (attackskill==102)
+				doWeaponSwitch(WEA_BH);
+			else{
+				doWeaponSwitch(WEA_ZEAL);
+				if (me.getSkill("Concentration",0))
+				me.setSkill("Concentration",0);
+			}
+			
+			DoCasting(attackskill,1,target);
+			if (attackskill==102)
+				walkto(me.x+rnd(-1,1),me.y+rnd(-1,1));
+			delay(getBaseStat(3,me.getSkill(2),191)+rnd(50,90));
+			 
+		}
+		
+	}
+	if (target.hp<=0) result=true;
+	
+	return result;
+}
+
+function moveHalfWay(a,b,c) {
+	if(arguments.length == 2) c = false;
+	NEWx = Math.round((a.x + b.x)/2);
+	NEWy = Math.round((a.y + b.y)/2);
+	
+	var databack=new Object();
+	databack["bossname"]=b.name;
+	databack["bossdist"]=6;
+	
+	if(!c) {
+		NEW = cMap.FindClosestWalkable(NEWx,NEWy);
+		GotoToDest(NEW.x,NEW.y,databack);
+	} else {
+		//dprint("my x: " + me.x + ", my y: " + me.y,3);
+		//dprint("x: " + NEWx + ", y: " + NEWy,3); 
+		GotoToDest(NEWx,NEWy,databack);
+	}
+	while(me.mode == 2 || me.mode == 3) delay(50);
+}
+
+function PostFindItem( target ) 
+{
+	var e = getUnit( 1, target.name );
+
+	if ( e && me.getSkill("Find Item")) {
+	    if ( e.getState( 104 ) ) // no draw monster
+	        return;
+		if ( e.getState( 118 ) ) // corpse no select
+	        return;
+			
+		if ( Dist2( target.x, target.y, me.x, me.y ) > 4*4 )
+			return;
+
+		if ( sets["weapon_switch"] )
+			wea_switch=doWeaponSwitch();
+
+		bprint("Find item");
+		if ( Sc_SetSkill("Find Item", right_hand) )
+			e.useSkill( right_hand );
+
+		SwitchBack();
+	};
+};
+
+
+// because monster move ;)
+function MoveToMonster(monster, mindist) {
+	if (!mindist || mindist < 1)
+		mindist = 1;
+        if (!monster) return false;
+        
+	var pos = new coord(me);	
+	var curdist = pos.dist(monster);  
+	if (curdist > 10) {
+		var databack = new Array();
+		var dest = FindClosestWalkable( monster.x, monster.y );
+		databack["noattack"] = true;
+		databack["monster"] = monster;
+		databack["m_mindist"] = mindist;
+		if ( GotoToDest( dest.x, dest.y, databack ) )
+			return true;
+	}
+	return MoveTo( monster, mindist );
+};
+
+// Code from Scavenger Multi MF
+// 2 kind of calls : MoveTo(x,y) or MoveTo(dest,mindist) (dest has x & y properties)
+function MoveTo(dest, mindist,bDirect)
+{
+	if (bDirect) return walkto(dest,mindist);	
+	if (!dest.x || !dest.y) {
+		DebugWrite("dest with no x or y");
+		var c = new coord(dest, mindist);
+		if (c.x < 100 && c.y < 100) {
+			DebugWrite("MoveTo: dest: " + c.toString());
+			return false;
+		}
+		DebugWrite("dest set to: " + c.x + "," + c.y);
+		dest = c;
+		mindist = 3;
+	}
+	
+	if (!mindist || mindist < 1)
+		mindist = 1;
+	
+	if (!dest || !dest.x || !dest.y) {
+		DebugWrite("MoveTo() -> No dest");
+		return false;
+	}
+	
+	var pos = new coord(me);	
+	DebugWrite("MoveTo: " + dest.x + "," + dest.y + " dist: " + pos.dist(dest));
+
+	pos.set(me);
+	var curdist = pos.dist(dest);  
+	if ( curdist <= mindist ) {
+		CheckMe();
+		DebugWrite("MoveTo done, returning true");
+		return true;
+	}
+	
+	dir = pos.dir(dest);
+	if (curdist > 10) {
+		var databack = new Array();
+		dest = FindClosestWalkable( dest.x, dest.y );
+		databack["noattack"] = true;
+		databack["destx"] = dest.x;
+		databack["desty"] = dest.y;
+		databack["mindist"] = mindist;
+		if ( GotoToDest( dest.x, dest.y, databack,mindist ) )
+			return true;
+	}
+//		pos.move(dir, 20);
+	else
+		pos.set(dest);
+	
+	if (!DirectMove(pos, mindist-1)) {
+		if (me.getSkill("Leap Attack")) {
+			DebugWrite("DirectMove failed, trying leap move");
+			DoAttackSequence( "Leap Attack", left_hand, pos.x, pos.y );
+			delay(250);
+			return DirectMove(pos, mindist-1);
+		}
+		else 
+			return false;
+	}
+	
+	return true;
+}
+
+// Code from Scavenger Multi MF
+function DirectMove(dest, mindist)
+{
+	if (!mindist || mindist < 3)
+		mindist = 3;
+	
+	DebugWrite("DirectMove called");
+	
+	var oldpos = new coord(me);
+	var fails = 0;
+	while(fails < 3) {
+		CheckSelf();
+		oldpos.set(me);
+		if (oldpos.dist(dest) <= mindist) {
+			DebugWrite("DirectMove done");
+			return true;
+		}
+		ClickMap(dest.x, dest.y);
+		var rdel = 0;
+		while ( ( me.x != dest.x || me.y != dest.y ) && rdel++ < 5 )
+			delay(50);
+		if (oldpos.x == me.x && oldpos.y == me.y)
+			fails++;
+	}
+	
+	DebugWrite("DirectMove failed");
+	return false;
+}
+
+function GotoUniqueBoss() {
+
+    var targetpos = new coord(bossunique.boss);
+	DebugWrite("targetpos "+targetpos.x+" "+targetpos.y+" me "+me.x+" "+me.y );
+
+    var dir = targetpos.dir(me); // normalized vector from target to me
+    var dist = myDist( bossunique.boss.x, bossunique.boss.y );
+	if ( dist < 10 )
+		return true;
+
+	targetpos.move(dir, dist-7 );
+
+	DebugWrite("try to teleport to "+targetpos.x+" "+targetpos.y );
+	if ( me.classid == 1 ) 
+  		Teleport( targetpos.x, targetpos.y, 10 );
+	else
+  		MoveTo( targetpos.x, targetpos.y );
+	
+	DebugWrite("GotoUniqueBoss end" );
+    return true;
+};
+
+//========================================================
+var cMap = null;
+var distbetweenpoint = 7;
+
+// close some path
+// need vert&horz space > 2
+// need diag space > 1
+function CorrectMap( map ) {
+	for (var x = 1; x < cMap.sizex-2; x++) {
+		for (var y = 1; y < cMap.sizey-2; y++) {
+			if ( cMap.Area[y][x] & 1 )
+				continue;
+			if ( cMap.Area[y-1][x] & 1  ) {
+				if ( ( cMap.Area[y+1][x] & 1 ) ||  ( cMap.Area[y+2][x] & 1 ) ) {
+					cMap.Area[y][x] |= 1;
+					cMap.Area[y+1][x] |= 1;
+					continue;
+				};
+			};
+			if ( cMap.Area[y][x-1] & 1  ) {
+				if ( ( cMap.Area[y][x+1] & 1 ) ||  ( cMap.Area[y][x+2] & 1 ) ) {
+					cMap.Area[y][x] |= 1;
+					cMap.Area[y][x+1] |= 1;
+					continue;
+				};
+			};
+			
+			if ( ( cMap.Area[y+1][x] & 1 ) )
+				if ( ( cMap.Area[y-1][x-1] & 1 ) || ( cMap.Area[y-1][x+1] & 1 ) ) {
+					cMap.Area[y][x] |= 1;
+					continue;
+				}
+			
+			for ( var vx = -1 ; vx <= 1 ; vx++ ) {
+		  		if ( vx == 0 )
+					continue;
+				for ( var vy = 0 ; vy <= 1 ; vy++ ) {
+					if ( ( cMap.Area[y+vy][x+vx] & 1 ) == 0 ) 
+						continue;
+					if ( vy == 0 ) {
+						if ( ( cMap.Area[y-1][x-vx] & 1 ) || ( cMap.Area[y+1][x-vx] & 1  ) ) 
+							cMap.Area[y][x] |= 1;
+					} 
+					else {
+						if ( ( cMap.Area[y-vy][x-vx] & 1 ) ) 
+							cMap.Area[y][x] |= 1;
+					};
+				};
+			};
+		};
+	};	
+};
+
+function InitMap() {
+	if ( !cMap ) {
+		cMap = new oMap( me.area );
+		cMap.InitializeMap();
+		if ( me.area == 111 || me.area == 101 )
+			CorrectMap( cMap );
+		bprint("Map initialized");
+	}
+	else if ( cMap.AreaInitialized != me.area ) {
+		cMap.InitializeMap();
+		if ( me.area == 111 || me.area == 101 )
+			CorrectMap( cMap );
+		bprint("Map reinitialized");
+	};
+//    DebugMap( "mapdebug2.txt", 1, null);
+};
+
+function FindClosestWalkable(x, y)
+{
+	InitMap();
+	for ( var d = 0 ; d < 100 ; d++ ) {
+		for ( var v = -d ; v <= d ; v++ ) {
+			if(cMap.IsWalkable(x+v, y+d)) 
+				return {x:x+v, y:y+d};
+			if ( !d )
+				continue;
+			if(cMap.IsWalkable(x+v, y-d)) 
+				return {x:x+v, y:y-d};
+			if(cMap.IsWalkable(x+d, y+v)) 
+				return {x:x+d, y:y+v};
+			if(cMap.IsWalkable(x-d, y+v)) 
+				return {x:x-d, y:y+v};
+		};
+	};
+	return false;
+};
+
+var DebugMapSave = new Array();
+
+//============================================================
+// The Countess Code
+//============================================================
+function GotoCountess() {
+    if ( !Town.InTown() ) {
+        UseTP();
+        InTown();
+    };
+
+  	if (!Town.TakeWP(1, 5)) return false;
+
+	//Use Sh_PathFinding
+	
+  	PreSkill();
+
+    if ( !GotoRoom( 163, 163, 20, 7 ) )
+      return false;
+
+    // enter 1 stair
+    if ( !TakeStairs(10,10) )
+      return false;
+
+    // next
+    if ( !TakeStairs(12,12) )
+      return false;
+
+	// lvl
+	for (var niv=0; niv<4; niv++)
+	{
+		bprint("Go to Tower Cellar "+(2+niv) );
+    	if ( !GotoRoom( 143, 146, 20, 7 , true ) )
+      	    return false;
+
+    	if ( !TakeStairs(9,9) )
+      	    return false;
+	};
+
+	var databack=new Object();
+	databack["bossname"]=bosscountess.lodname;
+	databack["bossdist"]=6;
+
+    if ( myDist ( 12636, 11068 ) < 50 ) {
+        if ( !GotoToDest( me.x-100, me.y,databack ) )
+	        return false;
+    }
+	else
+    	if ( !GotoToDest( me.x, me.y-100,databack ) )
+	        return false;
+
+    for ( var i = 0 ; i < 4 ; i++ )
+    {
+        var boss = getUnit(1,bosscountess.lodname);
+        if ( boss )
+            return true;
+    };
+    return false;
+};
+
+//============================================================
+
+
+//=========================================
+// The Pit Code by Killkeeper
+//=========================================
+
+function GotoThePit()
+{
+    if ( !Town.InTown() ) {
+        UseTP();
+        InTown();
+    };
+
+    if (!Town.TakeWP(1, 5)) return false;
+    
+    PreSkill();
+    InitMap();
+    
+    var path=cMap.FindPathToLevel(7,me.x,me.y,7,mlREDUCEWALK,mlASTAR,mlFHEUCLIDIANNOSQRT, false);
+    var reval=cMap.PathMove(path,true,0,7,mlASTAR,true);
+    if (reval != 0) {
+    	if (!GotoRoom(51,52,20,7,true)) return false;
+    	if (!TakeStairs(2,3)) return false;
+    }
+    
+    var retries=0;
+    while(me.area!=12 && retries<5){
+    	delay(200);
+    	retries++;
+    }
+    
+    InitMap();
+    
+    var roomlist=new Array();
+    var troom=getRoom();
+    do {
+    	var found=false;
+    	for(var i=0;i<roomlist.length;i++){
+    		if (roomlist[i][0]==troom.number){
+    			found=true;
+    			break;
+    		}
+    	}
+    	
+    	if (!found)
+    		roomlist.push([troom.number,troom.x*5,troom.y*5]);
+    	//print(troom.number);
+    }while (troom && troom.getNext());  	
+    	
+    if (roomlist) {
+    	do {
+    		roomlist.sort(sortRoom);
+    		me.overhead("Now explore room : " + roomlist[0][0] + " ,Remains : " + roomlist.length);
+    		GotoRoom(roomlist[0][0],roomlist[0][0],20,7,true);
+    		CleanUpMe(40);
+       		CheckObjects( true, BarbShrineMove );
+    		DoDel(500);
+
+	        roomlist.shift(); //remove the lastest room which has been explored.
+	}while(roomlist && roomlist.length);
+    }
+    
+    var path=cMap.FindPathToWarp(mlWARPNEXT, me.x, me.y, 7, mlREDUCEWALK, mlASTAR, mlFHMANHATTAN, 3);
+    if (path) {
+    	var reval=cMap.PathMove(path,true,0,7,mlASTAR,2);
+    	if (!TakeStairs(5,5)) return false;
+    	GotoRoom(107,107,20,7,true);
+    	var UberChest = getFarUnitXY (2,397);
+        if(!UberChest) var UberChest = getUnit(2,397);
+                if(UberChest) {
+        	GotoToDest(UberChest.x, UberChest.y);
+        	CleanUpMe(40);
+        	CheckObjects( true, DaeShrineMove );
+        }
+    }
+        
+    return (reval != 0) ;
+}
+
+function CleanThePit()
+{
+	return true;
+}
+
+
+//=============================================
+// Ancient Tunnel Code by Killkeeper
+//=============================================
+
+function GotoAncientTunnel()
+{
+    if ( !Town.InTown() ) {
+        UseTP();
+        InTown();
+    };
+
+    if (!Town.TakeWP(2, 6)) return false;
+    
+    PreSkill();
+    InitMap();
+
+    var path=cMap.FindPathToWarp(mlWARPDESSERTSEWERTRAP, me.x, me.y, 9, mlREDUCEWALK, mlASTAR, mlFHMANHATTAN, 3);
+    if (path) {
+    	var databack=new Object();
+    	databack["monsterrange"]=3;
+    	var reval=cMap.PathMove(path,databack,0,9,mlASTAR,2);
+    	if (me.area!=65)
+    		TakeStairs(50,50);
+    	
+    	InitMap();
+    	var roomlist=new Array();
+    	var troom=getRoom();
+    	do {
+    		roomlist.push([troom.number,troom.x*5,troom.y*5]);
+    	}while (troom && troom.getNext());  	
+    	
+    	if (roomlist) {
+    		do {
+    			roomlist.sort(sortRoom);
+    			me.overhead("Now explore room : " + roomlist[0][0] + " ,Remains : " + roomlist.length);
+    			//var databack=new Object();
+    			GotoRoom(roomlist[0][0],roomlist[0][0],20,7,true);
+    			CleanUpMe(40);
+        		CheckObjects( true, BarbShrineMove );
+    			DoDel(500);
+
+		        roomlist.shift(); //remove the lastest room which has been explored.
+    		}while(roomlist && roomlist.length);
+    	}
+    }
+        
+    return (reval != 0) ;
+}
+
+function sortRoom(a,b)
+{
+	if (myDist(a.x,a.y)<myDist(b.x,b.y)) return 1;
+	
+	return -1;
+}
+
+function CleanAncientTunnel()
+{
+	return true;
+}
+//===========================================================
+// Creeping Featrue(Barb) code
+//============================================================
+function Gotocreeping() {
+    if ( !Town.InTown() ) {
+        UseTP();
+        InTown();
+    };
+
+    if (me.act != 2)
+      if (!Town.TakeWP(2, 1)) return false;
+
+    //Use Sh_PathFinding
+    
+        Town.MoveTo("exit",2);
+        // westen (5011,5066)
+        // wp (5158,5050)
+        // norden (5096,5009)
+        if (me.x < 5050) walkto ((me.x - 20), me.y);
+        if (me.x > 5050) walkto (me.x, (me.y - 30));
+
+    DoDel(500);
+    if (me.area!=41) return false;
+    
+    PreSkill();
+    
+    if (!GotoRoom(388,388,20,7,true)) return false;
+    
+    TakeStairs (33, 36);
+    if (me.area!=55) return false;
+
+    if (!GotoRoom(448, 451, 20, 7,true) ) return false;
+    DoDel(500);
+    TakeStairs (46, 46);
+
+    
+    var databack=new Object();
+    databack["bossname"]=bosscreeping.lodname;
+    databack["bossdist"]=6;
+    
+    if (!GotoRoom(464, 467, 20, 7,databack )) return false;  // now it's creeping time :)
+    DoDel(500);
+
+    for ( var i = 0 ; i < 4 ; i++ )
+    {
+        var boss = getUnit(1,bosscreeping.lodname);
+    }
+
+    if (boss) return true;
+    
+    return false;
+
+   
+};
+
+function GotoToDest( destx, desty, databack,minDistFix)
+{
+	InitMap();
+	if (!minDistFix) {
+		var FixValue=null;
+		minDistFix=distbetweenpoint;
+	}
+	else
+		var FixValue=1.8;
+	
+	var path = cMap.FindPath( me.x, me.y, destx, desty, minDistFix, mlREDUCEWALK, mlASTAR, mlFHEUCLIDIAN, FixValue );
+	
+//    DebugMap( "mapdebug.txt", 1, path);
+
+	if ( !path ) 
+		return false;
+	bprint("Path found");
+
+	if ( !databack )
+		databack = true;
+
+	var retval = cMap.PathMove( path, databack, 0, distbetweenpoint, mlASTAR );
+
+	if ( ( me.area == 121 || me.area == 122 || me.area == 123 ) && !DebugMapSave[ me.area ] )  {
+		DebugMapSave[ me.area ] = true;
+		var rn = rnd(1,100);
+		DebugSavePath( "mappath"+me.area+"."+destx+"-"+desty+"."+rn+"."+".txt", path );
+		DebugMap( "mapdebug"+me.area+"."+destx+"-"+desty+"."+rn+"."+".txt", 1, path);
+	};
+
+	bprint("Path ended");
+	return ( retval != 0 );
+}
+
+
+function GotoRoom2(min, max, offset, builddist, databack)
+{
+	InitMap();
+	
+	var mapArray = new Array(max-min+1);
+	for ( var i = 0 ; i < max-min+1 ; i++ )
+		mapArray[i] = min+i;
+
+	var path = cMap.FindPathToRoom( mapArray, me.x, me.y, builddist, mlREDUCEWALK, mlASTAR, mlFHEUCLIDIAN, null );
+//	var path = cMap.FindPathToRoom( mapArray, me.x, me.y, builddist, mlREDUCEWALK, mlASTAR, mlFHDIAGSHORTCUT, 1.8 );
+	if ( !path )
+		return false;
+
+//	DebugMap( "mapdebug"+min+"-"+max+".txt", 1, path);
+
+	return cMap.PathMove( path, databack, 0, builddist, mlASTAR );
+};
+
+
+function GotoRoom(lo,hi,offset,builddist,databack)
+{
+	if (!builddist) builddist=7;
+	if (builddist>12) builddist=7;
+	if (!databack) databack=true;
+	
+	InitMap();
+	
+	var room = getRoom();
+    	do
+    	{
+        	if (room.number >=lo && room.number <=hi)
+        	{
+                	ShowState("Trying Room " + room.number);
+                  	var tempcoord = cMap.FindClosestWalkable(room.x*5+20, room.y*5+20);
+              		//var path = cMap.FindPath(me.x, me.y, tempcoord.x, tempcoord.y, builddist, mlREDUCEWALK, mlASTAR, mlFHEUCLIDIAN, null);
+              		var path = cMap.FindPath(me.x, me.y, tempcoord.x, tempcoord.y, builddist, mlREDUCEWALK, mlASTAR, mlFHMANHATTAN, 1.8);
+              		var reval=cMap.PathMove(path,databack,0,builddist,mlASTAR);
+              		if (reval != 0) return (reval != 0);         
+       		}
+    	} while(room && room.getNext());
+	return (reval!=0);
+}
+
+function LoadPath( filename )
+{
+	var lf=fileOpen( filename,0);
+	var s;
+	var ss;
+	if (lf)
+	{
+		var path = new Array();
+		while ( !lf.eof ) {
+	        s = lf.readLine(); 
+			if ( s.length == 0 )
+				continue;
+			ss = s.split( "," );
+			path[ path.length ] = { x:parseInt( ss[0] ), y:parseInt( ss[1] ) };
+		};
+		lf.close();
+		return path;
+	};
+	return null;	
+};
+
+//============================================================
+// Eldritch Code
+//============================================================
+function SubGotoEld()
+{
+ 	MoveTo(eld_path[5][0],eld_path[5][1],true);
+    	DoDel(15);
+    	MoveTo(eld_path[6][0],eld_path[6][1],true);
+    	DoDel(15);
+    	return true;
+};
+
+//============================================================
+// Thresh Code
+//============================================================
+function GotoSharpBarb()
+{
+    DebugWrite("Ask a sorted list of room" );
+    var list = GetListRoomSorted( 931, 938 );
+    DebugWrite("Get a sorted list with "+list.length+" points" );
+
+	InitMap();
+
+	var newcoord = cMap.FindClosestWalkable( list[0].x, list[0].y  );
+
+	var databack = new Array();
+	databack["bossname"] = bosssharp.lodname;
+
+	var res = GotoToDest( newcoord.x, newcoord.y, databack ); 
+	if ( !res )
+		return false;
+
+	var ts=getUnit(1, bosssharp.lodname );
+    if (!ts)
+		return false;
+
+	var databack = new Array();
+	databack["bossname"] = bosssharp.lodname;
+	databack["bossdist"] = 5;
+
+	newcoord = cMap.FindClosestWalkable( ts.x, ts.y  );
+	res = GotoToDest( newcoord.x, newcoord.y, databack ); 
+	if ( !res )
+		return false;
+
+	return true;
+}
+
+//============================================================
+// Frozenstein Code
+//============================================================
+function GotoFroz()
+{
+    if ( !Town.InTown() ) {
+        UseTP();
+        InTown();
+    };
+
+	//Use Sh_PathFinding
+	
+    if ( !GotoIceAnya() )
+      return false;
+
+    Pick();
+
+    // time to clean the entrance
+    // KillFrozEntrance();
+
+    // enter in ice
+    if ( !TakeStairs(75,75) )
+      return false;
+
+	InitMap();
+
+	var frozcase = 0;
+	var frozposition = new coord();
+    if ( myDist( 10017, 6652 ) < 50 ) {
+        frozcase = 1;
+		frozposition.x = 10183;
+		frozposition.y = 6570;
+    } else if ( myDist ( 10012, 6777 ) < 50 ) {
+	    frozcase = 2;
+		frozposition.x = 10089;
+		frozposition.y = 6562;
+    } else if ( myDist ( 10102, 6517 ) < 50 ) {
+	    frozcase = 3;
+		frozposition.x = 10100;
+		frozposition.y = 6769;
+    } else if ( myDist ( 10292, 6592 ) < 50 ) {
+	    frozcase = 4;
+		frozposition.x = 10047;
+		frozposition.y = 6606;
+    } else {
+	    bprint( "I am at  "+me.x+" "+me.y+" = unknow coord" );
+		return false;
+	};
+
+	var path;
+	path = LoadPath( "libs/dae/froz"+frozcase+".d2l"); 
+	if ( !path )
+//		path = cMap.FindPath( me.x, me.y, frozposition.x, frozposition.y, 5, mlREDUCEWALK, mlASTAR, mlFHEUCLIDIAN, 5 ); //xx
+		path = cMap.FindPath( me.x, me.y, frozposition.x, frozposition.y, 5, mlREDUCEWALK, mlASTAR, mlFHMANHATTAN, 5 );
+
+	if ( !path ) 
+		return false;
+
+  	PreSkill();
+//xx
+/*	var f = fileOpen("output/froz"+frozcase+".d2l", 2);
+	if (f) {
+		f.writeLine( "==========================" );
+		for ( var i = 0 ; i < path.length ; i++ )
+			f.writeLine( path[i].x+","+path[i].y);
+		f.close();
+	}*/
+
+	var databack = new Attack();
+	databack["bossname"] = bossfroz.lodname;
+	databack["bossdist"] = 7;
+
+	var retval = cMap.PathMove( path, databack, 0, distbetweenpoint, mlASTAR );
+	return ( retval != 0 );
+
+//    if ( !GotoToDest( frozposition.x, frozposition.y ) )
+//      return false;
+
+    for(var i=0;i<5;i++)
+    {
+        var npc=getUnit(1,bossfroz.lodname);
+        if (npc) return true;
+        delay(100);
+		CheckMe();
+    };
+
+    return false;
+}
+
+function GotoIceAnya()
+{
+    // take the wp
+  	if (!Town.TakeWP(5, 4)) return false;
+
+  	PreSkill();
+
+	var databack = new Array();
+	databack["tile"] = new Array();
+	databack["tile"][0] = 75;
+	databack["tile"][1] = 76;
+
+	if ( !GotoRoom( 1026, 1029, 0, distbetweenpoint, databack ) )
+		return false;  
+	
+	if ( databack["tilefound"] ) {
+		if ( Dist2( me.x, me.y, databack["tilefound"].x, databack["tilefound"].y ) > 100 ) {
+			var newcoord = cMap.FindClosestWalkable( databack["tilefound"].x, databack["tilefound"].y  );
+			GotoToDest( newcoord.x, newcoord.y, true );
+		};
+	};
+
+    return true;
+}
+
+//============================================================
+// Bonesaw Breaker Code
+//============================================================
+function SubGotoBone() {
+
+	var databack = new Array();
+	databack["bossname"] = bossbone.lodname;
+
+	if ( !GotoRoom( 1030, 1033, 0, distbetweenpoint, databack ) )
+		return false;  
+
+    for ( var i = 0 ; i < 4 ; i++ )
+    {
+        var boss = getUnit(1,bossbone.lodname);
+        if ( boss ) {
+			if ( Dist2( me.x, me.y, boss.x, boss.y ) > 100 ) {
+				var newcoord = cMap.FindClosestWalkable( boss.x, boss.y  );
+				GotoToDest( newcoord.x, newcoord.y, databack );
+			};
+            return true;
+		};
+    };
+    return false;
+};
+
+
+//============================================================
+//         Mephisto Code                         
+//============================================================
+function GotoMeph()
+{
+	if ( !Town.InTown() ) {
+        	UseTP();
+        	InTown();
+    	};
+	
+	if (!Town.TakeWP(3,9)) return false;
+	
+	PreSkill();
+
+	var databack = new Array();
+	databack["tile"] = new Array();
+	databack["tile"][0] = 67;
+	databack["tile"][1] = 68;
+	databack["noattack"] = true;
+	databack["nochest"]=true;
+	
+	if (!GotoRoom(788, 791, 0, distbetweenpoint, databack ) ) 
+		return false;
+	/*
+	if ( !databack["tilefound"] ) 
+		return false;
+		
+	if ( Dist2( me.x, me.y, databack["tilefound"].x, databack["tilefound"].y ) > 100 ) {
+		var newcoord = cMap.FindClosestWalkable( databack["tilefound"].x, databack["tilefound"].y  );
+		if ( !GotoToDest( newcoord.x, newcoord.y, true ) )
+			return false;
+	};
+	*/
+
+    // enter in ice
+    if ( !TakeStairs(67,68) )
+      return false;
+
+  	var databack=new Object();
+  	databack["noattack"]=true;
+  	databack["nochest"]=true;
+  	
+  	PreSkill();
+
+	InitMap();
+
+	if ( !GotoToDest( 17670, 8067, databack ) )
+		return false;
+	
+	var choice = 0;
+	if ( sets["escape_bremm"] ) {
+		var bremm = getUnit( 1, sets["name_bremm"] );
+		if ( bremm )
+			if ( bremm.y < 8067 )
+				choice = 1;
+	};
+
+	if ( choice == 1 ) {
+		if ( !GotoToDest( 17597, 8087, true ) )
+			return false;
+	}
+	else if ( !GotoToDest( 17597, 8054, true ) )
+		return false;
+
+	Sc_SetSkill("Leap Attack", left_hand);
+	var retry = 0 ;
+	var retry2;
+	do {
+		me.useSkillAt(17589, 8068, left_hand);
+		for ( retry2 = 0 ; ( Dist2( 17589, 8068 ) > 25 && retry2 < 20 ) || me.mode == 18 ; retry2++ ) {
+			delay( 100 );
+			CheckMe();
+		};
+	} while ( ( retry2 >= 20 ) && ( retry++ < 5 ) );
+
+	if ( retry >= 5 )
+		return false;
+
+	// wait conviction
+	// code form scavenger multi-bot
+	var timer = 6000;
+	while (me.getState(29) && timer > 0) { 
+		delay(100); 
+		timer -= 100; 
+		me.overhead("I hate conviction");
+		CheckMe(); 
+	};
+
+    for ( var i = 0 ; i < 4 ; i++ )
+    {
+   	  var boss = getUnit(1,bossmeph.lodname);
+      if ( boss )
+        return true;
+      DoDel( 100 );
+    };
+    return false;
+}
+
+//============================================================
+//         Baal Code                         
+//============================================================
+function GotoBaal()
+{
+	if ( !Town.InTown() ) {
+        	UseTP();
+        	InTown();
+    	};
+	
+	if (sets["buy_antidote_baal"][0]) BuyAntidote();
+	
+	if (!Town.TakeWP(5,9)) return false;
+	
+	
+	for ( var lvl = 2 ; lvl < 4 ; lvl++ ) {
+  		PreSkill();
+	
+		var databack = new Array();
+		databack["tile"] = new Array();
+		databack["tile"][0] = 82;
+		databack["tile"][1] = 82;
+		databack["tile"][2] = 129+(lvl-2);
+	
+		if (!GotoRoom(1078, 1081, 0, distbetweenpoint, databack ) ) 
+			return false;
+
+		if ( !databack["tilefound"] ) 
+			return false;
+
+		var posTile = GetStairs(82,82,129+(lvl-2)); 	
+		var newcoord = FindClosestWalkable( posTile.x, posTile.y ); 
+		if ( !GotoToDest( newcoord.x, newcoord.y, true ) )
+			return false;
+			
+/*		if ( Dist2( me.x, me.y, databack["tilefound"].x, databack["tilefound"].y ) > 100 ) {
+			bprint("me x"+me.x+" "+me.y+" newcoord "+databack["tilefound"].x+" "+databack["tilefound"].y);
+			var newcoord = FindClosestWalkable( databack["tilefound"].x, databack["tilefound"].y ); 
+			bprint("Go to stairs");
+			newcoord = cMap.FindClosestWalkable( newcoord.x, newcoord.y  );
+			bprint("me x"+me.x+" "+me.y+" newcoord "+newcoord.x+" "+newcoord.y);
+			if ( !GotoToDest( newcoord.x, newcoord.y, true ) )
+				return false;
+		};*/
+
+    	// enter in next lvl
+    	if ( !TakeStairs(82,82,129+(lvl-2)) )
+      		return false;
+	};
+
+  	PreSkill();
+
+	DebugWrite("Level of throne of Destruction reached");
+
+	InitMap();
+	var newcoord = cMap.FindClosestWalkable( 15095, 5068  );
+	
+	if ( !GotoToDest( newcoord.x, newcoord.y, true ) )
+		return false;
+
+	DebugWrite("Throne of Destruction reached");
+	bprint("Throne of Destruction reached");
+	
+	return true;
+}
+
+function KillBaal()
+{
+	var e = FindThroneEnemy();
+	var nAttack = 0;
+
+	while ( e && nAttack++ < 100 ) {
+		CharAttack( e ,false,bossunique.maxattacks );
+		e = FindThroneEnemy();
+	};
+	
+	if ( nAttack >= 100 )
+		return false;
+
+	MoveTo(15095, 5030);
+	Pick(1);
+	MoveTo(15095, 5045);
+	Pick(1);
+	MoveTo(15095, 5060);
+	Pick(1);
+
+	while (1) {
+		if (rnd(0,3) >= 2)
+			MoveTo(15117, 5071);
+		else
+			MoveTo(15074, 5071);
+
+		PreSkill();
+
+		var bTown = false;
+		do {
+			var merc=Town.GetMerc();
+			if ( !bTown && ( me.getState(2) 
+							|| ( merc && merc.getState(2) ) 
+							|| ( !merc && sets["revive_after_fight"] && sets["revive_merc"] ) 
+							|| Town.NeedPots() 
+							|| CheckIfReturnInTown( true ) ) ) {
+				BackToTown(true);
+				bTown = true;
+			};
+			delay(250);
+		} while(!FindThroneEnemy() && getUnit(1, c_MonsterClassID_Baal_Throne ));
+		
+		if (!getUnit(1, c_MonsterClassID_Baal_Throne)) {
+			break;
+		};
+		
+/*		if ( CheckIsBadThingThere( me, 60 ) == 2 ) 
+			return false;*/
+
+		// attack code
+    	var boss = CheckNearNormalBoss(60);
+		if ( boss ) {
+			var inter = checkenchant2(boss, bossunique.esc);
+			if (inter==2) {
+				disenchant(boss);
+        		escape( boss );
+        		return false;
+    		};
+			KillNormalBoss( boss ); // => TO DO return code or more checks+chicken
+		};
+		
+		var e = FindThroneEnemy();
+		var nAttack = 0;
+		while ( e && nAttack++ < 100 ) {
+			CharAttack( e ,false, bossunique.maxattacks );
+			e = FindThroneEnemy();
+		};
+	};
+
+	MoveTo(15095, 5029);
+	Pick(1);
+	
+	// return in town ? (need check on inventory, hp, potion)
+	
+	var portal = getUnit(2, c_ObjClassID_The_Worldstone_Chamber);
+	if (!portal) {
+		bprint("ERROR * No portal for baal");
+		DebugWrite("ERROR * No portal for baal");
+		return false;
+	};
+	
+	if ( !ChangeArea(c_ObjClassID_The_Worldstone_Chamber,132) )
+		return false;
+
+	DebugWrite("Now in the baal throne");
+
+	InitMap();
+	
+	var databack = new Array();
+	databack["bossname"] = bossbaal.lodname;
+	databack["bossdist"]=6;
+	
+	GotoToDest(15135,5920,databack);
+	
+	for ( var i = 0 ; i < 4 ; i++ )
+	{
+		var boss = getUnit(1,bossbaal.lodname);
+		if ( boss )
+			return Killlistboss( bossbaal );
+		DoDel( 500 ); // sometimes baal like to play with our mind
+	};
+
+	return false;
+};
+
+//============================================================
+// Sharp Code
+//============================================================
+function GotoThresh()
+{
+	
+	if ( !Town.InTown() ) {
+      UseTP();
+      InTown();
+    };
+
+    if (!Town.TakeWP( 5, 3 )) return false;
+
+	PreSkill();
+	ShowState("Moving to Sharp");
+
+	var databack = new Array();
+	databack["bossname"] = bossthresh.lodname;
+	databack["bossdist"]=5;
+
+	InitMap();
+	var room = getRoom();
+    	do
+    	{
+        	if (room.number >=913 && room.number <=914)
+        	{
+                	ShowState("Trying Room " + room.number);
+                  	var tempcoord = cMap.FindClosestWalkable(room.x*5+20, room.y*5+20);
+              		var path = cMap.FindPath(me.x, me.y, tempcoord.x, tempcoord.y, distbetweenpoint, mlREDUCEWALK, mlASTAR, mlFHMANHATTAN, 1.8);
+              		var reval=cMap.PathMove(path, databack, 0, distbetweenpoint, mlASTAR);             
+       		}
+    	} while(room && room.getNext());
+	return (reval!=0);
+}
+
+function GetAutoSkill(target,skilltype)
+{
+	if (!target) return null;
+	
+	var sklObj=new Object();
+	sklObj["singleskill"]=new Array(101,106,107,121,116,111);
+	
+    	var SpellList=new Array();
+    	var avgDam=-1;
+    	
+    	if (CheckMonster(target)==1){
+		if (GetEnemyCountNear(target,8)<=3){
+			for(var i=0;i<sklObj["singleskill"].length;i++)
+			{
+				var SkillList=sklObj["singleskill"];
+				avgDam=((me.getSkillDamageMin(SkillList[i],me.getSkill(SkillList[i],0)) + me.getSkillDamageMax(SkillList[i],me.getSkill(SkillList[i],0))) >>9 ) * ((100-getResist(SkillList[i],target))/100);
+    				if (!isNaN(avgDam)) SpellList.push([SkillList[i],avgDam]);
+    			}
+    			SpellList.sort ( sortskill );
+    			return (SpellList[0][0]);
+    		}
+    		else
+    		{
+    			return 112;
+    		}
+    	}
+    	
+    	if (CheckMonster(target)==2){
+    		if (GetEnemyCountNear(target,8)>=3){
+			return 112;
+    		}
+    		else
+    		{
+    			for(var i=0;i<sklObj["singleskill"].length;i++)
+    			{
+    				var SkillList=sklObj["singleskill"];
+    				avgDam=((me.getSkillDamageMin(SkillList[i],me.getSkill(SkillList[i],0)) + me.getSkillDamageMax(SkillList[i],me.getSkill(SkillList[i],0))) >>9 ) * ((100-getResist(SkillList[i],target))/100);
+    				if (!isNaN(avgDam)) SpellList.push([SkillList[i],avgDam]);
+    			}
+    			SpellList.sort ( sortskill );
+    			return (SpellList[0][0]);
+    		}
+    	}
+}
+
+function getResist(skill,boss)
+{
+	if (!boss || !skill) return 100;
+	var FireResit = boss.getStat(c_UnitStat_FireResist);
+    	var LightResit = boss.getStat(c_UnitStat_LightningResist);
+    	var ColdResit = boss.getStat(c_UnitStat_ColdResist);
+	var PoisonResit = boss.getStat(c_UnitStat_PoisonResist);
+	var PhyResit = boss.getStat(c_UnitStat_DamageResist);
+	var MagicResit = boss.getStat(c_UnitStat_MagicResist);
+	
+	var sklType=getSkillType(skill);
+	switch(sklType){
+		case "Fire":
+			return FireResit;
+			break;
+		case "Cold":
+			return ColdResit;
+			break;
+		case "Light":
+			if ( skill==35 && LightResit<100 ) LightResit = -50;
+			return LightResit;
+			break;
+		case "Poison":
+			return PoisonResit;
+			break;
+		case "Phy":
+			return PhyResit;
+			break;
+		case "Magic":
+			return MagicResit;
+			break;
+	}
+	
+	return 100;
+}
+
+function getSkillType(skill)
+{
+	if (!skill) return;
+	
+	101,106,107,121,116,111
+	
+	switch(skill)
+	{
+		case 101:
+		case 121:
+		case 112:
+			return "Magic";
+			break;
+		case 106:
+		case 107:
+		case 121:
+		case 111:
+			return "Phy";
+			break;
+	}
+}
+
+function sortskill(a,b)
+{
+	if (a[1] < b[1]) return 1;
+	else return -1;
+}
+	
+
+//============================================================
+// Nihlathak Code
+//============================================================
+//============================================================
+// Nitha Code
+//============================================================
+function GotoNihlathak()
+{
+	if ( !Town.InTown() ) {
+		if ( sets["use_wp_nitha"] || ( me.area != 121) ) {
+			UseTP();
+			InTown();
+		};
+	};
+	
+	if ( Town.InTown() ) {
+		if ( sets["use_wp_nihlathak"] )
+			if (!Town.TakeWP( 5, 6 )) return false;
+		else {
+			if ( !Town.MoveTo("portal",5) )
+				return false;
+			DoDel(10);
+			if ( !ChangeArea("Portal",121) )
+				return false;
+		}
+	};
+
+	PreSkill();
+	ShowState("Moving to "+bossnihlathak.name);
+	
+	if ( me.area == 121 ) {
+		InitMap();
+		
+		var newcoord = cMap.FindClosestWalkable( 10059, 13216  );
+		if ( !GotoToDest( newcoord.x, newcoord.y, true ) )
+			return false;
+	
+		if ( !TakeStairs(76,76) )
+			return false;
+	};
+
+	// code from frycowbot
+	if (me.area == 122) {
+		// get to the halls of pain
+		InitMap();
+
+		var x = 0; var y = 0;		
+		var troom = getRoom();
+		if(troom) do {
+			if (troom.number==1046) { x=10071; y=14151; }
+			else if (troom.number==1047) { x=10261; y=14188; }
+			else if (troom.number==1048) { x=10228; y=13832; }
+		} while(troom.getNext());
+		
+		if (!x || !y) {
+			bprint("Unable to find stairs down!");
+			return false;
+		}
+		var newcoord = cMap.FindClosestWalkable( x, y  );
+		if ( !GotoToDest( newcoord.x, newcoord.y, true ) )
+			return false;
+
+		if ( !TakeStairs(77,77) )
+			return false;
+	}
+	
+	if ( me.area != 123 )
+		return false;
+		
+	InitMap();
+
+	var x = 0; var y = 0;		
+	var troom = getRoom();
+	if(troom) do {
+		if (troom.number==1046) { x=10070; y=15052; }
+		else if (troom.number==1047) { x=10259; y=15086; }
+		else if (troom.number==1048) { x=10229; y=14731; }
+	} while(troom.getNext());
+	
+	if (!x || !y) {
+		bprint("Unable to find stairs down!");
+		return false;
+	}
+	var newcoord = cMap.FindClosestWalkable( x, y  );
+	if ( !GotoToDest( newcoord.x, newcoord.y, true ) )
+		return false;
+
+	if ( !TakeStairs(77,77) )
+		return false;
+			    		
+	var x = 0; var y = 0;		
+
+	InitMap();
+
+	if (cMap.IsWalkable(12507,5207) || cMap.IsWalkable(12507,5210) ) { // west
+		x = 12553; y = 5210;
+	} else if (cMap.IsWalkable(12711, 5007) || cMap.IsWalkable(12708, 5007) ) { // north
+		x = 12710; y = 5051;
+	} else if (cMap.IsWalkable(12709, 5413) || cMap.IsWalkable(12712, 5413) ) { // south
+		x = 12709; y = 5369;
+	} else if (cMap.IsWalkable(12910, 5210) ) { // east
+		x = 12838; y = 5208;
+	} else {
+		bprint("Can't find nihlalak!");
+		return false;
+	}
+	PreSkill();
+
+	var databack = new Array();
+	databack["bossname"] = bossnihlathak.lodname;
+	databack["bossdist"] = 40;
+
+	var newcoord = cMap.FindClosestWalkable( x, y  );
+	if ( !GotoToDest( newcoord.x, newcoord.y, databack ) )
+		return false;
+
+	databack["bossdist"] = 25;
+	databack["noattack"] = true;
+	if ( !GotoToDest( newcoord.x, newcoord.y, databack ) )
+		return false;
+
+    for ( var i = 0 ; i < 4 ; i++ )
+    {
+		var boss = getUnit(1,bossnihlathak.lodname);
+		if ( boss )
+			return true;
+		DoDel( 100 );
+		CheckMe();
+	};
+	bprint("Can't find nihlalak!");
+    return false;
+}
+
+//============================================================
+	function DebugMap(_filename, _bit, path) {
+//  	    var cMap = new oMap( true );
+
+		if ( path )
+			for ( var i = 0 ; i < path.length ; i++ ) {
+				cMap.Area[path[i].y-cMap.miny][path[i].x-cMap.minx] |= 0x10000;
+			};
+
+		var hFile = fileOpen("output/"+_filename, 1);
+			for (var y = 0; y < cMap.sizey; y++) {
+				for (var x = 0; x < cMap.sizex; x++) {
+
+					if(cMap.Area[y][x] & 0x10000)
+						line += "1";
+					else if(cMap.Area[y][x] & 0x20000)
+						line += "2";
+					else if(cMap.Area[y][x] & 0x40000)
+						line += "3";
+					else if(cMap.Area[y][x] & 0x80000)
+						line += "4";
+					else if(cMap.Area[y][x] & 1 ) //bit)
+						line += "X";
+					else if(cMap.Area[y][x] & 2 ) //bit)
+						line += "+";
+					else if(cMap.Area[y][x] & 4 ) //bit)
+						line += "*";
+					else if(cMap.Area[y][x] & 8 ) 
+						line += "8";
+					else if(cMap.Area[y][x] & 16 ) 
+						line += "-";
+					else if(cMap.Area[y][x] & 0xFFFF ) 
+						line += "L";
+					//else if(this.Area[y][x] & 0x100000)
+					//	line += "+";
+					//else if(this.Area[y][x] & 0x200000)
+					//	line += "-";
+					else
+						line += ".";
+
+				}
+				hFile.writeLine(line);
+				line = "";
+			}
+
+		for ( var i = 0 ; i < i_Points ; i++ ) {
+				hFile.writeLine(_Points[i].number);
+		};
+
+		hFile.close();
+	};
+
+function DebugSavePath( filename, path ) {
+	var f = fileOpen("output/"+filename, 2);
+	if (f) {
+		f.writeLine( "==========================" );
+		for ( var i = 0 ; i < path.length ; i++ )
+			f.writeLine( path[i].x+","+path[i].y);
+		f.close();
+	}
+}

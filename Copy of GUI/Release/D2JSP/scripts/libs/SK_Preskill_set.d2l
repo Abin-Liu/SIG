@@ -1,0 +1,281 @@
+/* *************************************************
+ SK_Preskiller.d2j settings file
+
+ (c) 2003-2004 Shrek_III
+ contact me Shrek_III@gmx.net
+
+ About SK_Preskiller:
+ This is an area-based autoskiller, for all charclasses,
+ so you might use this out of Daemon Multi MF as stand-
+ alone script.
+
+ Please report skill-spelling errors, as I am only playing sorc...
+
+
+   *************************************************
+
+ To do:
+    -> switching mode to switch between skills while playing
+
+   *************************************************
+
+ History:
+
+ v0.1 first official release
+    -> checks area and casts all nessecarry spells
+    -> works for all char classes (not only sorc and barb)
+
+   ************************************************* */
+
+// -------------------------------------------------------
+// ALL CHAR CLASS Part
+// edit the areas corresponding to your wishes
+//
+// example: PreSkiller_sets["Stony_Field"] = [1,2,3];
+// will cast skill 1, 2 and 3 if your at stony field
+// -------------------------------------------------------
+var PreSkiller_sets=new Object();
+
+// ACT 1
+PreSkiller_sets["Rogue_Encampment"] = [1,2];
+PreSkiller_sets["Blood_Moor"] = [1,2,3];
+PreSkiller_sets["Cold_Plains"] = [1,2,3];
+PreSkiller_sets["Stony_Field"] = [1,2,3];
+PreSkiller_sets["Dark_Wood"] = [1,2,3];
+PreSkiller_sets["Black_Marsh"] = [1,2,3];
+PreSkiller_sets["Tamoe_Highland"] = [1,2,3];
+PreSkiller_sets["Den_Of_Evil"] = [1,2,3];
+PreSkiller_sets["Cave_Level_1"] = [1,2,3];
+PreSkiller_sets["Underground_Passage_Level_1"] = [1,2,3];
+PreSkiller_sets["Hole_Level_1"] = [1,2,3];
+PreSkiller_sets["Pit_Level_1"] = [1,2,3];
+PreSkiller_sets["Cave_Level_2"] = [1,2,3];
+PreSkiller_sets["Underground_Passage_Level_2"] = [1,2,3];
+PreSkiller_sets["Hole_Level_2"] = [1,2,3];
+PreSkiller_sets["Pit_Level_2"] = [1,2,3];
+PreSkiller_sets["Burial_Grounds"] = [1,2,3];
+PreSkiller_sets["Crypt"] = [1,2,3];
+PreSkiller_sets["Mausoleum"] = [1,2,3];
+PreSkiller_sets["Forgotten_Tower"] = [1,2,3];
+PreSkiller_sets["Tower_Cellat_Level_1"] = [1,2,3];
+PreSkiller_sets["Tower_Cellat_Level_2"] = [1,2,3];
+PreSkiller_sets["Tower_Cellat_Level_3"] = [1,2,3];
+PreSkiller_sets["Tower_Cellat_Level_4"] = [1,2,3];
+PreSkiller_sets["Tower_Cellat_Level_5"] = [1,2,3];
+PreSkiller_sets["Monastery_Gate"] = [1,2,3];
+PreSkiller_sets["Outer_Cloister"] = [1,2,3];
+PreSkiller_sets["Barracks"] = [1,2,3];
+PreSkiller_sets["Jail_Level_1"] = [1,2,3];
+PreSkiller_sets["Jail_Level_2"] = [1,2,3];
+PreSkiller_sets["Jail_Level_3"] = [1,2,3];
+PreSkiller_sets["Inner_Cloister"] = [1,2,3];
+PreSkiller_sets["Cathedral"] = [1,2,3];
+PreSkiller_sets["Catacombs_Level_1"] = [1,2,3];
+PreSkiller_sets["Catacombs_Level_2"] = [1,2,3];
+PreSkiller_sets["Catacombs_Level_3"] = [1,2,3];
+PreSkiller_sets["Catacombs_Level_4"] = [1,2,3];
+PreSkiller_sets["Tristram"] = [1,2,3];
+PreSkiller_sets["Moo_Moo_Farm"] = [1,2,3];
+
+// ACT 2
+PreSkiller_sets["Lut_Gholein"] = [1,2];
+PreSkiller_sets["Rocky_Waste"] = [1,2,3];
+PreSkiller_sets["Dry_Hills"] = [1,2,3];
+PreSkiller_sets["Far_Oasis"] = [1,2,3];
+PreSkiller_sets["Lost_City"] = [1,2,3];
+PreSkiller_sets["Valley_Of_Snakes"] = [1,2,3];
+PreSkiller_sets["Canyon_Of_The_Magi"] = [1,2,3];
+PreSkiller_sets["The_Sewers_Level_1"] = [1,2,3];
+PreSkiller_sets["The_Sewers_Level_2"] = [1,2,3];
+PreSkiller_sets["The_Sewers_Level_3"] = [1,2,3];
+PreSkiller_sets["Harem_Level_1"] = [1,2,3];
+PreSkiller_sets["Harem_Level_2"] = [1,2,3];
+PreSkiller_sets["Palace_Cellar_Level_1"] = [1,2,3];
+PreSkiller_sets["Palace_Cellar_Level_2"] = [1,2,3];
+PreSkiller_sets["Palace_Cellar_Level_3"] = [1,2,3];
+PreSkiller_sets["Stony_Tomb_Level_1"] = [1,2,3];
+PreSkiller_sets["Halls_Of_The_Dead_Level_1"] = [1,2,3];
+PreSkiller_sets["Halls_Of_The_Dead_Level_2"] = [1,2,3];
+PreSkiller_sets["Claw_Viper_Temple_Level_1"] = [1,2,3];
+PreSkiller_sets["Stony_Tomb_Level_2"] = [1,2,3];
+PreSkiller_sets["Halls_Of_The_Dead_Level_3"] = [1,2,3];
+PreSkiller_sets["Claw_Viper_Temple_Level_2"] = [1,2,3];
+PreSkiller_sets["Maggot_Lair_Level_1"] = [1,2,3];
+PreSkiller_sets["Maggot_Lair_Level_2"] = [1,2,3];
+PreSkiller_sets["Maggot_Lair_Level_3"] = [1,2,3];
+PreSkiller_sets["Ancient_Tunnels"] = [1,2,3];
+PreSkiller_sets["Tal_Rashas_Tomb_1"] = [1,2,3];
+PreSkiller_sets["Tal_Rashas_Tomb_2"] = [1,2,3];
+PreSkiller_sets["Tal_Rashas_Tomb_3"] = [1,2,3];
+PreSkiller_sets["Tal_Rashas_Tomb_4"] = [1,2,3];
+PreSkiller_sets["Tal_Rashas_Tomb_5"] = [1,2,3];
+PreSkiller_sets["Tal_Rashas_Tomb_6"] = [1,2,3];
+PreSkiller_sets["Tal_Rashas_Tomb_7"] = [1,2,3];
+PreSkiller_sets["Duriels_Lair"] = [1,2,3];
+PreSkiller_sets["Arcane_Sanctuary"] = [1,2,3];
+
+// ACT 3
+PreSkiller_sets["Kurast_Docktown"] = [1,2];
+PreSkiller_sets["Spider_Forest"] = [1,2,3];
+PreSkiller_sets["Great_Marsh"] = [1,2,3];
+PreSkiller_sets["Flayer_Jungle"] = [1,2,3];
+PreSkiller_sets["Lower_Kurast"] = [1,2,3];
+PreSkiller_sets["Kurast_Bazaar"] = [1,2,3];
+PreSkiller_sets["Upper_Kurast"] = [1,2,3];
+PreSkiller_sets["Kurast_Causeway"] = [1,2,3];
+PreSkiller_sets["Travincal"] = [1,2,3];
+PreSkiller_sets["Spider_Cave"] = [1,2,3];
+PreSkiller_sets["Spider_Cavern"] = [1,2,3];
+PreSkiller_sets["Swampy_Pit_Level_1"] = [1,2,3];
+PreSkiller_sets["Swampy_Pit_Level_2"] = [1,2,3];
+PreSkiller_sets["Flayer_Dungeon_Level_1"] = [1,2,3];
+PreSkiller_sets["Flayer_Dungeon_Level_2"] = [1,2,3];
+PreSkiller_sets["Swampy_Pit_Level_3"] = [1,2,3];
+PreSkiller_sets["Flayer_Dungeon_Level_3"] = [1,2,3];
+PreSkiller_sets["Sewers_Level_1"] = [1,2,3];
+PreSkiller_sets["Sewers_Level_2"] = [1,2,3];
+PreSkiller_sets["Ruined_Temple"] = [1,2,3];
+PreSkiller_sets["Disused_Fane"] = [1,2,3];
+PreSkiller_sets["Forgotten_Reliquary"] = [1,2,3];
+PreSkiller_sets["Forgotten_Temple"] = [1,2,3];
+PreSkiller_sets["Ruined_Fane"] = [1,2,3];
+PreSkiller_sets["Disused_Reliquary"] = [1,2,3];
+PreSkiller_sets["Durance_Of_Hate_1"] = [1,2,3];
+PreSkiller_sets["Durance_Of_Hate_2"] = [1,2,3];
+PreSkiller_sets["Durance_Of_Hate_3"] = [1,2,3];
+
+// ACT 4
+PreSkiller_sets["The_Pandemonium_Fortress"] = [1,2];
+PreSkiller_sets["Outer_Steppes"] = [1,2,3];
+PreSkiller_sets["Plains_Of_Despair"] = [1,2,3];
+PreSkiller_sets["City_Of_The_Damned"] = [1,2,3];
+PreSkiller_sets["River_Of_Flame"] = [1,2,3];
+PreSkiller_sets["Chaos_Sanctum"] = [1,2,3];
+
+// ACT 5
+PreSkiller_sets["Harrogath"] = [1,2];
+PreSkiller_sets["Bloody_Foothills"] = [1,2,3];
+PreSkiller_sets["Frigid_Highlands"] = [1,2,3];
+PreSkiller_sets["Arreat_Plateau"] = [1,2,3];
+PreSkiller_sets["Crystalized_Cavern_Level_1"] = [1,2,3];
+PreSkiller_sets["Cellar_Of_Pity"] = [1,2,3];
+PreSkiller_sets["Crystalized_Cavern_Level_2"] = [1,2,3];
+PreSkiller_sets["Echo_Chamber"] = [1,2,3];
+PreSkiller_sets["Tundra_Wastelands"] = [1,2,3];
+PreSkiller_sets["Glacial_Caves_Level_1"] = [1,2,3];
+PreSkiller_sets["Glacial_Caves_Level_2"] = [1,2,3];
+PreSkiller_sets["Rocky_Summit"] = [1,2,3];
+PreSkiller_sets["Nihlathaks_Temple"] = [1,2,3];
+PreSkiller_sets["Halls_Of_Anguish"] = [1,2,3];
+PreSkiller_sets["Halls_Of_Deaths_Calling"] = [1,2,3];
+PreSkiller_sets["Halls_Of_Vaught"] = [1,2];
+PreSkiller_sets["Hell_1"] = [1,2,3];
+PreSkiller_sets["Hell_2"] = [1,2,3];
+PreSkiller_sets["Hell_3"] = [1,2,3];
+PreSkiller_sets["The_Worldstone_Keep_Level_1"] = [1,2,3];
+PreSkiller_sets["The_Worldstone_Keep_Level_2"] = [1,2,3];
+PreSkiller_sets["The_Worldstone_Keep_Level_3"] = [1,2,3];
+PreSkiller_sets["Throne_Of_Destruction"] = [1,2,3];
+PreSkiller_sets["The_Worldstone_Chamber"] = [1,2,3];
+
+// -------------------------------------------------------
+// AMAZONE Part
+// edit the lines below if your char is a sorc
+// -------------------------------------------------------
+if ( me.classid == 0 ) {
+   var PreSkiller_skill = new Array();
+   PreSkiller_skill.push("");                     // 0th Skill don't use that!
+   PreSkiller_skill.push("Valkyrie");             // 1st Skill
+   //PreSkiller_skill.push("");        // 2nd Skill (not enabled, now)
+   //PreSkiller_skill.push("");        // 3rd Skill (not enabled, now)
+   //PreSkiller_skill.push("");        // 4th Skill (not enabled, now)
+   //PreSkiller_skill.push("");        // 5th Skill (not enabled, now)
+}
+
+// -------------------------------------------------------
+// SORCERESS Part
+// edit the lines below if your char is a sorc
+// -------------------------------------------------------
+if ( me.classid == 1 ) {
+   var PreSkiller_skill = new Array();
+   PreSkiller_skill.push("");                     // 0th Skill don't use that!
+   PreSkiller_skill.push("Frozen Armor");         // 1st Skill
+   //PreSkiller_skill.push("Energy Shield");        // 2nd Skill
+   //PreSkiller_skill.push("Thunder Storm");        // 3rd Skill
+   //PreSkiller_skill.push("Shiver Armor");       // 4th Skill (not enabled, now)
+   //PreSkiller_skill.push("Chilling Armor");     // 5th Skill (not enabled, now)
+}
+
+// -------------------------------------------------------
+// NECROMANCER Part
+// edit the lines below if your char is a sorc
+// -------------------------------------------------------
+if ( me.classid == 2 ) {
+   var PreSkiller_skill = new Array();
+   PreSkiller_skill.push("");                     // 0th Skill don't use that!
+   PreSkiller_skill.push("Iron Golem");           // 1st Skill
+   PreSkiller_skill.push("Clay Golem");           // 2nd Skill
+   PreSkiller_skill.push("Fire Golem");           // 3rd Skill
+   //PreSkiller_skill.push("Blood Golem");          // 4th Skill (not enabled, now)
+}
+
+// -------------------------------------------------------
+// PALADIN Part
+// edit the lines below if your char is a paladin
+// -------------------------------------------------------
+if ( me.classid == 3 ) {
+   var PreSkiller_skill = new Array();
+   PreSkiller_skill.push("");                   // 0th Skill don't use that!
+   PreSkiller_skill.push("Fanaticism");         // 1st Skill
+   PreSkiller_skill.push("Conviction");         // 2nd Skill
+   PreSkiller_skill.push("Salvation");          // 3rd Skill
+   //PreSkiller_skill.push("Resist Fire");        // 4th Skill (not enabled, now)
+   //PreSkiller_skill.push("Resist Cold");        // 5th Skill (not enabled, now)
+   //PreSkiller_skill.push("Resist Lightning");   // 6th Skill (not enabled, now)
+   //PreSkiller_skill.push("Defiance");           // 7th Skill (not enabled, now)
+   //PreSkiller_skill.push("Meditation");         // 8th Skill (not enabled, now)
+   //PreSkiller_skill.push("Might");              // 9th Skill (not enabled, now)
+   //PreSkiller_skill.push("Blessed Aim");        // 10th Skill (not enabled, now)
+   //PreSkiller_skill.push("Concentration");      // 11th Skill (not enabled, now)
+   //PreSkiller_skill.push("Holy Freeze");        // 12th Skill (not enabled, now)
+   //PreSkiller_skill.push("Sanctuary");          // 13th Skill (not enabled, now)
+   //PreSkiller_skill.push("Holy Shock");         // 14th Skill (not enabled, now)
+}
+
+// -------------------------------------------------------
+// BARBARIAN Part
+// edit the lines below if your char is a barbarian
+// -------------------------------------------------------
+if ( me.classid == 4 ) {
+   var PreSkiller_skill = new Array();
+   PreSkiller_skill.push("");                     // 0th Skill don't use that!
+   PreSkiller_skill.push("Battle Command");       // 1st Skill
+   PreSkiller_skill.push("Battle Orders");        // 2nd Skill
+   PreSkiller_skill.push("Shout");                // 3rd Skill
+}
+
+// -------------------------------------------------------
+// DRUID Part
+// edit the lines below if your char is a druid
+// -------------------------------------------------------
+if ( me.classid == 5 ) {
+   var PreSkiller_skill = new Array();
+   PreSkiller_skill.push("");                     // 0th Skill don't use that!
+   PreSkiller_skill.push("Cyclone Armor");        // 1st Skill
+   PreSkiller_skill.push("Shift");                // 2nd Skill
+   PreSkiller_skill.push("Spirit Wolf");          // 3rd Skill
+   //PreSkiller_skill.push("Grizzly");              // 4th Skill
+   //PreSkiller_skill.push("Raven");                // 5th Skill
+   //PreSkiller_skill.push("Dire Wolf");            // 6th Skill
+}
+
+// -------------------------------------------------------
+// ASSASSIN Part
+// edit the lines below if your char is an assassin
+// -------------------------------------------------------
+if ( me.classid == 6 ) {
+   var PreSkiller_skill = new Array();
+   PreSkiller_skill.push("");                    // 0th Skill don't use that!
+   PreSkiller_skill.push("Venom");               // 1st Skill
+   PreSkiller_skill.push("Blade Shield");        // 2nd Skill
+}

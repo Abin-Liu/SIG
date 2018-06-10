@@ -1,0 +1,91 @@
+/*
+Daemon Mutil-Mf Tools 0.25
+Try not to edit this file!
+
+0.25 -> add a Anti-Idle check
+*/
+
+var lifepot=0;
+var manapot=0;
+var mercpot=0;
+//hook
+var clife;
+var cmana;
+var coor;
+var cping;
+
+include("Dae_Multi_Set.d2l");
+
+function main()
+{
+    var post= getScreenHook();
+    SHook(post,50,280,"--------States--------",4,8);
+
+	clife = getScreenHook();
+	SHook(clife,630,180,"Life - "+ me.hp,4,0);
+	cmana = getScreenHook();
+	SHook(cmana,630,195,"Mana - "+ me.mp,4,0);
+	coor = getScreenHook();
+	SHook(coor,50,295,"X - " + me.x + " Y - " + me.y,4,0);
+	cping = getScreenHook();
+	SHook(cping,630,240,"Ping - " + me.ping,4,0);
+
+	//Dae_Mutil-Mf tools,used for healing,screen hooking...
+	var idletimes=0;
+	var recordX,recordY;
+	
+	while(1)
+	{
+		if (recordX==me.x && recordY==me.y) idletimes++;
+		else idletimes=0;
+		
+		me.overhead(idletimes);
+		
+		if (sets["anti_idle"] && idletimes>(sets["anti_idle_timer"]*1000/500))
+		{
+			print("ÿc1 Your bot has been a idler for such a long time! Exitting game!");
+			delay(1500);
+			quit();
+		}
+		hooking();
+		delay(500);
+		
+		recordX=me.x;
+		recordY=me.y;
+	}
+}
+
+function hooking()
+{
+	SHook2(clife,"Life - "+ me.hp);
+	SHook2(cmana,"Mana - "+me.mp);
+	SHook2(cping,"Ping - "+me.ping);
+	SHook2(coor,"X - " + me.x + " Y - " + me.y);
+}
+
+function SHook(hook,x,y,text,sfont,scolor)
+{
+	var tx=0;
+	var ty=0;
+	if (me.screensize==0)
+	{
+		tx=x*0.8;
+		ty=y*0.8;
+	}
+	else
+	{
+		tx=x;
+		ty=y;
+	}
+	hook.color=scolor;
+	hook.x=tx;
+	hook.y=ty;
+	hook.font=sfont;
+	hook.text=String(text);
+}
+
+function SHook2(hook,text)
+{
+	hook.text=String(text);
+}
+

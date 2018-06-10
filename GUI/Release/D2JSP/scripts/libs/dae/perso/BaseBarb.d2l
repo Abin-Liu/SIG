@@ -1,0 +1,620 @@
+//Daemon Multi-mf Bot Settings file.
+/*this override the settings in Dae_Multi_set
+0.48i
+	fixed that EVIL error where it doesn't pick rejuves when belt is empty!!!!
+	sets["snag_stash_maxtimes"] is actually used now.  default changed to 3
+
+v0.48g
+  	default value for sets["use_internal_bmpwnit"] changed to false
+	fixed gototristram not defined error
+  	default values for tristram and creeping feature changed to false (was causing barb problems)
+v0.48e
+	new powerful but difficult Esacpe settings
+v0.48c
+	add gamename dictionary support
+v0.47Rock
+	add sets["town_min_col_inventory"]
+
+v0.47e+
+	fixed "nenemies"
+	default value for sets["enable_all_skills"]=true;
+v0.47e
+	modify some settings(thanks scorpio0920)
+	add sets["dodge_missiles"]
+	default value for Eyeback is 'false'
+v0.47d
+	add escape setting for Lister The Tormentor
+	add sets["always_execute"]
+	remove sets["chest_max_dist"] but use sets["check_xxx_dist"]
+v0.47b
+	add sets["auto_preskill"]
+	add sets["shenk_when_dac_farren"]
+v0.47
+	Too many updates :(
+	add sets["random_quest_count"] & sets["min_quest_count"]
+	add sets["gamble"] & sets["mingoldgamble"] & sets["gamble_ini"] & sets["gamble_xxx"]
+	add sets["meph_portal_to_act4"]
+	add sets["use_wells"]
+	add sets["anti_idle"] & sets["anti_idle_timer"]
+	add sets["safe_nihlathak_code"]
+	add sets["use_special_pot"] & sets["buy_antidote_baal"]
+	add sets["prevent_no_boss"] & sets["random_boss_list"]
+	add sets["waypoint_delay"]
+	add sets["cube_ini"]
+	add sets["cube_stuff"] & sets["cube_stuff_custom"]
+	add sets["cube"]
+	remove sets["pre_xxx"] (like sets["pre_thunder"],sets["pre_frozen"]),but use skill_xxx.push("Thunder Storm") etc.
+	remove sets["mingoldpickup"] & sets["wp_d2hackit"]
+	remove sets["path_find"]
+v0.46z
+	add sets["jarless_kill_code"]
+v0.46d
+	add new sets for barb : sets["min_left_time_xxx"]
+v0.46c
+	cancel sets["min_dist"]
+	add a use for sets["skip_uniquetype"] => it is also the settings for skipping the chests.
+	add sets["safe_chest_radius"]
+v0.46b
+	add sets["wp_d2hackit"]
+	reintroduce sets["min_dist"]
+v0.46a
+	add sets["revive_after_fight"]
+	modify the format to fill sets["times_xxx"] into sets["times_xxx"]=new Array(AttackSkillTimes,SFTimes,MinDist);
+	remove sets["min_dist"] but use the settings above
+v0.46
+	add Nihlathak support
+	add barb skill variable (and the new sets["barb_kill_minion_first"] )
+	add new skill_xxx => you can define attack for each boss
+v0.45
+	add baal support.
+v0.44
+	add sets["BarbChangeWeaponPre"] & sets["escape_bremm"]
+0.38d
+	added sets["kill_special"]=false; in place of champion
+*/
+
+//==========Don't touch this!!!=================
+if ( typeof( c_Sy_Constants_Version ) == "undefined" )
+    include ("Sy_Constants.d2l"); //include need for constant in Dae_Multi_Set
+
+//Settings for SnagIt
+var HtmlLogging=false;
+
+var sets=new Object();
+//=========Don't touch this!!!==================
+
+//>>>>>>>>>>>>>>>>>>> [Settings] <<<<<<<<<<<<<<<<<<<<<<<<<
+
+//=====================Healing Settings=========================
+//Note:for all the numberical settings,-1 means DISABLED
+
+sets["heal_hp"]=40;		//drink a rej pot if your life below this percent
+sets["heal_mp"]=15;		//drink a rej pot if your mana below this percent
+sets["heal_pot"]=70;		//drink a health pot if your life below this percent
+sets["mana_pot"]=0;		//drink a mana pot if your mana below this percent
+sets["drink_timer"]=3;		//But dont drink more than one potion for this number of seconds  (only applied for normal potion, no effect on rejus)
+sets["chicken_hp"]=30;		//chicken from a boss if  your life below this percent
+sets["chicken_mp"]=0;		//chicken from a boss if  your mana below this percent
+sets["chicken_nopot"]=false;	//chicken out the game if you need a pot but you don't have one =p
+sets["chicken_mercdead"]=false;	//if your merc died,chicken out the game
+sets["malah_hp"]=80;		//ask malah for healing if  your life below this percent
+sets["malah_mp"]=75;		//ask malah for healing if  your mana below this percent
+sets["merc_pot"]=70;		//give merc a health pot if  his/her life below this percent * v0.25
+sets["merc_reju"]=20;		//give merc a rej pot if his/her life below this percent * v0.25
+sets["merc_chicken"]=0;		//chicken out of current game when merc's life below this percent.
+sets["use_hp_pots"]=true;	//set to true to buy and use hp pots
+sets["hp_pots_buy_percent"]=50;		//when the amount of pots in the belt drops below this value, buy new pots (only when using hp pots)
+sets["scroll_buy_percent"]=25;		//when the quantity on the tome drops below this percent, buy new scrolls
+sets["keys_buy_percent"]=25;		//when the quantity one the keys drops below this percent,buy new keys
+sets["buy_key"]=false;			//whether you want to buy keys to open chests or not.
+sets["healifcursed"]=true;		//if in town, when cursed/poisonned => heal
+sets["use_special_pot"]=true;		//when you're poisoned,frozen,use Thrawing pot or Antidote pot.
+sets["buy_antidote_baal"]=[true,2];	//buy a Antidote pot before kill baal(prevent the second team) format:[true/false,pots count]
+//^for example [true,2] means buy 2 Antidote pots,[false,3] means buy nothing(though pots count is more than 0)
+
+//============================Return to town Settings==============================
+sets["town_hp_no_pots"]=0;		//sorc only return in town if no pots and life below that(n%)
+sets["town_mp_no_pots"]=15;		//sorc only return in town if no pots and mana below that(n%)
+sets["town_min_col_inventory"]=2;	//the min col width,when your bot has less than this col width,return in town.
+sets["back_town_battle"]=false;		//if your character accord the three settings above while battle,set'true' to return in town,false to chicken from game.
+sets["back_town_pathfinding"]=true;	//if your character accord the three settings above while pathfinding,set'true' to return in town,false to chicken from game.
+
+//============Merc and Weapon Switching / Pathing Settings================
+sets["revive_merc"]=true;		//revive your merc when he/she is dead
+sets["repair_percent"]=25;		//percent to go to repair equip
+sets["begin_delay"]=2000;		//delay before starting running bot
+sets["initial_switch"]=0;		//force to use equipement I (0) or II (1) when begining
+sets["weapon_switch"]=true;		//set 'true'to switch weapon //zz
+sets["switch_hp"]=8;			//life percent of the enemy to switch weapons when it drops below
+sets["BarbChangeWeaponPre"]=false;	//switch weapons before to cry
+sets["remove_pickit"]=false;		//remove pickit
+sets["random_move"]=false;		//(invalid now)random move while bot is walking/teleporting to target
+sets["use_screenhook"]=false;		//*use screenhook to display information.
+sets["low_cpu"]=true;			//usefull for me ;)
+sets["check_unique_every_hop"]=1;	//frequence to check if unique in neightboor, raise to 2 if you have a very low CPU (do not put 0)
+sets["mingoldpickup"]=1000;
+
+//=======================Debugging and Logging Settings=====================
+sets["debug"]=false;			//debug mode
+sets["show_debug_info"]=false;		//show the debug information(in function checkgoodposex)
+sets["lifewatch_verbose"]=false;	//show message from lifewatch library
+
+//======================Other Settings(A litter unorderly)=============
+sets["language"]="en";				//currently only English (en), more are comming up
+sets["always_stash_existing"]=false;		//set to true if you have something in your inventory that you want to keep that is not valuable (the bot will try to stash if possible). But do not be surprised to see a pike 7% ED or other sometimes :evil: (very useless setting, only for nb vexxan)
+sets["stash_gold_amount"]=30000;
+sets["use_internal_bmpwnit"]=false;		//use the internal version of BMpwnIt (less buggy)
+sets["parseitfile"]="settings\\bmitems.ini";	//"settings\\bmitems.ini" is the default parseit item ini
+sets["snag_ini"]="settings/snagit.ini";		//ini file for snagit
+sets["shop_ini"]="settings/bmShopIt.ini";
+sets["snag_delay"]=1000;			//=in ms time before we begin to pick item
+sets["snag_delayshenk"]=3000;			//=in ms time before we begin to pick item
+sets["snag_stash"]=true;			//when pick,if your inventory is full,stash first.
+sets["snag_stash_maxtimes"]=3;			//after killing one boss,the max times back to town for stashing.
+sets["snag_rad"]=25;
+sets["sell_items"]=true;
+sets["new_id_code"]=true;			//to use the new id code (if you have problem with item management, set to false
+
+//======================Chest Dist Settings=======================
+//In different area,different dist!
+sets["chest_hall_dist"]=15;		//for Meph,Baal,
+sets["chest_openair_dist"]=18;		//for Thresh,Dac Farren,Shenk,Eldritch,Sharptooth,Eyeback,Hephasto,Stormtree
+sets["chest_cave_dist"]=12;		//for Bonesaw,Nihlathak,Frozenstein,Snapchip
+sets["chest_tower_dist"]=8;		//for Countess
+
+sets["chest_with_monster"]=false;	//mainly evil urne
+sets["safe_chest_setting"]=[5,3];
+//Format:sets["safe_chest_setting"]=[Safe_Radius,Max_Monster_Count];
+//this is the setting that check the chest's safety.
+//if the count of monsters in dangerous type is more than(or equal to) the Max_Monster_Count,skip the chest.
+
+sets["snag_delay_chest"]=250;		//delay before pick item (do not put 0)
+sets["code_anti_crash"]=true;		//if you have a lot of crash when you play, set it to true (this desactivates the room.release() but bots works better)
+sets["d2_classic"]=false;		//totally in alpha code (use only in open and report me bugs)
+
+sets["anti_idle"]=true;			//prevent the bot stay in game for too long time and do nothing.
+sets["anti_idle_timer"]=45;
+
+sets["monothread"]=true;			//*use only 1 running script  (not tested in 0.27 if set to false, use at your own risk)
+sets["finish_in_town"]=false;			//finish the game in town with id & stash
+sets["nextscript"]="";				//*nextscript can be only set if sets["monothread"] is true (or you use at your own risk) but it is (experimental)
+//sets["nextscript"]="bots/scav_multi_mf.d2j";	//example that works
+
+//======================Shopping and Gambling Settings==========================
+sets["shop"]=true;		//*Set to 'true' Enable shopping. WARNING: can crash d2?
+sets["shop_rate"]=0;		//the shop rate in percent,set to 100 means always shop,0 means never(just during healing/repairing}. (except act1)
+sets["shop_anya"]=true;		//set 'true' to shop at Anya's (depend on sets["shop_rate"] except when kill pindle => always)
+sets["shop_rate_act1"]=0;	//*Force visiting npc's for shopping (heal and repair npc) in act 1
+sets["mingoldshop"]=1000000;	//only shop items if gold > this (this does not affect scroll, potion, ...)
+sets["gamble"]=true;		//gamble circlet/ring/amulet(depend on sets["gamele_rate"] except when kill pindle => always)
+sets["mingoldgamble"]=3000000;	//only gamble circlet if gold is more than this.
+sets["gamble_rate"]=0;		//the shop rate in percent,set to 100 means always shop,0 means never(except kill pindle}.
+sets["gamble_ini"]="settings/gambleitems.ini"	//the ini to parse circlet
+
+sets["gamble_circlet"]=true;	//set 'true' to gamble circlets
+sets["gamble_ring"]=true;	//set 'true' to gamble rings
+sets["gamble_amulet"]=true;	//set 'true' to gamble amulets
+sets["max_gamble_one_run"]=3;	//Once in town,the max gamble times.
+
+//=========================Gamename/Password Settings=====================
+/*
+You need a d2jspLoader 1.14 or higher version to support this method.
+Copy your d2jspLoader.d2l to your libs directory!
+
+Gamename dictionary is a ini file in your settings directory.
+You can use gamedict.html to create your own dictionary
+
+*/
+sets["use_custom_name_pass"]=false;	//set 'true' to use your own gamename/password.
+sets["gamename_mode"]=1;	//1=use gamename dictionary(randomly choose options),2=use randomly gamename
+sets["gamepass_mode"]=2;	//1=use a fixed gamepassword(e.g: 123,abc etc.),2=use randomly gamepassword
+
+sets["gamename_dict"]="settings/gamedict.ini";	//only enabled when sets["gamename_mode"]=1
+sets["gamename_keys"]="a,s,d,f,g,h,j,k,l,q,e,t,u";	//only use these characters to create a random gamename,use "," to split each character.
+//you can make one character appear more than 1 time.for example. "a,a,b". then "a" will have a 66.6% rate,"b" have 33.3%
+sets["gamename_dict_mode"]=1;	//1=randomly choose a game name from your dictionary,2=one by one,choose a game name in turn
+
+sets["gamename_randomly"]=[3,7];
+/*
+Format:
+sets["gamename_randomly"]=[MIN_CHARACTERS,MAX_CHARACTERS];
+
+for example:
+sets["gamename_randomly"]=[3,5];
+will randomly create a 3~5 characters' gamename.
+
+only enabled when sets["gamename_mode"]=2
+*/
+
+sets["gamepass_fixed"]="abc123";	//a fixed game password,only enabled when sets["gamepass_mode"]=1;
+sets["gamepass_keys"]="1,2,3,4,5,6,7,8,9,0";	//the same as sets["gamename_keys"]
+sets["gamepass_randomly"]=[3,5];
+/*
+Format:
+sets["gamepass_randomly"]=[MIN_CHARACTERS,MAX_CHARACTERS];
+
+for example:
+sets["gamepass_randomly"]=[3,5];
+will randomly create a 3~5 characters' password.
+
+only enabled when sets["gamepass_mode"]=2
+*/
+
+//========================Cube Settings==========================
+sets["cube"]=true;		//do cube.
+sets["cube_pg"]=true;		//cube flawless gems into perfect ones.
+
+//======Cube Stuff Settings====
+/*
+Format:
+sets["cube_stuff"].push("STUFF_NAME_STRING");
+only the STUFF_NAME_STRING you saw are VALID,the others ARE ALL INVALID.
+
+e.g:
+sets["cube_stuff"].push("NSC");
+sets["cube_stuff"].push("small charm");
+THE TWO LINES ABOVE ARE ALL INVALID!!!
+
+if something you don't want to cube,add "//" before that line.
+if something your want to cube but there's a "//" before that line,remove "//"
+*/
+sets["cube_stuff"]=new Array();		//don't touch this line!
+sets["cube_stuff"].push("nsc");		//Small Charm that has a Internal Level equal 95.(Baal or Nitha drops it)
+sets["cube_stuff"].push("cb");		//Colossus Blade(item code:7gd)
+sets["cube_stuff"].push("cs");		//Colossal Sword (item code:7fb)
+sets["cube_stuff"].push("mbow");	//Matriarchal Bow(item code:amb)
+sets["cube_stuff"].push("mbow2");	//Matron Bow(item code:amc)
+sets["cube_stuff"].push("jewel");	//Jewels
+sets["cube_stuff"].push("sc");		//normal Small Charm
+//sets["cube_stuff"].push("lc");	//normal Large Charm(i don't suggest to cube large charm,it's not rewarding)
+//sets["cube_stuff"].push("gc");	//normal Grand Charm
+
+/*
+Custom Cube Stuff Settings (Advanced setting)
+
+If your stuff are on the list above,you can make your own.
+Now custom stuff only support 3 gems+stuff,doesn't support Craft Item(Jewel+Rune+Stuff+Gem)
+
+Format:
+sets["cube_stuff_custom"].push([ITEM_CODE,GEM_TYPE]);
+ITEM_CODE can be any code(see Item Codes on www.d2jsp.org)
+GEM_TYPE can be: 1=3 x Perfect Gems,2=3 x Chipped Gems
+
+For example:
+
+You want to cube Matriarchal Javelin,use
+sets["cube_stuff_custom"].push(["amf",1]);
+
+
+Be sure your format is CORRECT!
+
+*/
+sets["cube_stuff_custom"]=new Array();		//dont touch this line!
+
+sets["cube_ini"]="settings/cubeitems.ini";	//your personal cube parser ini.
+sets["fill_cube"]=false;			//when your stash is full,fill your cube with items.
+sets["collect_recipe"]=false;			//collect the cube recipe you need.(collect only one when in need)
+
+//========================Quests Settings==========================
+sets["quest_pindle"]=true;		//set 'true' to kill PindleSkin
+sets["quest_eyeback"]=false;		//set 'true' to kill Eyeback
+sets["quest_sharp"]=true;		//set 'true' to kill SharpTooth
+sets["quest_shenk"]=true;		//set 'true' to kill Shenk
+sets["quest_dac"]=true;			//set 'true' to kill Dac Farren
+sets["quest_eld"]=true;			//set 'true' to kill Eldritch
+sets["quest_thresh"]=true;		//set 'true' to kill Thresh Socket
+sets["quest_snapchip"]=true;		//set 'true' to kill Snapchip Shatter
+sets["quest_bone"]=true;		//set 'true' to kill Bonesaw Breaker
+sets["quest_froz"]=true;		//set 'true' to kill Frozenstein (be carefull, it is the harder boss in the list)
+sets["quest_countess"]=false;		//set 'true' to kill The countess
+sets["quest_meph"]=true;		//set 'true' to kill Mephisto
+sets["quest_storm"]=false;		//set 'true' to kill Stormtree
+sets["quest_baal"]=false;		//set 'true' to kill Baal (be carefull, it is the final boss act 5), sure that your perso can kill this superboss)
+sets["quest_nihlathak"]=false;		//set 'true' to kill Nihlathak (be carefull, it is a boss with corpse explosion)
+sets["quest_hephasto"]=false;		//set 'true' to kill Hephasto(be careful,this guy is awesome)
+sets["quest_izual"]=false;		//set 'true' to kill Izual,awesome boss!
+
+sets["prevent_no_boss"]=true;		//if you set all bosses to 'false',kill a random boss.(see sets["random_boss_list"] below)
+sets["random_boss_list"]=[1,4,6,7];	//the random bosses list,used for preventing bot from killing no boss.
+/*Bosses Code List:
+1=Pindle,2=Eyeback,3=Sharptooth,4=Shenk,5=Dac Farren,6=Eldritch,7=Thresh,8=Snapchip,9=Bonesaw,10=Frozenstein,11=The Countess,12=Mephisto,13=StormTree,14=Baal,15=Nihlathak,16=Heaspto,17=Creeping Feature,18=Ismail Vilehand,19=Izual*/
+
+sets["revive_after_fight"]=true;	//when kill Throne enemies,try to revive your dead merc after killing each group of enemies.
+
+sets["use_wp_nihlathak"]=false;		//use the wp to go to nitha, false most often (if you have the wp, then you do not have the red portal)
+sets["use_wp_pindle"]=false;		//use the wp to go to Pindle,default value is false(if you have the wp,then you don't have the Red portal)
+
+sets["check_quest"]=true;		//if one boss is never killed and the bot cannot find the boss for over 5 times.skip this boss.
+sets["random_boss"]=true;		//kill boss in a random line
+sets["random_group"]=true;		//valid only if sets["random_boss"]=true, in place of totally random boss, it try random group
+//group are : (Shenk,Dac Farren),(Eldritch,Thresh),(Pindle,Nihlathak)
+sets["random_quest_count"]=false;	//if true,bot will randomly appoint which bosses to kill.
+//the bosses the bot will appoint are enabled by you and the count of the bosses is random.
+sets["min_quest_count"]=3;		//min quest count
+sets["always_execute"]=[1,12,14];	//no matter how many bosses the bot chose,these bosses will always be executed.
+sets["order_boss"]=[1,15,2,3,4,5,6,7,8,9,10,11,12,13,14,16,17,18,19];		//the order to kill bosses as you want,just works when sets["random_boss"]=false;
+/*Bosses Code List:
+1=Pindle,2=Eyeback,3=Sharptooth,4=Shenk,5=Dac Farren,6=Eldritch,7=Thresh,8=Snapchip,9=Bonesaw,10=Frozenstein,11=The Countess,12=Mephisto,13=StormTree,14=Baal,15=Nihlathak,16=Heaspto,17=Creeping Feature,18=Ismail Vilehand,19=Izual*/
+
+sets["tpaftereyeback"]=true;		//set 'true' to return in town after killing Eyeback (* actually, it opens always tp *)
+sets["tpafterpindle"]=true;		//set 'true" to return in town by scrolls after killing Pindle,'false' by red portal (not tested by the red portal ;) )
+
+sets["jarless_kill_code"]=false;	//if true,less crash but MUCH MORE DANGEROUS!!
+
+sets["meph_portal_to_act4"]=true;	//if Mephisto is the last boss,take Red portl to act4 => save time
+
+sets["shenk_when_dac_farren"]=true;	//before pathfinding to Dac Farren,kill Shenk.
+
+sets["escape_bremm"]=true;		//try to escape Bremm Sparkfist (durance level 3)
+sets["minion_shenk"]=true;		//this option is not to kill every minions but to clean before to kill shenk
+sets["kill_minions"]=true;		//set to true to kill minions of every boss except shenk & tresh :)
+sets["unique_before_countess"]=true;	//kill boss (and eventually champion) on the way to the countess
+sets["unique_before_meph"]=false;
+/*kill unique bosses on the way to Mephisto!
+Warning:though I skipped Mauler and Undead Stygian Doll,it is STILL VERY VERY DANGEROUS for your character!
+*/
+
+sets["kill_uniqueboss"]=true;		//kill unique boss on the way
+//removed sets["kill_champion"] and sets["kill_ghostly"] in version 0.38c
+//use new setting below
+sets["kill_special"]=false;
+/*
+if you set set["kill_special"]=true,the bot will kill these types of monsters:
+
+[Champions]
+Maximum Damage x2
+Attack Rating x2
+Attack Rate +120%
+Velocity x2
++20% Speed
+
+[Ghostly]
+Half Speed
+About 20% Chance for Cold Damage
+50% Physical Resistance
+
+[Fanatics]
++100% Speed
+-70% To Attack Rating
+
+[Berserkers]
+Damage x4
+Attack Rating x4
+Hit Points x1.5
+
+[Possessed]
+Hit Points x12
+Can't be Cursed
+*/
+
+sets["kill_minionsuniqueboss"]=true;	//kill minion of unique boss
+sets["skip_uniquetype"]=[506,507,508,509,510,216,188,189,461,462,463,464,465,466,467,468];
+//type of unique skipped all blood lord type and Undead Stygian Doll,Mauler,Urdar,Suicide Minion )
+//also it's the setting for skipping the chests. the bot will try not to open a chest when there're skipped-type-monsters.
+
+//=====================Shirnes/Wells Settings======================
+//be sure to download the shrine library (ShrineLib.d2l) at http://scripts.d2jsp.org/index.php?pid=3&a=vp&did=233
+sets["use_shrine"]=true;	//zz
+sets["shrineMaxDistance"]=15;
+//shirne list:
+//choose what you need,remove the "//" before the string if it's commented.
+//add "//" before a shirne type that you don't want.
+sets["a_shrinePrefs"]=new Array(
+				//c_ShrineType_Stamina,
+				c_ShrineType_Refilling,
+				//c_ShrineType_Health,
+				//c_ShrineType_Mana,
+				c_ShrineType_ResistFire,
+				c_ShrineType_ResistCold,
+				//c_ShrineType_ResistPoison,
+				c_ShrineType_ResistLightning,
+				//c_ShrineType_ManaRecharge,
+				c_ShrineType_Armor,
+				c_ShrineType_Combat,
+				c_ShrineType_Skill,
+				c_ShrineType_Experience
+				); //do not comment this last line !!
+
+sets["waypoint_delay"]=0;	//(unit:ms) the delay after taking waypoints
+
+//==================== BARBARIAN ==================================
+//Barbarian parameters and skill
+var skill_global=new Array();
+skill_global["barb_primary_skill"]="Whirlwind";		//primary attack skill
+skill_global["barb_secondary_skill"]="Concentrate";	//secondary attack skill (used if out of mana if primary is WW)
+skill_global["barb_backup_skill"]="Berserk";		//backup attack skill(if the target is phys immune)
+
+var skill_unique=new Array();
+
+var skill_eld=new Array();
+
+var skill_pindle=new Array();
+
+var skill_thresh=new Array();
+
+var skill_bone=new Array();
+
+var skill_froz=new Array();
+
+var skill_meph=new Array();
+
+var skill_baal=new Array();
+
+var skill_nihlathak=new Array();
+skill_nihlathak["barb_primary_skill"]="Leap Attack";	//primary attack skill
+skill_nihlathak["barb_secondary_skill"]="Concentrate";	//secondary attack skill (used if out of mana if primary is WW)
+skill_nihlathak["barb_backup_skill"]="Berserk";		//backup attack skill(if the target is phys immune)
+
+var skill_hephasto=new Array();
+
+var skill_izual=new Array();
+
+sets["phys_whirlwind_first"]=true;		//if the target is phys immune,use Whirlwind to clean up the minions around the phys immune boss.
+sets["barb_kill_minion_first"]=false;		//set to true to kill minion first
+sets["min_left_time_Shout_on_the_way"]=0;
+sets["min_left_time_BO_on_the_way"]=60;		//recast Battle Order if time remaining is < at this settings in second
+//if the bot recast BO and you have Shout, it recasts Shout too
+//if you have Battle Command, the bot casts it auto.
+
+sets["min_left_time_Shout_before_attack"]=30;	//recast Shout if time remaining is < at this settings in second before attack
+sets["min_left_time_BO_before_attack"]=60;	//recast Battle Order if time remaining is < at this settings in second before attack or before to return in town
+
+//end of barb, do not touch this line
+
+//======================Safety Settings(For Escaping)=====================
+
+/*
+Format:
+esc_BOSSNAME[NUMBER]=new Array(immunity(or aura or enchant)#1,immunity(or aura or enchant)#2,....,immunity(or aura or enchant)#n,ValidClasses);
+
+
+NUMBER:
+FROM 0-N(integer only)
+
+immunity(or aura or enchant)# xx:
+Set enchant/immunity/aura as you want.
+
+-----------------------------------------------
+
+ValidClasses(Advance Setting):
+Appoint which class(es) need to escape from this boss
+This value must be an integer,and you need to create a bit mask:
+
+bit 0: Amazon
+bit 1: Sorceress
+bit 2: Necromancer
+bit 3: Paladin
+bit 4: Barbarian
+bit 5: Druid
+bit 6: Assassin
+
+BE CAREFUL! IF YOU DON'T KNOW WHAT IS BIT MASK,DON'T TOUCH THE NUMBER!
+PLEASE USE Daetools\Escape.html TO CREATE A ESCAPE SETTING!
+
+e.g.
+
+esc_shenk.push( [17,28,2] );
+means if shenk both have Lighting Enchanted,Stone Skin and you're a Sorceress,escape.
+
+esc_shenk.push( [149,-36,17] );
+means if shenk both have Immune to Physical,Fanaticism Aura Enchanted and you're a Barbarian or an Amazon,escape
+
+-1 means for all classes!
+-2 means disabled!!!
+
+e.g.
+
+esc_shenk.push( [17,29,-1] );	//MSLE
+means if shenk both have Multi-Shot and Lighting Enchanted,no matter what class you are,escape
+
+-----------------------------------
+Enchant/Aura/immunity LIST:
+
+Don't edit the numbers below,they are all correct~
+
+Immunity:
+
+-36="Immune to Physical"
+-37="Immune to Magic"
+-39="Immune to Fire"
+-41="Immune to Lightning"
+-43="Immune to Cold"
+-45="Immune to Poison"
+
+Note:from version 0.42c,the bot will check your immunity settings automaticly(just for sorceress).
+
+Enchant:
+5="Extra Strong"
+6="Extra Fast"
+7="Cursed"
+8="Magic Resistant"
+9="Fire Enchanted"
+17="Lightning Enchanted"
+18="Cold Enchanted"
+25="Mana Burn"
+26="Teleportation"
+27="Spectral Hit"
+28="Stone Skin"
+29="Multi-Shot"
+
+Aura:
+128="Conviction Aura Enchanted"
+133="Might Aura Enchanted"
+135="Holy Fire Aura Enchanted"
+140="Blessed Aim Aura Enchanted"
+143="Holy Freeze Aura Enchanted"
+146="Holy Shock Aura Enchanted"
+149="Fanaticism Aura Enchanted"
+
+e.g:
+esc_shenk.push( [17,28,true] );
+means if shenk both have Lighting Enchanted,Stone Skin,escape.
+
+Do not forget if you have only 2 spells to add lines to escape double immune(of course for sorc) :
+esc_global.push( [-41,-39,2] );		//Lighning & fire immune
+esc_global.push( [-41,-43,2] );		//Lighning & cold immune
+esc_global.push( [-43,-39,2] );		//Cold & fire immune
+
+*/
+//All boss
+var esc_global=new Array()
+esc_global.push( [149,-1] );		//fana(all class)
+esc_global.push( [133,5,-1] );		//might extra strong(all class)
+esc_global.push( [17,29,-1] );		//MSLE(all class)
+esc_global.push( [17,128,-1] );		//LE conviction(all class)
+//esc_global.push( [-41,-39,2] );	//Lighning & fire immune(sorc only)
+//esc_global.push( [-41,2] );		//Lighning immune(sorc only)
+//esc_global.push( [17,-1] );		//LEB(all class)
+esc_global.push( [-36,-37,16] );	//physical immune & magic immune(barb)
+esc_global.push( [-36,25,16] );		//physical immune & mana burn(barb)
+
+//normal unique
+var esc_unique=new Array();
+
+//Shenk
+var esc_shenk=new Array()
+
+//Eldritch
+var esc_eld=new Array()
+
+//Thresh
+var esc_thresh=new Array()
+
+//Sharptooth
+var esc_sharp=new Array()
+
+//Eyeback
+var esc_eyeback=new Array()
+
+//SnapChip
+var esc_snapchip=new Array()
+
+//Pindle
+var esc_pindle=new Array();
+
+//Bonesaw Breaker
+var esc_bone=new Array();
+
+//Dac Farren
+var esc_dac=new Array();
+
+//Frozenstein
+var esc_froz=new Array();
+
+//The countess
+var esc_countess=new Array();
+
+//StormTree
+var esc_storm=new Array();
+
+//Nihlathak
+var esc_nihlathak=new Array();
+
+//Hephasto
+var esc_hephasto=new Array();
+
+//Lister The Tormentor
+var esc_lister=new Array();
+
+//Izual
+var esc_izual=new Array();

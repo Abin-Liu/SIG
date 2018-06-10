@@ -1,0 +1,280 @@
+function costposition( listpos ) 
+{
+	var e = getUnit(1);
+	if ( e ) do {
+		if ( e.mode != 12 ) {
+			var p = e.getParent();
+			if (p && p.name == me.name)
+				continue;
+			var mtype = CheckMonster( e );
+			if ( mtype < 1 )
+				continue;
+			var bColdImmune = e.getStat(c_UnitStat_ColdResist) > 99;
+			for ( var i = 0 ; i < listpos.length ; i++ ) {
+				var dist = 36-Dist2( listpos[i].x, listpos[i].y, e.x, e.y );
+				if ( ( 36-dist <= 16*16 ) && !bColdImmune )
+					listpos[i].ColdSensible = true;
+//				MyDebugWrite( "i "+i+" listposx "+listpos[i].x+" listposy "+listpos[i].y+" name "+e.name+" ex "+e.x+" ey "+e.y+" dist "+dist, 2 );
+				if ( dist < 0 )
+					continue;
+				if ( mtype == 2 )
+					dist *= 3;
+				listpos[i].data += dist;
+			};
+		}
+	}while(e && e.getNext());
+};
+
+var lastroom = null;
+var	roomsizex;
+var	roomsizey;
+
+function ParseCollision(x,y)
+{
+	var room = getRoom(0);
+	if ( room )
+		return ( room.getCollision(x-room.x*5,y-room.y*5) );
+	return -1;
+};
+
+	// some code form matlant library ;)
+	function checklos(Ax, Ay, Bx, By)
+	{
+		var dX = Bx-Ax;
+		var dY = By-Ay;
+
+		var Xincr, Yincr;
+		var oldX = Ax;
+		var oldY = Ay;
+		var res;
+
+		if (Ax > Bx) { Xincr=-1; } else { Xincr=1; }
+		if (Ay > By) { Yincr=-1; } else { Yincr=1; }
+
+		if ( dX < 0 ) dX = -dX;
+		if ( dY < 0 ) dY = -dY;
+
+		if (dX >= dY){
+			var dPr 	= dY<<1;
+			var dPru 	= dPr - (dX<<1);
+			var P 		= dPr - dX;
+			oldX = Ax; oldY = Ay;
+			for (; dX>=0; dX--)	{
+				res = ParseCollision( Ax, Ay );
+				if ( ( res == -1 ) || ( res & 4 )  )
+				{
+					runGC();
+					return new coord( oldX, oldY );
+				}
+				if ( ( res & 1 ) == 0 ) {
+					oldX = Ax; oldY = Ay;
+				};
+				if (P > 0){
+					Ax+=Xincr;
+					Ay+=Yincr;
+					P+=dPru;
+				}
+				else{
+					Ax+=Xincr;
+					P+=dPr;
+				}
+			}
+		}
+		else{
+			var dPr 	= dX<<1;
+			var dPru 	= dPr - (dY<<1);
+			var P 		= dPr - dY;
+			oldX = Ax; oldY = Ay;
+			for (; dY>=0; dY--)	{
+				res = ParseCollision( Ax, Ay );
+				if ( ( res == -1 ) || ( res & 4 )  )
+				{
+					runGC();
+					return new coord( oldX, oldY );
+				}
+				if ( ( res & 1 ) == 0 ) {
+					oldX = Ax; oldY = Ay;
+				};
+				if (P > 0){
+					Ax+=Xincr;
+					Ay+=Yincr;
+					P+=dPru;
+				}
+				else{
+					Ay+=Yincr;
+					P+=dPr;
+				}
+			}
+		}
+		runGC();
+		return new coord( oldX, oldY );
+	};
+
+function sortcoorddata( a, b ) {
+  if ( a.data > b.data )
+    return 1;
+  else
+    return -1;
+}
+
+sets["risk_position"]=100;
+
+function checkgoodposex(data,target,nbattack)
+{
+	if (target.classid==526) 
+	{
+		if (nbattack<2) return;
+		else return SafeNihlathak(target);
+	}
+	
+	MyDebugWrite(" target.x "+target.x+" y "+target.y, 2 );
+
+	var mypos = new coord(me);
+    var targetpos =  new coord(target);
+	var actualdist = mypos.dist(target.x, target.y);
+	var tabbos = new Array(1);
+	tabbos[0] = mypos;
+	costposition( tabbos );
+	data.ColdSensible = mypos.ColdSensible; 
+	var actualcost = mypos.data;
+	tabbos.pop();
+    var needmove = ( actualdist > data.maxdist );
+    if ( !needmove ) {
+		var test = checklos( target.x, target.y, me.x, me.y );
+		needmove =  ( test.x != me.x || test.y != me.y );
+		if ( needmove )
+			if (sets["show_debug_info"]) print("the boss is not in LOS");
+	};
+
+	MyDebugWrite("actualcost "+actualcost+" actualdist "+actualdist+" me.x "+me.x+" y "+me.y, 2 );
+	if ( mypos.data > sets["risk_position"] || needmove || ( actualdist < data.mindist ) ) {
+		if (sets["show_debug_info"]) print("try new position cost "+actualcost+" dist "+actualdist+" me.x "+me.x+" y "+me.y+" target.x "+target.x+" y "+target.y, 2 );
+		var newpos = new Array(1);
+		var pos = 0;
+		var dxinter = 25*25-(target.y-me.y)*(target.y-me.y);
+		if ( dxinter > 0 ) {
+			dxinter = Math.floor(Math.sqrt( dxinter ) );
+			var newx = me.x+dxinter;
+			if ( newx > target.x ) {
+				if ( newx > target.x+(data.maxdist-1) )
+					newx = target.x+(data.maxdist-1);
+				var posel = new coord( newx, target.y );
+				MyDebugWrite( "try posx "+posel.x+" posy "+posel.y, 2 );
+				posel = checklos( target.x, target.y, posel.x, posel.y );
+				MyDebugWrite( "corrected posx "+posel.x+" posy "+posel.y, 2 );
+				posel.data = 0;
+				newpos[pos++] = posel;
+			};
+			newx = me.x-dxinter;
+			if ( newx < target.x ) {
+				if ( newx < target.x-(data.maxdist-1) )
+					newx = target.x-(data.maxdist-1);
+				posel = new coord( newx, target.y );
+				MyDebugWrite( "try posx "+posel.x+" posy "+posel.y, 2 );
+				posel = checklos( target.x, target.y, posel.x, posel.y );
+				MyDebugWrite( "corrected posx "+posel.x+" posy "+posel.y, 2 );
+				posel.data = 0;
+				newpos[pos++] = posel;
+			};
+		}; 
+
+		var dyinter = 25*25-(target.x-me.x)*(target.x-me.x);
+		if ( dyinter > 0 ) {
+			dyinter = Math.floor(Math.sqrt( dyinter ) );
+			var newy = me.y+dyinter;
+			if ( newy > target.y ) {
+				if ( newy > target.y+(data.maxdist-1) )
+					newy = target.y+(data.maxdist-1);
+				posel = new coord( target.x, newy );
+				MyDebugWrite( "try posx "+posel.x+" posy "+posel.y, 2 );
+				posel = checklos( target.x, target.y, posel.x, posel.y );
+				MyDebugWrite( "corrected posx "+posel.x+" posy "+posel.y, 2 );
+				posel.data = 0;
+				newpos[pos++] = posel;
+			};
+			newy = me.y-dyinter;
+			if ( newy < target.y ) {
+				if ( newy < target.y-(data.maxdist-1) )
+					newy = target.y-(data.maxdist-1);
+				posel = new coord( target.x, newy );
+				MyDebugWrite( "try posx "+posel.x+" posy "+posel.y, 2 );
+				posel = checklos( target.x, target.y, posel.x, posel.y );
+				MyDebugWrite( "corrected posx "+posel.x+" posy "+posel.y, 2 );
+				posel.data = 0;
+				newpos[pos++] = posel;
+			};
+		};
+		if ( !pos ) { // probably a lag (no room initialized)
+			if (sets["show_debug_info"]) print("oups no room initialised, we are too fast ;) ");
+			var dir = targetpos.dir(mypos); // normalized vector from target to me
+			targetpos.move(dir, data.maxdist-1 );
+			newpos[pos++] = new coord( targetpos.x, targetpos.y );
+		};
+
+			costposition( newpos );
+			newpos.sort( sortcoorddata );
+			for ( var i = 0 ; i < pos ; i++ ) {
+            	MyDebugWrite("try a new position ("+newpos[i].x+","+newpos[i].y+") cost "+newpos[i].data, 2 );
+			};
+//			print(" target.x "+target.x+" y "+target.y+" teleport "+newpos[0].x+" "+newpos[0].y );
+			if ( ( newpos[0].data < actualcost ) || needmove ) { 
+				Teleport( newpos[0].x, newpos[0].y, 1, 1 );
+				data.ColdSensible = newpos[0].ColdSensible;
+			}; 
+
+		data.nbattack_afterpos = nbattack;
+		data.hp_afterpos = target.hp;
+ 		runGC();
+ 		return true;
+	};
+
+    // check if no obstacle
+	if ( ( ( data.hp_afterpos -  target.hp) < 5 ) && 
+	     ( ( nbattack - data.nbattack_afterpos ) > 5 ) ) 
+    {
+		var dir = targetpos.dir(mypos); // normalized vector from target to me
+ 	    dir.rotate( 90 );
+ 	    targetpos.move(dir, data.maxdist-1 );
+		if (sets["show_debug_info"]) print("seems there is obstacle, try a new position ("+targetpos.x+","+targetpos.y+")" );
+		if (sets["show_debug_info"]) print("2) target.x "+target.x+" y "+target.y+" teleport "+targetpos.x+" "+targetpos.y );
+		Teleport( targetpos.x, targetpos.y, 2, 1 );
+		data.nbattack_afterpos = nbattack;
+		data.hp_afterpos = target.hp;
+ 		runGC();
+ 		return true;
+	};
+    if ( ( data.hp_afterpos -  target.hp) > 5 )
+    {
+		data.nbattack_afterpos = nbattack;
+		data.hp_afterpos = target.hp;
+	};
+	runGC();
+	return true;
+}
+
+function checkgoodposEx(data,target,nbattack)
+{
+	if (target.classid==526) return;
+	Teleport(target.x-5,target.y-5,3,1);
+}
+
+function SafeNihlathak(target)
+{
+	var pi=Math.PI;
+		
+	var _angle=(Math.atan((target.y-me.y)/(target.x-me.x))*180/pi)-45;
+	if (_angle<0) _angle+=360;
+	_angle+=45;
+		
+	var _dist=Dist(me.x,me.y,target.x,target.y);
+	
+	_dx=Math.round(_dist*Math.sin((225-_angle)*pi/180))+target.x;
+	_dy=Math.round(_dist*Math.cos((225-_angle)*pi/180))+target.y;
+	
+	var pos=cMap.getSafeOffScreenXY(target.x,target.y,_dx,_dy,15);
+	if (!cMap.IsWalkable(pos.x,pos.y)) return true;
+	var path = cMap.FindPath(me.x, me.y, pos.x, pos.y,15,mlREDUCESORC,mlASTAR,mlFHDIAGSHORTCUT, 2.0);
+        cMap.PathMove(path,false,0,15,mlASTAR,2.0);
+
+	return true;
+}

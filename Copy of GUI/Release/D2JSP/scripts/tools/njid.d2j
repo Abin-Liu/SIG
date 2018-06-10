@@ -1,0 +1,44 @@
+/*
+	njid.d2j
+	njaguar's inventory dumper
+	Version: 5.1 beta
+*/
+
+function main() {
+	outputFile = fileOpen("output/njid/njid." + (me.account ? me.account : "SINGLEPLAYER") + "." + me.name + ".htm", 1);
+	if(!outputFile) return;
+	outputFile.writeLine("<HTML><HEAD><TITLE>"+(me.account ? me.account : "SINGLEPLAYER") + "." + me.name+"</TITLE><STYLE>.c0 { color: #c4c4c4 }\n.c1 { color: #b04434 }\n.c2 { color: #18f200 }\n.c3 { color: BLUE }\n.c4 { color: #948064 }\n.c5 { color: #505050 }\n.c6 { color: #000000 }\n.c7 { color: #ac9c64 }\n.c8 { color: #d08420 }\n.c9 { color: #d8b864 }\n.ca { color: #186408 }\n.cb { color: #a420fc }\n.cc { color: #287c14 }</STYLE></HEAD><BODY TEXT=BLACK><CENTER>");
+	item = getUnit(4);
+	if(item) do {
+		parent=item.getParent();
+		if(parent.name==me.name) {
+			if( !item.getFlag(0x8) ) {
+				ostr = parseDesc( item.description );
+				outputFile.writeLine(ostr);
+			}
+		}
+	} while(item.getNext());
+	
+	outputFile.writeLine("<BR>* Item Dump created by njid.d2j (njaguar's inventory dumper)</BODY></HTML>");
+	outputFile.close();
+}
+
+function parseDesc( desc ) {
+	ostr = "<TABLE STYLE='font:13px Verdana; font-weight:bold;background-color:black'><TR><TD ALIGN=CENTER>";
+	lines = desc.split( "\n" );
+	lastcolor = 0;
+//	ostr = "";
+	for(i=0;i<lines.length;i++) {
+		m = lines[i].match(/.*ÿc(.).*/);
+		if(m) lastcolor=m[1];
+		lines[i] = lines[i].replace(/ÿc(.)/g, "</FONT><FONT CLASS='c$1'>");
+		lines[i] = (lines[i].substring(0,5)=="</FON" ? "" : "</FONT><FONT CLASS='c" + lastcolor + "'>") + lines[i];
+	}
+		
+	desc2 = "";
+	for(i=lines.length;i>0;i--) desc2 += lines[i-1] + "<BR>"
+	
+	ostr += desc2;
+	ostr += "</TD></TR></TABLE><BR>";
+	return ostr;
+}

@@ -1,0 +1,52 @@
+<html>
+<body>
+<pre>
+<h1>Build Log</h1>
+<h3>
+--------------------Configuration: RealmInfo - Win32 Release--------------------
+</h3>
+<h3>Command Lines</h3>
+Creating command line "rc.exe /l 0x804 /fo"Release/RealmInfo.res" /d "NDEBUG" /d "_AFXDLL" "D:\Projects\SIG\RealmInfo\RealmInfo.rc"" 
+Creating temporary file "C:\DOCUME~1\Abin\LOCALS~1\Temp\RSPD6.tmp" with contents
+[
+/nologo /MD /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_WINDLL" /D "_AFXDLL" /D "_MBCS" /D "_AFXEXT" /Fp"Release/RealmInfo.pch" /Yu"stdafx.h" /Fo"Release/" /Fd"Release/" /FD /c 
+"D:\Projects\SIG\RealmInfo\IniFile.cpp"
+"D:\Projects\SIG\RealmInfo\RealmInfo.cpp"
+"D:\Projects\SIG\RealmInfo\RealmInfo1.cpp"
+]
+Creating command line "cl.exe @C:\DOCUME~1\Abin\LOCALS~1\Temp\RSPD6.tmp" 
+Creating temporary file "C:\DOCUME~1\Abin\LOCALS~1\Temp\RSPD7.tmp" with contents
+[
+/nologo /MD /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_WINDLL" /D "_AFXDLL" /D "_MBCS" /D "_AFXEXT" /Fp"Release/RealmInfo.pch" /Yc"stdafx.h" /Fo"Release/" /Fd"Release/" /FD /c 
+"D:\Projects\SIG\RealmInfo\StdAfx.cpp"
+]
+Creating command line "cl.exe @C:\DOCUME~1\Abin\LOCALS~1\Temp\RSPD7.tmp" 
+Creating temporary file "C:\DOCUME~1\Abin\LOCALS~1\Temp\RSPD8.tmp" with contents
+[
+/nologo /subsystem:windows /dll /incremental:no /pdb:"Release/RealmInfo.pdb" /machine:I386 /def:".\RealmInfo.def" /out:"Release/RealmInfo.dll" /implib:"Release/RealmInfo.lib" 
+.\Release\IniFile.obj
+.\Release\RealmInfo.obj
+.\Release\RealmInfo1.obj
+.\Release\StdAfx.obj
+.\Release\RealmInfo.res
+]
+Creating command line "link.exe @C:\DOCUME~1\Abin\LOCALS~1\Temp\RSPD8.tmp"
+<h3>Output Window</h3>
+Compiling resources...
+Compiling...
+StdAfx.cpp
+Compiling...
+IniFile.cpp
+RealmInfo.cpp
+RealmInfo1.cpp
+Generating Code...
+Linking...
+   Creating library Release/RealmInfo.lib and object Release/RealmInfo.exp
+
+
+
+<h3>Results</h3>
+RealmInfo.dll - 0 error(s), 0 warning(s)
+</pre>
+</body>
+</html>

@@ -1,0 +1,448 @@
+var escaping = false;
+
+function GetLegAgain ()
+{
+    if (!Town.TakeWP(1, 3)) return false;
+
+    //Use Sh_PathFinding
+    PreSkill(bosstristram);
+
+    // Rakanishu, first
+    if ( !GotoRoom2(160, 160, 30, 80 ) )
+      return false;
+
+    PreSkill(bosstristram);
+
+    // go through portal
+    DoDel(10);
+    if (!ChangeArea("Portal",38))
+        return false;
+    //kaka,into portal!
+    DoDel(100);
+
+    // Welcome in tristram, young wanderer... :)
+    Sh_BuildOnlyMap(); // lets make a map of tristram ,zz,now fixed
+
+    var path = Sh_FindPath(25049, 5183, 50);
+    if ( !path )
+      return false;
+    if ( !Sh_FollowPathToThingEx(path, 25049, 5183,50) )
+      return false;
+
+    var leg=getUnit(4);
+    if (leg) do
+    {
+    	if (leg.code=="leg" && (leg.mode==3 || leg.mode==5))
+    	{
+    		PickUpItem(leg);
+    		break;
+    	}
+    }while (leg && leg.getNext());
+    me.overhead("All right,got my leg");
+    DoDel(200);
+    UseTP();
+    return true;
+}
+
+function buyTPTome(npc)
+{
+    var s = LocateItem(npc, "tbk", -1);
+    if (s) {
+        var gld = me.getStat(14) + me.getStat(15);
+        if (gld<s.getItemCost(0))
+        {
+            bprint("Not enough money to buy a tome of town portal!");
+        }
+        else
+        {
+            var retry = 0;
+            do {
+                bprint("Buying tome of town portal");
+                s.shop(npc, 2);
+                delay(1000);
+            } while( ( gld == (me.getStat(14) + me.getStat(15)) ) && ( retry++ < 10 ) );
+        }
+    }
+    else {
+        DebugWrite(" * ERROR: Failed to buy tome of townportal");
+        delay(100);
+    }
+}
+
+function OpenPortal()
+{
+    function OpenCube()
+    {
+        var box=getUnit(4,"box",0);
+        if ( box ) {
+            var retry = 0;
+            while (!getUIFlag(c_UIFlag_Cube) && ( retry++ < 5 ) ) {
+                clickItem(1,box);
+                delay(500);
+            };
+        };
+        return getUIFlag(c_UIFlag_Cube);
+    };
+
+    function OpenStash()
+    {
+        var stash = getUnit(2, "Bank");
+        if (!stash) {
+            me.overhead ("Where the fuck is my stash?!");
+            return false;
+        }
+
+        var pos = new coord(me);
+        if (pos.dist(stash) > 3) {
+            ClickMap(stash.x, stash.y);
+            delay(50);
+            pos.set(me);
+        }
+
+        while(!getUIFlag(0x19)) {
+            ClickMap(stash);
+            delay(500);
+        }
+    }
+
+    function CloseStash()
+    {
+        while(getUIFlag(0x19)) {
+            me.cancel(0);
+            delay(500);
+        }
+    }
+
+    function TakeItem(itemname)
+    {
+        var itemtobepicked=getUnit(4,itemname,0);
+        if ( itemtobepicked ) {
+            var retry = 0;
+            while ( (!me.itemoncursor) && ( retry++ < 5 ) ) {
+                clickItem(0,itemtobepicked);
+                delay(500);
+            };
+        };
+        return me.itemoncursor;
+    };
+
+    function CloseCube()
+    {
+        var box=getUnit(4,"box",0);
+        if ( box ) {
+            var retry = 0;
+            while (getUIFlag(c_UIFlag_Cube) && ( retry++ < 5 ) ) {
+                box.cancel(0);
+                delay(500);
+            };
+        };
+        return (!getUIFlag(c_UIFlag_Cube));
+    };
+
+    function OpenMooMooPortal()
+    {
+        var box=getUnit(4,"box",0);
+        if (! box) return false;
+
+        // put leg into cube
+        TakeItem ("leg");
+        if (! me.itemoncursor)
+        {
+            CloseCube();
+            CloseStash();
+            if (! GetLegAgain()) return false;
+            Town.MoveTo("stash",1);
+            OpenStash();
+            CleanCube();
+            TakeItem ("leg");
+        }
+        if (! me.itemoncursor) return false;
+        var retry = 0;
+        while ((me.itemoncursor) && ( retry++ < 5 ) ) {
+            clickItem (0,box);
+            delay(100);
+        };
+
+        // put tome with minimum scrolls of townportal into cube
+        item = getUnit(4, "tbk", 100);
+        var worst_tome = 21;
+        do {
+            if (item && item.mode == 0 && item.itemloc == 0 && item.getParent() && item.getParent().name == me.name) {
+                if ( item.getStat(70) < worst_tome ) worst_tome = Math.min(item.getStat(70), worst_tome);;
+            }
+        }while(item && item.getNext("tbk", 100));
+
+        item = getUnit(4, "tbk", 100);
+        do {
+            if (item && item.mode == 0 && item.itemloc == 0 && item.getParent() && item.getParent().name == me.name)
+            {
+                if ( item.getStat(70) == worst_tome )
+                {
+                     var retry = 0;
+                     while ((! me.itemoncursor) && ( retry++ < 5 ) ) {
+                         clickItem (0,item);
+                         delay(100);
+                     };
+                }
+            }
+        } while ((item.getStat(70) != worst_tome) && (item.getNext("tbk", 100)) && (item) );
+
+        var retry = 0;
+        while ((me.itemoncursor) && ( retry++ < 5 ) ) {
+            clickItem (0,box);
+            delay(100);
+        };
+
+        // open the red portal
+        if (! OpenCube()) return false;
+        OpenCube();
+        delay(100);
+        transmute();
+        delay(100);
+        CloseCube();
+        return true;
+    };
+
+    function CleanCube()
+    {
+        while ( true ) {
+            var item=getUnit(4,null,103);
+            if (!item) return true;
+
+            if ( !OpenCube() ) return false;
+
+            //move out
+            var freespace=getFreeSpace(item.xsize,item.ysize,104);
+            if (!freespace)
+            {
+                bprint("No enough room to store the item in the cube!");
+                return false;
+            }
+            clickItem(0,item);
+            var retries=0;
+            while(retries++<5 && item.mode!=4) delay(150);
+            if (item.mode!=4) return false;
+
+            CloseCube();
+
+            DoDel(100);
+            do {
+                if (item.code == "tbk")
+                {
+                    delay (500);
+                    CloseStash();
+                    item.cancel(0);
+                }
+                else clickItem(0,freespace.x,freespace.y,4);
+                delay(500);
+            } while(item.mode == 4);
+
+            if (item.code == "tbk")
+            {
+                OpenStash();
+                delay (500);
+            }
+            OpenCube();
+        }
+    };
+
+    OpenStash();
+    CleanCube();
+    if (!OpenMooMooPortal()) {
+         CloseStash();
+         bprint ("Not able to open portal to moo moo farm!");
+         return false;
+    }
+
+    CloseStash();
+    return true;
+}
+
+
+function ExploreRoom (min, max, offset, builddist, avoid)
+{
+    if (!builddist || builddist < 30)
+        builddist = 30;
+
+    if (!offset)
+        offset = 18; // make sure it an integer, not 'undefined' or 'NaN'
+
+    DebugWrite("GotoRoom: min: " + min + ", max: " + max + ", offset: " + offset + ", builddist: " + builddist);
+
+        var target = Sh_BuildMap(min, max, offset);
+        if (!target || (target.x == 0 && target.y == 0)) {
+            DebugWrite("* WARNING: No target, retrying");
+            delay(2000);
+            target = Sh_BuildMap(min, max, offset);
+        }
+        if (!target || (target.x == 0 && target.y == 0)) {
+            DebugWrite("* WARNING: No target, retrying");
+            DebugWrite("No target, retrying again");
+            delay(2000);
+            target = Sh_BuildMap(min, max, offset);
+        }
+        if (!target || (target.x == 0 && target.y == 0)) {
+            DebugWrite("No target, Failed");
+            bprint("Failed to get target coordinates");
+            return false;
+        }
+        DebugWrite("Going to build the path");
+
+        var path = null;
+        do {
+            DebugWrite("Calling Sc_FindPath");
+            path = Sh_FindPath(target.x, target.y, builddist);
+            if (!path) {
+                DebugWrite("* WARNING: Build with dist: " + builddist + " failed");
+            }
+            else
+                DebugWrite("Sc_Findpath returned a path");
+
+            builddist += 10;
+            delay(50);
+        }while(!path);
+
+        print("Build path with distance " + (builddist - 10));
+        DebugWrite("Build path with distance " + (builddist - 10));
+
+        DebugWrite("Going to teleport the path");
+        if ( !TeleportThroughMooMooFarm( path, target.x, target.y, builddist ) )
+            return false;
+
+        if ( !TeleportToStairs(target.x,target.y) )
+              return false;
+
+          DebugWrite("GotoRoom done");
+
+           return true;
+}
+
+
+function TeleportThroughMooMooFarm(path, x, y, DistPath )
+{
+    var deadlock = 0;
+    var i = 1; //v0.27 no need to teleport on self ;)
+    var t1 = 0, t2 = 0, t3 = 0;
+    TeleportDeadlock = 5; // => think it is enough because Teleport can do long teleport
+
+    escaping = false;
+    looprestart: while (i < path.length && myDist(x, y) > 10)
+    {
+        oldx = me.x;
+        oldy = me.y;
+
+        if (deadlock > TeleportDeadlock)
+        {
+          bprint("Deadlock teleporting to destination...aborting...");
+          DebugWrite("Deadlock teleporting to destination...aborting...");
+          return false;
+        }
+
+            if ((!escaping) && (KillUniqueBossIfNotKing())) {
+                // check if we are near a path point
+                for ( var j = 0 ; j < path.length ; j++ ) {
+                    var distpoint = Dist2( path[j][0], path[j][1], me.x, me.y );
+                    if ( distpoint < 25*25 ) {
+                        Pick ();
+                        if ( distpoint > 10*10 )
+                            Teleport( path[j][0], path[j][1], 5 );
+//                        bprint("restart from position "+(j+1)+" we were "+i ); //zz
+                        i = j+1;
+                        continue looprestart;
+                    };
+                };
+                if ( DistPath ) {
+                    Pick ();
+                    var newpath = Sh_FindPath(x, y, DistPath);
+//                    bprint("repathing "+ newpath.length ); //zz
+                    if ( newpath ) {
+                        path = newpath;
+                        i = 1;
+                        deadlock = 0;
+                        continue looprestart;
+                    };
+                }
+                Teleport( oldx, oldy, 10 ); // yes it seems stupid but it works most of time ;)
+            };
+
+        if ( CheckIfReturnInTown( (sets["town_min_col_inventory"]>0) ) )
+            BackToTown();
+
+
+        Teleport( path[i][0], path[i][1], 5, 1 );
+        t1++;
+        if ( ( myDist(oldx, oldy) < 5 ) )
+        {
+            TeleportRandomly2();
+            t3++;
+        };
+
+        if (myDist(path[i][0], path[i][1]) < 20)
+        {
+            CheckObjects( true, DaeShrineMove );
+            ++i;
+            deadlock = 0;
+        }
+        else
+            deadlock++;
+   }
+   DebugWrite("Sh_FollowPathToThingEx end");
+   return true;
+}
+
+
+function CheckNearNormalBoss2( maxdistboss )
+{
+    var bossname = "";
+    var bossid = 0;
+    var distboss = 2500; //50*50
+    if ( maxdistboss )
+        distboss = maxdistboss*maxdistboss;
+    var npc=getUnit(1);
+    if (npc) do
+    {
+        if ( npc.mode != 12 ) {
+//            if ( CheckIsSuper( npc ) && ( npc.mode != 12 ) ) // first the super boss then the others (=> because sometimes, i kill the superboss in the same time !!!)
+//                return null;
+
+            var newdistboss = Dist2( me.x, me.y, npc.x, npc.y );
+            if ( newdistboss < distboss && !CheckIsKilled( npc ) ) {
+                bossname = npc.name;
+                bossid = npc.id;
+                distboss = newdistboss;
+            }
+        }
+    }while( npc && npc.getNext());
+
+    if ( bossid ) {
+        npc=getUnit(1,bossname);
+        if (npc) do
+        {
+            if ( npc.id == bossid )
+                return npc;
+        }while( npc && npc.getNext());
+    };
+    return null;
+}
+
+
+function KillUniqueBossIfNotKing( maxdistboss )
+{
+    var bossed = false;
+
+    var boss = CheckNearNormalBoss2( maxdistboss );
+    if ( boss ) {
+        bossed = true;
+        do {
+            if (boss.name == bosscows.name)
+            {
+               escaping = true;
+               return false;  // better chicken away, if cowking is near...
+            }
+            KillMonster( boss, 10 );
+            boss = CheckNearNormalBoss2( maxdistboss );
+        } while ( boss );
+    };
+    DebugWrite( "KillAllNearUniqueBoss end" );
+    return bossed;
+}

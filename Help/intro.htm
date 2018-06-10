@@ -1,0 +1,84 @@
+
+
+<head>
+<title></title>
+</head>
+
+<body background="bkgnd.gif">
+
+<h2><b><a name="top"></a>SIG使用帮助
+</b></h2>
+<hr>
+<ul>
+  <li><a href="#intro">程序简介</a></li>
+  <li><a href="#req">系统要求</a></li>
+  <li><a href="#gui">用户界面<br>
+    </a></li>
+</ul>
+<p><b><a name="intro"></a>程序简介</b></p>
+<p>&nbsp;&nbsp;&nbsp; SIG，全称为&quot;<i>Stay in Game</i>&quot;，是一个专门为<a href="http://www.blizzard.com">Diablo                   
+II</a>游戏设计的通用控制GUI，其作用为实时监控Diablo II的运行状态，并且帮助Diablo                   
+II程序从各种错误和崩溃中恢复正常，为其它Hack模块(如<a href="http://www.gamer-networks.com/forums/forumdisplay.php?s=1b1ccdb8aa81ed7b9630dd4c2b9d8e6b&amp;forumid=21">D2Hackit</a>外挂、<a href="http://www.d2jsp.org/">D2JSP</a>脚本等等)提供一个不间断的、稳定的Diablo                   
+II游戏内环境，从而确保这些Hack模块能够长时间地持续正常运行。</p>
+<p>&nbsp;&nbsp;&nbsp; SIG本身并不是一个Hack程序，除了<a href="settings.htm#create">Anti-Idle</a>(可由用户随时禁止)以外，它并不向<a href="http://www.battle.net">Battle.net</a>服务器发送任何数据包，也不更改、延迟或纪录任何从Battle.net服务器接收到的、或发往Battle.net的数据包，因此SIG不具有任何意义上的Hack行为。确切地说，SIG仅仅是一个为其它Hack模块或D2JSP脚本提供服务的辅助程序，而其自身并不与Battle.net服务器发生任何直接的关系，因此SIG的存在是不可能被Battle.net服务器所察觉的。</p>               
+<p>&nbsp;&nbsp;&nbsp; SIG除了为其它Hack模块提供稳定的运行环境以外，还提供了一系列仅靠游戏内控制模块所无法实现的功能，例如<a href="control.htm#mulemode">Mule模式</a>、<a href="api.htm#poststring">文字信息显示接口</a>等，这些功能可以在很大程度上满足各类玩家和Hack模块开发者在使用、监控和开发方面的不同需求。</p>              
+<p>&nbsp;&nbsp;&nbsp; SIG对D2Hackit模块和D2JSP都提供了完全的支持。</p>               
+<p><a href="#top">返回页顶</a></p>         
+<p><b><a name="req"></a>系统要求</b></p>
+<p>&nbsp;&nbsp;&nbsp; 操作系统：Windows 95/8x/ME或Windows 2000/XP。<br>                
+&nbsp;&nbsp;&nbsp; 软件环境：Diablo II或Diablo II Lord of Distruction</p>                
+<p><a href="#top">返回页顶</a>&nbsp;</p>          
+<p><b><a name="gui"></a>用户界面</b></p>
+<p>&nbsp;&nbsp;&nbsp; SIG程序主界面如下：</p>                
+<p>&nbsp; <img border="0" src="gui.gif">&nbsp;&nbsp;&nbsp;&nbsp;<br>             
+&nbsp;&nbsp;&nbsp; (图1：SIG程序主界面一览)</p>                
+<ul>
+  <li><u><a name="menu"></a>系统菜单</u><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<br>
+    提供基本的系统操作，如退出运行，显示帮助信息等。<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;</li>
+  <li><u><a name="char"></a>角色信息</u><br>
+    &nbsp;&nbsp;&nbsp;<br>
+    显示当前在游戏内的角色的基本信息，包括角色种类和名称。如果角色尚未进入游戏，则此标签为空。<br>
+    &nbsp;&nbsp;&nbsp;</li>
+  <li><u><a name="indicators"></a>指示灯组</u><br>
+    &nbsp;&nbsp;&nbsp;<br>
+    指示灯组用以实时显示游戏状况，当Diablo II游戏窗体处于最小化或隐藏状态时，用户可以很方便直观地监测到游戏的运行情况。各个指示灯的作用分别为(从左至右)：<br>              
+    &nbsp;&nbsp;<br>
+    LC --              
+    角色位置指示。绿色表示角色位于城内，红色表示角色位于城外，黄灯闪烁表示角色正在移动。<br>
+    HB -- 从服务器收到&quot;心跳&quot;数据包时亮起。(注：&quot;心跳&quot;数据包是服务器与客户端之间相互测试时发送的特殊数据包。在Diablo               
+    II里，服务器与客户端之间如果一方在15秒内没有收到另一方的&quot;心跳&quot;数据包，即判定为网络连接已中断)。<br>
+    RV --&nbsp; 存在下行数据流时亮起。<br>             
+    ST --&nbsp; 存在上行数据流时亮起。<br>             
+    AI --&nbsp; 执行<a href="settings.htm#create">Anti-Idle</a>指令时亮起。<br>            
+    &nbsp;&nbsp;&nbsp;</li>
+  <li><u><a name="label"></a>信息条</u><br>
+    &nbsp;&nbsp;<br>
+    以文字方式报告程序的执行状况。其它Hack模块或D2JSP脚本也可以在游戏中使用&quot;SIG              
+    PostString&quot;命令将任何文字信息(支持中文)随时发送到这里。<br>
+    &nbsp;&nbsp;&nbsp;</li>
+  <li><u><a name="buttons"></a>控制按钮组</u><br>
+    &nbsp;&nbsp;&nbsp; <br>
+    用以控制程序的运行。各个按钮的作用分别为：<br>
+    &nbsp; <br>
+    Mule模式(<img border="0" src="intro.2.gif" width="19" height="17">) --              
+    启用/禁止Mule模式。<br>
+    开始/暂停(<img border="0" src="intro.7.gif" width="17" height="17">/<img border="0" src="intro.3.gif" width="16" height="15">)              
+    -- 开始/暂停SIG的运行。<br>             
+    停止(<img border="0" src="intro.4.gif" width="16" height="15">) --              
+    彻底停止SIG的运行。<br>
+    设置(<img border="0" src="intro.5.gif" width="15" height="16">) --              
+    打开设置界面以进行各项参数设置。<br>
+    退出(<img border="0" src="intro.6.gif" width="16" height="15">) --              
+    退出程序的运行。<br>
+    显示Diablo II(<img border="0" src="intro.1.gif" width="15" height="12">)  
+    -- 激活Diablo II游戏窗体并将其显示在屏幕上。<br> 
+    关闭Diablo II(<img border="0" src="intro.8.gif" width="17" height="15">)  
+    -- 关闭Diablo II游戏窗体并干净地杀死其进程。<br> 
+    查看bot记录文件(<img border="0" src="intro.9.gif" width="14" height="17">) 
+    -- 查看bot记录只需点一下鼠标，不必再麻烦地打开一层层子目录。<br>
+    选择bot记录文件(<img border="0" src="intro.10.gif" width="11" height="13">) 
+    -- 选定一个记录文件作为快速查看对象。</li>
+</ul>
+<p><a href="#top">返回页顶</a>&nbsp;</p>

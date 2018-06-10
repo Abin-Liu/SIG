@@ -1,0 +1,1659 @@
+//////////////////////////////////////////////////////////////////////
+//
+// d2jsp-attack.d2l Attack functions library
+//
+// Core scripters team : Xizeta, Muellsammler, Darien, Killkeeper
+// Version 1.2
+// Updated on 2004/07/16
+//
+// Legal stuff :
+// This program is free software; You can redistrubute freely as long as this
+// header and contents stays intact. Modifications for redistribution can only
+// be done by submitting to the core scripters team for approval. If you don't
+// want to submit the modifications and wanted to redistribute this script, you
+// must rename it by remplacing d2jsp with your own name to avoid conflicts.
+//
+// This program is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY
+// or FITNESS FOR A PARTICULAR PURPOSE.
+//
+//////////////////////////////////////////////////////////////////////
+DA_Version="1.2";
+include("common/d2jsp-common.d2l");
+
+
+//////////////////////////////////////////////////////////////////////
+// private variables
+//////////////////////////////////////////////////////////////////////
+var DA_Immunities=new Array(7);
+var DA_ImmunitiesCombo=new Array();
+var DA_Enchantments = new Array(13);
+var DA_EnchantmentsCombos=new Array();
+var DA_Auras = new Array(8);
+var DA_EnchantAuraCombos=new Array();
+var DA_ImmunityAuraCombos=new Array();
+var DA_DisplayImmunities=true;
+var _DA_BOTimer=0;
+var fresh_enchanted=false;
+
+
+//////////////////////////////////////////////////////////////////////
+// Public variables
+//////////////////////////////////////////////////////////////////////
+
+// General section
+var DA_LogChickens = true;
+var DA_ChickenLogPath = "output/" + me.name + "-ChickenLog.html";
+
+// Precasts section
+var DA_AutoPrecasts = true;	// Set to true to cast defensive skills
+var DA_UseCTA = false;
+
+	// Druid
+	var DA_WereBear=false;		// Set to true if you use WereBear
+	var DA_WereWolf=true;		// Set to true if you use WereWolf
+	var DA_Raven=0;			// Set the Number of Ravens you can summon, 0 to disable it
+	var DA_SpiritWolf=0;		// Set the Number of Spirit Wolves can Summon, 0 to disable it
+	var DA_DireWolf=0;		// Set the Number of Dire Wolves can Summon, 0 to disable it
+	var DA_Grizzly=false;		// Set to true if you want to Summon Grizzly Bear
+	var DA_PoisonVine=false;	// Set to true if you use Poison Vine
+	var DA_CarrionVine=true;	// Set to true if you use Carrion Vine
+	var DA_SolarCreeper=false;	// Set to true if you use SolarCreeper
+	var DA_Oaksage=false;		// Set to true if you use Oaksage
+	var DA_Wolverine=true;		// Set to true if you use Spirit of Wolverine
+	var DA_SpiritBarbs=false;	// Set to true if you use Spirit of Barbs
+
+	// Necromancer
+	var DA_Skeletons=false;		// Set to true to raise skeletons
+	var DA_SkeletonMages=false;	// Set to true to raise skeleton mages
+	var DA_Revives=false;		// Set to true to use Revive skill on Dead monsters
+
+// Chicken section
+//////////////////////////////////////////////////////////////////////
+// Immunities/Resistances/Enchantments to skip
+//====================================================================
+//Set each to true to chicken out if pindle is immune to that kind of damage
+//--------------------------------------------------------------------
+
+DA_Immunities[1]=false;	// Physical
+DA_Immunities[2]=false;	// Magic
+DA_Immunities[3]=false;	// Fire
+DA_Immunities[4]=false;	// Lightning
+DA_Immunities[5]=false;	// Cold
+DA_Immunities[6]=false;	// Poison
+
+//--------------------------------------------------------------------
+// Immunities Combinations
+// Method:  if set to true, will chicken with that immunities# / immunities# combination
+// DA_ImmunitiesCombo[next number] = new Array(immunities#,immunities#,true/false);
+//--------------------------------------------------------------------
+
+DA_ImmunitiesCombo[1]=new Array(1,2,false);	// Immune to Physical and Immune to Magic
+DA_ImmunitiesCombo[2]=new Array(4,5,false);	// Immune to Lightning and Immune to Cold
+
+//--------------------------------------------------------------------
+// Set each to true to chicken out if pindle has that enchantment 
+//--------------------------------------------------------------------
+
+DA_Enchantments[1]=false;	//Extra Strong 
+DA_Enchantments[2]=false;	//Extra Fast 
+DA_Enchantments[3]=false;	//Cursed
+DA_Enchantments[4]=false;	//Magic Resistant 
+DA_Enchantments[5]=false;	//Fire Enchanted 
+DA_Enchantments[6]=false;	//Lightning Enchanted
+DA_Enchantments[7]=false;	//Cold Enchanted 
+DA_Enchantments[8]=false;	//Mana Burn 
+DA_Enchantments[9]=false;	//Teleportation 
+DA_Enchantments[10]=false;	//Spectral Hit 
+DA_Enchantments[11]=false;	//Stone Skin 
+DA_Enchantments[12]=false;	//Multiple Shot
+
+//--------------------------------------------------------------------
+// Enchantment Combinations 
+// Method:  if set to true, will chicken with that enchantment# / enchantment# combination 
+// DA_EnchantmentsCombos[next number] = new Array(enchantment#,enchantment#,true/false); 
+//--------------------------------------------------------------------
+
+DA_EnchantmentsCombos[1]=new Array(6,12,false);	// Multiple Shot LE
+DA_EnchantmentsCombos[2]=new Array(1,3,false);	// Extra Strong Cursed
+DA_EnchantmentsCombos[3]=new Array(2,8,false);	// Extra Fast Mana Burn 
+
+//--------------------------------------------------------------------
+// Set each to true to chicken out if pindle has that aura 
+//--------------------------------------------------------------------
+
+DA_Auras[1]=false;	//Conviction
+DA_Auras[2]=false;	//Might 
+DA_Auras[3]=false;	//Holy Fire 
+DA_Auras[4]=false;	//Blessed Aim 
+DA_Auras[5]=false;	//Holy Freeze 
+DA_Auras[6]=false;	//Holy Shock
+DA_Auras[7]=false;	//Fanaticism 
+
+//--------------------------------------------------------------------
+// Enchantment / Aura Combinations 
+// Method:  if set to true, will chicken with that enchantment# / aura# combination 
+// DA_EnchantAuraCombos[next number] = new Array(enchantment#,aura#,true/false);
+//--------------------------------------------------------------------
+
+DA_EnchantAuraCombos[1]=new Array(1,2,false);	// Extra Strong Might 
+DA_EnchantAuraCombos[2]=new Array(1,7,false);	// Extra Strong Fanaticism
+DA_EnchantAuraCombos[3]=new Array(2,2,false);	// Extra Fast Might 
+DA_EnchantAuraCombos[4]=new Array(2,7,false);	// Extra Fast Fanaticism
+DA_EnchantAuraCombos[5]=new Array(2,5,false);	// Extra Fast Holy Freeze
+DA_EnchantAuraCombos[6]=new Array(6,1,false);	// LE Conviction
+
+//--------------------------------------------------------------------
+// Immunity / Aura Combinations 
+// Method:  if set to true, will chicken with that immunity# / aura# combination 
+// DA_ImmunityAuraCombos[next number] = new Array(immunity#,aura#,true/false);
+//--------------------------------------------------------------------
+
+DA_ImmunityAuraCombos[1]=new Array(5,7,false);	// Immune to Cold and Fanaticism
+DA_ImmunityAuraCombos[2]=new Array(3,2,false);	// Immune to Fire and Might
+
+
+//////////////////////////////////////////////////////////////////////
+// Public functions
+//////////////////////////////////////////////////////////////////////
+
+// Function from Scavenger, modified by Xizeta
+// Parameters :
+// -enemy	Target to check for immunities
+// -type	Type of immunity to check, check list below
+// List of available immunities :
+// 1 = Physical
+// 2 = Magic
+// 3 = Fire
+// 4 = Lightning
+// 5 = Cold
+// 6 = Poison
+function DA_IsImmuneTo(enemy, type) {
+
+	if (!enemy) {
+
+		DC_DPrint("DA_IsImmuneTo() : No enemy object entered!");
+		return false;
+	}
+
+	if (arguments.length == 2) { switch(type) {
+
+		case 1:
+			if (enemy.getStat(36) > 99) { return true; }
+			break;
+		case 2:
+			if (enemy.getStat(37) > 99) { return true; }
+			break;
+		case 3:
+			if (enemy.getStat(39) > 99) { return true; }
+			break;
+		case 4:
+			if (enemy.getStat(41) > 99) { return true; }
+			break;
+		case 5:
+			if (enemy.getStat(43) > 99) { return true; }
+			break;
+		case 6:
+			if (enemy.getStat(45) > 99) { return true; }
+			break;
+		case 0:
+			return true;
+	} }
+	else {
+
+		DC_DPrint("DA_IsImmuneTo() : You must specify a immunity type to check!");
+		return false;
+	}
+
+	return false;
+}
+
+// Function by Xizeta
+// Parameter :
+// -string	String to log in the chicken log file
+// Return value : None, will just log the string to file and to autod2jsp
+function DA_LogChicken(string) {
+
+	if (DA_LogChickens) {
+
+		DC_WriteLogEntry(DA_ChickenLogPath,string);
+		DC_LogToautod2jsp(string);
+	}
+}
+
+// Function from Pwnage Pindle, modified by Xizeta
+// Parameter :
+// -enemy	Enemy object to check for immunities
+// Return value : True if the monster has some bonuses who fit the user "danger" list
+function DA_CheckImmunities(enemy) {
+
+	// If the enemy object is not available, return a error
+	if (!enemy) {
+
+		DC_DPrint("DA_CheckImmunities() : No enemy object entered!");
+		return false;
+	}
+
+	var _immunecheck = new Array(7);
+	var _enchantmentcheck = new Array(13);
+	var _auracheck = new Array(8);
+
+	_immunecheck[1]=new Array(36,"immune to Physical");
+	_immunecheck[2]=new Array(37,"immune to Magic");
+	_immunecheck[3]=new Array(39,"immune to Fire");
+	_immunecheck[4]=new Array(41,"immune to Lightning");
+	_immunecheck[5]=new Array(43,"immune to Cold");
+	_immunecheck[6]=new Array(45,"immune to Poison");
+
+	_enchantmentcheck[1]=new Array(5,"Extra Strong");
+	_enchantmentcheck[2]=new Array(6,"Extra Fast");
+	_enchantmentcheck[3]=new Array(7,"Cursed");
+	_enchantmentcheck[4]=new Array(8,"Magic Resistant");
+	_enchantmentcheck[5]=new Array(9,"Fire Enchanted");
+	_enchantmentcheck[6]=new Array(17,"Lightning Enchanted");
+	_enchantmentcheck[7]=new Array(18,"Cold Enchanted");
+	_enchantmentcheck[8]=new Array(25,"Mana Burn");
+	_enchantmentcheck[9]=new Array(26,"Teleportation");
+	_enchantmentcheck[10]=new Array(27,"Spectral Hit");
+	_enchantmentcheck[11]=new Array(28,"Stone Skin");
+	_enchantmentcheck[12]=new Array(29,"Multi-Shot");
+
+	_auracheck[1]=new Array(28,"Conviction Aura Enchanted");
+	_auracheck[2]=new Array(33,"Might Aura Enchanted");
+	_auracheck[3]=new Array(35,"Holy Fire Aura Enchanted");
+	_auracheck[4]=new Array(40,"Blessed Aim Aura Enchanted");
+	_auracheck[5]=new Array(43,"Holy Freeze Aura Enchanted");
+	_auracheck[6]=new Array(46,"Holy Shock Aura Enchanted");
+	_auracheck[7]=new Array(49,"Fanaticism Aura Enchanted");
+
+	var _chickenstring;
+
+	// Check for immunities
+	for (var i = 1; i <= 6; i+=1) {
+
+		if (DA_IsImmuneTo(enemy,i) && DA_Immunities[i]) {
+
+			_chickenstring = "Chicken : " + enemy.name + " is " + _immunecheck[i][1] + "!!!";
+			DC_DPrint(_chickenstring);
+			DA_LogChicken(_chickenstring);
+			return true;
+		}
+	}
+
+	// Check for immunities combos if there is a list
+	for (i = 1; i < DA_ImmunitiesCombo.length; i+=1) {
+
+		if ((enemy.getStat(_immunecheck[DA_ImmunitiesCombo[i][0]][0]) > 99) && (enemy.getStat(_immunecheck[DA_ImmunitiesCombo[i][1]][0]) > 99) && DA_ImmunitiesCombo[i][2])	{
+
+			_chickenstring = "Chicken : " + enemy.name + " is both " + _immunecheck[DA_ImmunitiesCombo[i][0]][1] + " and " + _immunecheck[DA_ImmunitiesCombo[i][1]][1] + "!!!";
+			DC_DPrint(_chickenstring);
+			DA_LogChicken(_chickenstring);
+			return true;
+		}
+	}
+
+	// Check for enchantments
+	for (i = 1; i <= 12; i+=1) {
+
+		if ((enemy.getEnchant(_enchantmentcheck[i][0])) && DA_Enchantments[i]) {
+
+			_chickenstring = "Chicken : " + enemy.name + " is " + _enchantmentcheck[i][1] + "!!!";
+			DC_DPrint(_chickenstring);
+			DA_LogChicken(_chickenstring);
+			return true;
+		}
+	}
+
+	for (i = 1; i < DA_EnchantmentsCombos.length; i+=1) {
+
+		if ((enemy.getEnchant(_enchantmentcheck[DA_EnchantmentsCombos[i][0]][0])) && (enemy.getEnchant(_enchantmentcheck[DA_EnchantmentsCombos[i][1]][0])) && DA_EnchantmentsCombos[i][2]) {
+
+			_chickenstring = "Chicken : " + enemy.name + " is both " + _enchantmentcheck[DA_EnchantmentsCombos[i][0]][1] + " and " + _enchantmentcheck[DA_EnchantmentsCombos[i][1]][1] + "!!!";
+			DC_DPrint(_chickenstring);
+			DA_LogChicken(_chickenstring);
+			return true;
+		}
+	}
+
+	for (i = 1; i <= 7; i+=1) {
+
+		if ((enemy.getState(_auracheck[i][0])) && (DA_Auras[i] === true)) {
+
+			_chickenstring = "Chicken : " + enemy.name + " is " + _auracheck[i][1] + "!!!";
+			DC_DPrint(_chickenstring);
+			DA_LogChicken(_chickenstring);
+			return true;
+		}
+	}
+
+	for (i = 1; i < DA_EnchantAuraCombos.length; i+=1) {
+
+		if ((enemy.getEnchant(_enchantmentcheck[DA_EnchantAuraCombos[i][0]][0])) && (enemy.getState(_auracheck[DA_EnchantAuraCombos[i][1]][0])) && DA_EnchantAuraCombos[i][2]) {
+
+			_chickenstring = "Chicken : " + enemy.name + " is both " + _enchantmentcheck[DA_EnchantAuraCombos[i][0]][1] + " and " + _auracheck[DA_EnchantAuraCombos[i][1]][1] + "!!!";
+			DC_DPrint(_chickenstring);
+			DA_LogChicken(_chickenstring);
+			return true;
+		}
+	}
+
+	for (i = 1; i < DA_ImmunityAuraCombos.length; i+=1) {
+
+		if ((DA_IsImmuneTo(enemy,_immunecheck[DA_ImmunityAuraCombos[i][0]][0])) && (enemy.getState(_auracheck[DA_ImmunityAuraCombos[i][1]][0])) && DA_ImmunityAuraCombos[i][2]) {
+
+			_chickenstring = "Chicken : " + enemy.name + " is both " + _immunecheck[DA_ImmunityAuraCombos[i][0]][1] + " and " + _auracheck[DA_ImmunityAuraCombos[i][1]][1] + "!!!";
+			DC_DPrint(_chickenstring);
+			DA_LogChicken(_chickenstring);
+			return true;
+		}
+	}
+
+	// If the user want to see the list of immunities, enchantments and auras, display it
+	if (DA_DisplayImmunities) {
+
+		_ioutput=enemy.name + " is";
+		_eoutput=enemy.name + " is enchanted with";
+		_aoutput=enemy.name + " has the auras";
+
+		for (var d = 1; d <= 6; d+=1) {
+
+			if (enemy.getStat(_immunecheck[d][0]) > 99) { 
+
+				_ioutput+="ÿc@, ÿc1"+_immunecheck[d][1];
+			}
+		}
+
+		for (d = 1; d <= 12; d+=1) {
+
+			if (enemy.getEnchant(_enchantmentcheck[d][0])) { 
+
+				_eoutput+="ÿc@, ÿc7"+_enchantmentcheck[d][1];
+			}
+		}
+
+		for (d = 1; d <= 7; d+=1) {
+
+			if (enemy.getState(_auracheck[d][0])) {
+
+				_aoutput+="ÿc@, ÿc8"+_auracheck[d][1];
+			}
+		}
+
+		// If there is something added on the line, display it
+		if (_ioutput!=enemy.name + " is") { DC_Print(_ioutput); }
+		if(_eoutput!=enemy.name + " is enchanted with") { DC_Print(_eoutput); }
+		if(_aoutput!=enemy.name + " has the auras") { DC_Print(_aoutput); }
+	}
+
+	// Nothing fit the user list so return false
+	return false;
+}
+
+// Function from Scavenger, modified by Xizeta
+// Parameter :
+// -skill	Skill ID to check for damage type
+// ToDo : -convert skill names to ID
+// 	  -expand to all damage types, including physical and poison
+function DA_GetSkillDamageType(skill) {
+
+	switch (skill) {
+
+		case "Fire Bolt" :
+		case "Inferno" :
+		case "Blaze" :
+		case "Fire Ball" :
+		case "Fire Wall" :
+		case "Enchant" :
+		case "Hydra" :
+		case "Meteor" :
+			return 1;
+
+		case "Chain Lightning" :
+		case "Lightning" :
+		case "Thunder Storm" :
+		case "Nova" :
+		case "Telekinesis" :
+		case "Static Field" :
+		case "Charged Bolt" :
+			return 2;
+
+		case "Frozen Orb" :
+		case "Blizzard" :
+		case "Frost Nova" :
+		case "Ice Blast" :
+		case "Glacial Spike" :
+		case "Ice Bolt" :
+		case "Chilling Armor" :
+		case "Shiver Armor" :
+		case "Frozen Armor" :
+			return 3;
+
+		default:
+			DC_DPrint("GetSkillDamageType() : " + skill + " is not a damage skill");
+			return 0;
+	}
+}
+
+// Function from IceCountess, modified by Xizeta
+// Parameter :
+// -monster	Monster object to check
+// Return value : True if it is a valid target (attackable)
+function DA_IsValidTarget(monster) {
+
+	// No monster specified or already dead
+	if (!monster || monster.mode == 12 || monster.hp <= 0) { return false; }
+
+	// Monster has no name defined
+	if (!monster.name || monster.name.length === 0) { return false; }
+
+	// Monster is In Town!
+	if (DC_InTown(monster)) { return false; }
+
+	// Anything we're the owner (Covers our Merc).
+	if (monster.getParent() && monster.getParent().name == me.name) { return false; }
+
+	// It is indeed a monster so check if it is not a special unattackable monster class
+	switch (monster.classid) {
+
+		case 351:	// Hydra Sorc Spell
+		case 352:	// Hydra Sorc Spell
+		case 353:	// Hydra Sorc Spell
+
+		case 266:	// Act1: Flavie		(Navi)		-> Between BloodMoor & ColdPlains
+		case 408:	// Act4: Hadriel	(Malachai)	-> Entrance of River of Flames
+
+		case 516:	// Act5: Impact point for Catapults (Invisible)	-> Frigid Highlands
+		case 517:	// Act5: Impact point for Catapults (Invisible)
+		case 518:	// Act5: Impact point for Catapults (Invisible)	-> Bloodyfoot Hill
+		case 519:	// Act5: Impact point for Catapults (Invisible)
+		case 522:	// Act5: Combatant Barbarian
+		case 523:	// Act5: Combatant Barbarian
+
+		// Unsure if it's stable.. leaving it in the name section for now
+		//case 153:	// Any: "an evil force"	-> Misc Places (Near Mephisto too)
+
+			// If it is one of the special monster, return false
+			return false;
+	}
+
+	// Others that I can't pinpoint to direct ClassID
+	switch (String(monster.name).toLowerCase()) {
+
+		case "dummy":
+		case "an evil force":
+
+			// If it is one of the special monster, return false
+			return false;
+	}
+
+	// It is a valid attackable target, return true
+	return true;
+}
+
+// Function by Xizeta
+// ToDo : Add weapon switching on certain conditions
+function DA_DoPrecasts() {
+
+	// If the user set DA_AutoPrecasts to false, skip precasts
+	if (!DA_AutoPrecasts) {
+
+		DC_DPrint("DA_DoPrecasts() : Ignoring precasts because DA_AutoPrecasts is set to false");
+		return true;
+	}
+
+	// Amazon
+	if (me.classid === 0) {
+
+		if (DC_CheckSkill(32) >= 1) {
+
+			// Valkyrie
+			if(!DC_getNPC(357)) {
+
+				DC_DoCast(32,0);
+			}
+		}
+	}
+
+	// Sorceress
+	if (me.classid == 1) {
+
+		var _chillingarmor=false;
+		var _shiverarmor=false;
+		var _frozenarmor=false;
+
+		// Determine the best armor to use
+		if(DC_CheckSkill(60) >= 1) { _chillingarmor=true; }
+		else if(DC_CheckSkill(50) >= 1) { _shiverarmor=true; }
+		else if(DC_CheckSkill(40) >= 1) { _frozenarmor=true; }
+
+		// Enchant
+		var _merc = DC_GetMerc();
+		if (_merc && !_merc.getState(16) && DC_CheckSkill(52)) {
+
+			// Loop until the merc get within range before casting Enchant
+            		for (var x=0; x < 10; x+=1) {
+
+				// If the merc is in range, break the loop
+                		if (DA_GetRange(_merc) <= 20) { break; }
+
+				// If we are in the wild, cast Teleport on place to bring back the merc
+                		if (!DC_InTown(me) && DC_CheckSkill(54)) { DC_DoCast(54, 0, me.x, me.y); }
+
+				// Wait 1/10 of a second
+                		DC_DoDel(100);
+            		}
+
+			// If the merc is in range, cast it
+            		if (DA_GetRange(_merc) <= 20) { DC_DoCast(52,0,_merc); }
+    		}
+
+		// Frozen Armor
+		if (!me.getState(10) && _frozenarmor) {
+
+			DC_DoCast(40,0);
+		}
+
+		// Shiver Armor
+		if(!me.getState(88) && _shiverarmor) {
+
+			DC_DoCast(50,0);
+		} 
+
+		// Chilling Armor
+		if (!me.getState(20) && _chillingarmor) {
+
+			DC_DoCast(60,0);
+		}
+
+		// Energy Shield
+		if(!me.getState(30) && DC_CheckSkill(58) >= 1) {
+
+			DC_DoCast(58,0);
+		} 
+
+		// Thunderstorm
+		if(!DC_InTown(me) && !me.getState(38) && DC_CheckSkill(57) >= 1) {
+
+			DC_DoCast(57,0);
+		}
+	}
+
+	// Necromancer
+	// ToDo : Finish the section with revives
+	if (me.classid == 2) {
+
+		// Bone Armor
+    		if (!me.getState(14) && DC_CheckSkill(68) >= 1) {
+
+			DC_DoCast(68,0); 
+		}
+
+   		// Autodetect the best Golem to use
+		var _golem=false;
+		if(DC_CheckSkill(94) >= 1) { _golem = 94; }
+		else if(DC_CheckSkill(85) >= 1) { _golem = 85; }
+    		else if(DC_CheckSkill(75) >= 1) { _golem = 75; }
+
+		// Cast a Golem if no one is raised
+		if (_golem) {
+
+			// Fire Golem
+			if (_golem == 94 && !DC_getNPC(292)) {
+
+				DC_DoCast(_golem,0);
+			}
+
+			// Blood Golem
+			if (_golem == 85 && !DC_getNPC(290)) {
+
+				DC_DoCast(_golem,0);
+			}
+
+			// Clay Golem
+			if (_golem == 75 && !DC_getNPC(289)) {
+
+				DC_DoCast(_golem,0);
+			}
+		}
+
+		/*
+		// calculate the maximum number of summoned minions
+		if(DC_CheckSkill(70) <= 3) var _numskel = DC_CheckSkill(70);
+		else if (DC_CheckSkill(70) > 3) var _numskel = Math.floor(DC_CheckSkill(70)/3) + 2;
+		if(DC_CheckSkill(80) <= 3) var _numskelmage = DC_CheckSkill(80);
+		else if (DC_CheckSkill(80) > 3) var _numskelmage = Math.floor(DC_CheckSkill(80)/3) + 2;
+    		_numrevive = DC_CheckSkill(95);
+
+		////////////////////////////////
+		if(DA_Revives && !Sc_InTown(me)) {
+			haveRevive=0;
+			Revive = getUnit(1);
+			if(Revive) do {
+				if(Revive.getParent() && Revive.getParent().name == me.name && Revive.mode != 0 && Revive.mode != 12 &&
+					Revive.classid != 371 &&
+					Revive.classid != 289 &&
+					Revive.classid != 290 &&
+					Revive.classid != 291 &&
+					Revive.classid != 292 &&
+					Revive.classid != 363 &&
+					Revive.classid != 271 &&
+					Revive.classid != 338 &&
+					Revive.classid != 359 &&
+					Revive.classid != 561 &&
+					Revive.classid != 364) haveRevive+=1;
+			}while(Revive.getNext());
+			if(haveRevive < _numrevive) {
+				korpse = getBodyTarget();
+				if(korpse) {
+					thediffR = Math.floor(_numrevive - haveRevive);
+					DC_DPrint("I only have " + haveRevive + " Revives... Need " + thediffR + " more.", 3);
+					D_setSkill(95,0);
+					DC_DPrint("Reviving " + korpse.name + " from range " + getRange(me,korpse), 8);
+			 		korpse.useSkill(0);
+			 		castdelay();
+					delay(500);
+					newGuy = whoisthis();
+					if(newGuy) DC_DPrint("Revive " + newGuy.name + " Successful.", 2);
+					else DC_DPrint("Summon Unsuccessful! ingnoring this taget body",1);
+				}
+			}
+		}
+
+		if(DA_SkeletonMages && !Sc_InTown(me)) {
+			haveSkelMage = countMy(364);
+			if(haveSkelMage < _numskelmage) {
+				korpse = getBodyTarget();
+				if(korpse) {
+					thediffSM = Math.floor(_numskelmage - haveSkelMage);
+					DC_DPrint("I only have " + haveSkelMage + " Mage Skeletons... Need " + thediffSM + " more.", 3);
+					D_setSkill(80,0);
+					DC_DPrint("Summoning a Skeleton Mage from " + korpse.name + " from range " + getRange(me,korpse), 8);
+			 		korpse.useSkill(0);
+			 		castdelay();
+					delay(500);
+					newGuy = whoisthis(364);
+					if(newGuy) DC_DPrint("Summon " + newGuy.name + " Successful.", 2);
+					else DC_DPrint("Summon Unsuccessful! ingnoring this taget body",1);
+				}
+			}
+		}
+
+		if(DA_Skeletons && !Sc_InTown(me)) {
+			haveSkel = countMy(363);
+			if(haveSkel < _numskel) {
+				korpse = getBodyTarget();
+				if(korpse) {
+					thediffS = Math.floor(_numskel - haveSkel);
+					DC_DPrint("I only have " + haveSkel + " Skeletons... Need " + thediffS + " more.", 3);
+					D_setSkill(70,0);
+					DC_DPrint("Summoning a Skeleton from " + korpse.name + " from range " + getRange(me,korpse), 8);
+			 		korpse.useSkill(0);
+			 		castdelay();
+					delay(500);
+					newGuy = whoisthis(363);
+					if(newGuy) DC_DPrint("Summon " + newGuy.name + " Successful.", 2);
+					else DC_DPrint("Summon Unsuccessful! ingnoring this taget body",1);
+				}
+			}
+		}
+		*/
+
+	////////////////////////////////////
+	}
+
+	// Paladin
+	if(me.classid == 3) {
+		
+		// Holy Shield
+		if(!me.getState(101) && me.mp > 30 && DC_CheckSkill(117) >= 1) {
+
+			DC_DoCast(117,0);
+		}
+	}
+
+	// Barbarian
+	if(me.classid == 4) {
+
+		DA_BOSwitch("bo");
+
+		if (DC_CheckSkill(155) >= 1) { var _battlecommand=true; }
+
+		// Cast Battle Commands
+		if(!DC_InTown(me) && _battlecommand && !me.getState(51) && !me.getState(32) && me.mp > 30) {
+
+			DC_DoCast(155,0);
+		}
+
+		// Cast Battle Orders
+		if(!DC_InTown(me) && DC_CheckSkill(149) >= 1 && me.mp > 30) {
+
+			// Funtion to set time of BO cast and renew 2 seconds before expiration
+			_bolevel = DC_CheckSkill(149);
+
+			if(((new Date().getTime()-_DA_BOTimer)/1000) >= ((_bolevel*6)+28)) {
+
+				// If we have Battle Command, cast it at the same time
+				if (_battlecommand) { DC_DoCast(155,0); }
+
+				DC_DoCast(149,0);
+
+				// Reset the timer
+				_DA_BOTimer=new Date().getTime();
+			}
+		}
+
+		// Cast Shout
+		if(!DC_InTown(me) && DC_CheckSkill(138) >= 1 && !me.getState(26) && me.mp > 10)	{
+
+			DC_DoCast(138,0);
+		}
+
+		DA_BOSwitch("attack");
+	}
+
+	// Druid
+	if (me.classid == 5) {
+
+		// Cyclone Armor
+		if ((!me.getState(139) && !me.getState(140) && !me.getState(151)) && DC_CheckSkill(235) >= 1) {
+
+			DC_DoCast(235,0);
+		}
+
+		if (!me.getState(139) && DA_WereWolf && (me.mp > 30)){
+
+			DC_DoCast(223,0);
+		}
+		else if (!me.getState(140) && DA_WereBear && (me.mp > 30)) {
+
+			DC_DoCast(228,0);
+		}
+
+		if (DA_PoisonVine && (me.mp > 15)) {
+
+			if(!DC_getNPC(425)) {
+
+				DC_DoCast(222,0);
+			}
+		}
+
+		if (DA_CarrionVine && (me.mp > 15)) {
+
+			if(!DC_getNPC(426)) {
+
+				DC_DoCast(231,0);
+			}
+		}
+
+		if (DA_SolarCreeper && (me.mp > 15)) {
+
+			if(!DC_getNPC(427)) {
+
+				DC_DoCast(241,0);
+			}
+		}
+
+		if (DA_Raven > 0 && (me.mp > 15)) {
+
+			var _numravens=DA_CountMinions(419);
+			while(_numravens < DA_Raven) {
+
+				DC_DoCast(221,0);
+				_numravens=DA_CountMinions(419);
+			}
+		}
+
+		if (DA_SpiritWolf > 0 && (me.mp > 15)) {
+
+			var _numspiritwolf=DA_CountMinions(420);
+
+			while (_numspiritwolf < DA_SpiritWolf && (me.mp > 15)) {
+
+				DC_DoCast(227,0);
+		 		_numspiritwolf=DA_CountMinions(420);
+			}
+		}
+	
+		if (DA_DireWolf > 0 && (me.mp > 15)) {
+
+			var _numdirewolf=DA_CountMinions(421);
+			while(_numdirewolf < DA_DireWolf && (me.mp > 15)) {
+
+				DC_DoCast(237,0);
+		 		_numdirewolf=DA_CountMinions(421);
+			}
+		}
+
+		if (DA_Grizzly && (me.mp > 15)) {
+
+			if(!DC_getNPC(428)) {
+
+				DC_DoCast(247,0);
+			}
+		}
+
+		if(DA_Oaksage && (me.mp > 15)) {
+
+			if(!DC_getNPC(424)) {
+
+				DC_DoCast(226,0);
+			}
+	
+		}
+
+		if(DA_Wolverine && (me.mp > 15)) {
+
+			if(!DC_getNPC(423)) {
+
+				DC_DoCast(236,0);
+			}
+		}
+
+		if(DA_SpiritBarbs && (me.mp > 15)) {
+
+			if(!DC_getNPC(422)) {
+
+				DC_DoCast(246,0);
+			}
+		}
+	}
+
+	// Assassin
+	if (me.classid == 6 ) {
+
+		// Venom
+		if(!me.getState(31) && DC_CheckSkill(278) >= 1) {
+
+			DC_DoCast(278,0);
+		} 
+
+		// Shadow Master
+		if (DC_CheckSkill(279) >= 1) {
+
+			// If Shadow Master is not cast, cast it
+			if(!DC_getNPC(418)) { DC_DoCast(279,0); }
+		}
+	}
+}
+
+function DA_GetRange(object) {
+
+	var _xdiff = Math.abs(me.x - object.x);
+	var _ydiff = Math.abs(me.y - object.y);
+	var _xyrange = Math.sqrt((Math.pow(_xdiff,2)) + (Math.pow(_ydiff,2)));
+
+	// Return the calculated range
+	return parseInt(_xyrange);
+}
+
+function DA_UseCTASkills() {
+
+	// CTA skills casting for all chars excepted Barbarian
+    	if (DA_UseCTA && me.classid != 4 && !DC_InTown(me)) {
+
+        	DA_BOSwitch("bo");
+
+		DC_DoCast(155,0);
+		DC_DoCast(149,0);
+		DC_DoCast(138,0);
+
+        	DA_BOSwitch("attack");
+    	}
+}
+
+function DA_BOSwitch(which) {
+
+	var _adder = 0;
+	var _mainbo=0;
+	var _switchbo=0;
+	var _switchavail=false;
+
+	_weapon = DC_getItem(null, 1);
+
+	if (_weapon) { do {
+
+		if (DC_CheckOwner(_weapon)) {
+
+			// If first weapon tab
+			if (_weapon.itemloc == 4 || _weapon.itemloc == 5) {
+
+				if (_weapon.runeword) { _adder = checkRunewordSkill(_weapon, BATTLE_ORDERS[1], 97); }
+				else { _adder = _weapon.getStat(107, BATTLE_ORDERS[1]); }
+
+				if (_adder) { _mainbo += _adder; }
+			}
+
+			// If second weapon tab
+			if (_weapon.itemloc == 11 || _weapon.itemloc == 12) {
+
+				_switchavail = true;
+
+				if (_weapon.runeword) { _adder = checkRunewordSkill(_weapon, BATTLE_ORDERS[1], 97); }
+				else { _adder = _weapon.getStat(107, BATTLE_ORDERS[1]); }
+
+				if (_adder) { _switchbo += _adder; }
+
+				//_switchbo += _weapon.getStat(107, BATTLE_ORDERS[1]);
+			}
+		}
+
+	} while (_weapon.getNext(null, 1)); }
+
+	if (_switchavail) {
+
+		DC_DPrint("Your actual BO level is " + _mainbo + ", your weapon switch has level " + _switchbo + " BO !");
+
+		if(_mainbo > _switchbo && which == "attack") {
+
+			DC_DPrint("switching to Attack");
+			DC_DoWeaponSwitch();
+		}
+
+		if(_mainbo < _switchbo && which == "bo") {
+
+			DC_DPrint("switching to BO/CTA");
+			DC_DoWeaponSwitch();
+		}
+	}
+}
+
+
+// Function by Muellsammler, modified by Xizeta
+// returns a stat list for runeword items to make it look like getStat(-1)
+// Parameter :
+// -item	Item object to get stats
+// Return value : Stats list of the item
+function DA_CreateRunewordStatList(item) {
+
+	var _statlist = item.getStat(-2);
+
+	var _orderedstatlist = false;
+
+	if (_statlist) {
+
+		_orderedstatlist = new Array();
+
+		for (var stat = 0; stat < 358; stat += 1) {
+
+			if (stat in _statlist) {
+
+				for( substat in _statlist[stat] ) {
+
+					_orderedstatlist.push([stat, substat, _statlist[stat][substat]]);
+				}
+			}
+		}
+
+    	}
+
+	return _orderedstatlist;
+}
+
+// Function by Muellsammler, modified by Xizeta
+// checks a non class skill (like on CTA)
+// Parameters :
+// -item = UNIT		the item to check (eg a cta-weapon)
+// -whichstat = INT	ID of the skill (eg 149 for Battle Orders)
+// -stattype = INT	type of the stat (eg 97, where the 149 on a cta is located)
+// Return value : 
+function DA_CheckRunewordSkill(item, whichstat, stattype) {
+
+	var _itemstats = DA_CreateRunewordStatList(item);
+
+	if (_itemstats) {
+
+		for (var x = 0; x < _itemstats.length; x += 1) {
+
+			if (_itemstats[x][0] == stattype && _itemstats[x][1] == whichstat) {
+
+				return parseInt(_itemstats[x][2]);
+			}
+		}
+	}
+}
+
+/*
+function getBodyTarget(range) {
+	if(arguments.length < 1) { range = 25; }
+	BodyTarget = getUnit(1, null, 12);
+	var closestdist=range;
+	body_target=false;
+	if(BodyTarget) { do {
+		var targetRange=getRange(me,BodyTarget);
+		if(targetRange < range && !BodyTarget.getParent() &&
+			BodyTarget.classid != 371 &&
+			BodyTarget.classid != 289 &&
+			BodyTarget.classid != 290 &&
+			BodyTarget.classid != 291 &&
+			BodyTarget.classid != 292 &&
+			BodyTarget.classid != 271 &&
+			BodyTarget.classid != 338 &&
+			BodyTarget.classid != 359 &&
+			BodyTarget.classid != 561 &&
+			BodyTarget.classid != 363 &&
+			BodyTarget.classid != 364) {
+
+			skipTarget=false;
+			for(var tk = 0; tk<ignoreKorpse.length; tk+=1) {
+				if(ignoreKorpse[tk] == BodyTarget.gid) { skipTarget=true; }
+			}
+			if(!skipTarget) { 
+				if(targetRange < closestdist) {
+					closestdist = targetRange;
+					body_target = copyUnit(BodyTarget);
+				}
+			}
+				
+		}
+	}while(BodyTarget.getNext(null,12)); }
+	
+	if(body_target) { ignoreKorpse.push(body_target.gid); return body_target; }
+	return false;
+}
+*/
+
+// Function from Darien, modified by Xizeta
+// Return value : Number of minions of the same classid
+function DA_CountMinions(classid) {
+
+	var _numminions=0;
+
+	// Count while we have minions of the same classid
+	var _minion = DC_getNPC(classid);
+	if(_minion) { do {
+
+		if(_minion.mode !== 0 && _minion.mode != 12 && DC_CheckOwner(_minion)) {
+
+			_numminions+=1;
+		}
+
+	} while(_minion.getNext(classid)); }
+
+	// Return the number of minions
+	return _numminions;
+}
+
+// Function from Darien
+// Return value : True if the char is cursed
+function DA_IsCursed() {
+
+	if (me.getState(55) || me.getState(9) || me.getState(19)) { return true; }
+
+	return false;
+}
+
+//
+// return -1 => i do not know, but probably not attackable
+// return 0 => unattackable
+// return 1 => normal attackable
+// return 2 => boss attackable
+
+
+
+// monster ID
+c_DaeClassID_Mephisto = 242; // attackable
+
+c_DaeClassID_Nihlathak = 526; // attackable
+
+c_MonsterClassID_Baal_Throne = 543; // unattackable
+c_DaeClassID_Baal = 544; // attackable
+
+// objects
+c_ObjClassID_The_Worldstone_Chamber = 563;
+
+function DA_CheckMonster(monster) {
+
+	if (!monster) { return 0; }
+
+	if (monster.classid > 573) { return -1; }
+
+	if (monster.classid==c_MonsterClassID_Baal_Throne) { return 0; }
+	
+	if (monster.name=="Valkyrie" || monster.name=="Decoy") { return 0; }
+		
+	var merc=DC_GetMerc();
+	if (merc) { if (monster.name==merc.name) { return 0; } }		
+     
+	if ( monster.mode == 12 || monster.hp <= 0 ) { return 0; }
+
+	// check the alignement
+	if ( monster.getStat(172) == 2 ) { return 0; }
+
+	//if ( monster.getState(143) ) // not directly attackable
+		//return 0;
+
+	//if (CheckIsWrongType(monster)) { return 0; }
+
+	if (monster.spectype & 1 || monster.spectype & 4) { return 2; }
+
+	return 1;
+}
+
+function DA_FindClosestEnemy(x,y,radius) {
+
+	var pos = new coord(x,y);
+	var closest_dist = 500000;
+	var monster_id = 0;
+	var monster = null;
+	var e = getUnit(1);
+	if (e) { do {
+
+		if ( DA_CheckMonster( e ) > 0 ) {
+			var dist = pos.dist2(e);
+			if (dist < closest_dist) {
+
+				closest_dist = dist;
+				monster_id = e.gid;
+				monster = e;
+			}
+		}
+
+	} while(e.getNext()); }
+
+	e = getUnit(1);
+	if (e) { do {
+
+		if ( DA_CheckMonster( e ) > 0 ) {
+
+			if (e.gid == monster_id) {
+				return e;
+			}
+		}
+
+	} while(e.getNext()); }
+
+	return null;
+}
+
+function DA_FindClosestEnemyClassID(x,y,radius,classid) {
+
+	var pos = new coord(x,y);
+	var closest_dist = 500000;
+	var monster_id = 0;
+	var monster = null;
+	var e = getUnit(1,classid);
+	if (e) { do {
+
+		if ( DA_CheckMonster( e ) > 0 ) {
+			var dist = pos.dist2(e);
+			if (dist < closest_dist) {
+
+				closest_dist = dist;
+				monster_id = e.gid;
+				monster = e;
+			}
+		}
+
+	} while(e.getNext(classid)); }
+
+	e = getUnit(1,classid);
+	if (e) { do {
+
+		if ( DA_CheckMonster( e ) > 0 ) {
+
+			if (e.gid == monster_id) {
+				return e;
+			}
+		}
+
+	} while(e.getNext(classid)); }
+
+	return null;
+}
+
+
+/*
+function DA_AttackMonster(monster) {
+
+	var Selection = new Object();
+	var UseFrostNova = null;
+	var Failures = 0;
+	var MinDist = 4;
+	var FN_CheckInterval = 2500;
+
+	mdprint("[AttackMonster("+monster.name+")] Entering AttackMonster()");
+	// No Monster or Dead.
+	if (!monster || monster.mode == 12 || monster.hp <=0)
+		return true;
+	// AutoSkill if Selected
+	if (ICS_Settings["AutodetectSkill"]){
+		Selection = IC_AutoSkill(monster,mdprint);
+		ICS_Settings["PrimaryAttackSkill"] = Selection["Primary"];
+		ICS_Settings["SecondaryAttackSkill"] = Selection["Secondary"];
+		ICS_Settings["AttackSkillRange"] = Selection["MaxRange"];
+		UseFrostNova = (me.getSkill("Frost Nova") && monster.getStat(43) < 99 && (IC_AS_IsFire(ICS_Settings["PrimaryAttackSkill"]) || IC_AS_IsLight(ICS_Settings["PrimaryAttackSkill"])) &&	(IC_AS_IsFire(ICS_Settings["SecondaryAttackSkill"]) || IC_AS_IsLight(ICS_Settings["SecondaryAttackSkill"])))
+	}
+	mdprint("[AttackMonster("+monster.name+")] Selected Spell Is -> " + ICS_Settings["PrimaryAttackSkill"]);
+	var LifeCheckPreviousHP = monster.hp;
+	var LifeCheckPreviousTime = IC_GetTime();
+	var FN_Previous = 0;
+	while (monster.hp > 0){
+		// Display Monster HP
+		if (monster.hp > 0) me.overhead(monster.name + "'s Life: " + Math.round(monster.hp / 1.28) + " %");
+		// Back To Monster if Too Far
+		if (!IC_InRangeCoord(me, monster, ICS_Settings["AttackSkillRange"])){
+			mdprint("[AttackMonster("+monster.name+")] Monster Out Of Range.  Going back to him.");
+			while (me.mode == 18 && monster.hp > 0)	IC_MyDelay(20);   // x-nerd(hideo)
+			GetBackToMonster(monster,MinDist);
+		}
+
+
+		mdprint("[AttackMonster("+monster.name+")] Casting Spell -> " + ICS_Settings["PrimaryAttackSkill"] + "(" + monster.hp + ")");
+		while (me.mode == 18 && monster.hp > 0)	IC_MyDelay(20);   // x-nerd(hideo)
+		IC_MyCast(ICS_Settings["PrimaryAttackSkill"], 0, monster);
+		// We're done casting the MainAttack.. if it has a casting delay, let's do something else.
+		while(me.getState(121) && monster.hp > 0)		{
+			if (ICS_Settings["SecondaryAttackSkill"] == "Static Field"){
+				// Casting Static until he has less than 64 life (50%).
+				if (monster.hp > 64){
+					mdprint("[AttackMonster("+monster.name+")] Casting Spell -> " + ICS_Settings["SecondaryAttackSkill"] + "(" + monster.hp + ")");
+					IC_MyCast(ICS_Settings["SecondaryAttackSkill"],0,monster);
+				}
+				else if (ICS_Settings["AutodetectSkill"]){
+					Selection = IC_AutoSkill(monster,mdprint);
+					ICS_Settings["PrimaryAttackSkill"] = Selection["Primary"];
+					ICS_Settings["SecondaryAttackSkill"] = Selection["Secondary"];
+					ICS_Settings["AttackSkillRange"] = Selection["MaxRange"];
+					UseFrostNova = (me.getSkill("Frost Nova") && monster.getStat(43) < 99 && (IC_AS_IsFire(ICS_Settings["PrimaryAttackSkill"]) || IC_AS_IsLight(ICS_Settings["PrimaryAttackSkill"])) &&	(IC_AS_IsFire(ICS_Settings["SecondaryAttackSkill"]) || IC_AS_IsLight(ICS_Settings["SecondaryAttackSkill"])))
+				}
+			}else{
+				// Cast
+				mdprint("[AttackMonster("+monster.name+")] Casting Spell -> " + ICS_Settings["SecondaryAttackSkill"] + "(" + monster.hp + ")");
+				while (me.mode == 18 && monster.hp > 0)	IC_MyDelay(20);   // x-nerd(hideo)
+				IC_MyCast(ICS_Settings["SecondaryAttackSkill"],0,monster);
+			}
+
+			// FrostNova Check Here
+			if (UseFrostNova && ((IC_GetTime() - FN_Previous) > FN_CheckInterval)){
+				while (me.mode == 18 && monster.hp > 0)	IC_MyDelay(20);   // x-nerd(hideo)
+				FN_Previous = IC_GetTime()
+				IC_MyCast("Frost Nova",0,monster);
+			}
+
+			// Back To Monster if Too Far
+			if (!IC_InRangeCoord(me, monster, ICS_Settings["AttackSkillRange"])){
+				mdprint("[AttackMonster("+monster.name+")] Monster Out Of Range.  Going back to him.");
+				while (me.mode == 18 && monster.hp > 0)	IC_MyDelay(20);   // x-nerd(hideo)
+				GetBackToMonster(monster,MinDist);
+				Failures++;
+			}else Failures=0;
+
+			if (Failures == 3 && ICS_Settings["_DEBUGMODE"]){
+				takeScreenshot();
+				mdprint("[AttackMonster()] SCREENSHOT TAKEN!!!");
+			}
+			// Display her HP
+			if (monster.hp > 0) me.overhead(monster.name + "'s Life: " + Math.round(monster.hp / 1.28) + " %");
+			//IC_MyDelay(20);
+		}
+		// FrostNova Check Here
+		if (UseFrostNova && ((IC_GetTime() - FN_Previous) > FN_CheckInterval)){
+			while (me.mode == 18 && monster.hp > 0)	IC_MyDelay(20);   // x-nerd(hideo)
+			FN_Previous = IC_GetTime()
+			IC_MyCast("Frost Nova",0,monster);
+		}
+
+		if((IC_GetTime() - LifeCheckPreviousTime) > ICS_Settings["MonsterLifeCheckInverval"]){
+			LifeCheckPreviousTime = IC_GetTime();
+			if (monster.hp >= LifeCheckPreviousHP){
+				mdprint("[AttackMonster("+monster.name+")] Monster didn't lose life after "+ICS_Settings["MonsterLifeCheckInverval"]+"ms.. Teleporting back to her.");
+				mdprint("[AttackMonster("+monster.name+")] LifePrevious(" + LifeCheckPreviousHP + ") LifeNow(" + monster.hp + ")");
+				GetBackToMonster(monster,MinDist,true);
+			}
+			LifeCheckPreviousHP = monster.hp;
+		}
+	}
+	me.overhead(monster.name + "'s Life: 0 %");
+}
+*/
+/*
+    skillDamage object v1.0
+    by njaguar
+    
+    Usage:
+        skilldmg = new skillDamage();
+        skilldmg.initialize();
+
+        // for each monster you wish to attack:
+        skillId = skilldmg.getBestAttackQuick( target_unit ); // returns -1 if no suitable attack found
+        ..
+*/
+
+/*
+var elementalToStatLookup = [
+    37,		// magical
+    39,		// fire
+    41,		// lightning
+    45,		// poison
+    43];	// cold
+
+
+function skillDamage() {
+    this.skillData = new Array();
+    this.skillMostDamage = -1;
+    this.skillElementalType = new Array();
+    this.skillElementalMostDamage = [-1, -1, -1, -1, -1];
+    
+    // build the list of data
+    // this is only truly functional with sorcs or elemental druids
+    this.initialize = function() {
+        skillEntries = [
+            [6,  35],	// amazon
+            [36, 65],	// sorceress
+            [66, 95],	// necromancer
+            [96, 125],	// paladin
+            [126,155],	// barbarian
+            [221,251],	// druid
+            [252,281]];	// assassin
+        
+        
+        skipList = [];
+        skipList[58] = 1;    // energy shield
+        
+        _max_dmg = 0;
+        _max_dmg_elem = [0, 0, 0, 0, 0];
+        for( count1 = skillEntries[me.classid][0]; count1 < skillEntries[me.classid][1]; count1+=1 ) {
+            if(!(count1 in skipList)) {
+                _min_val = me.getSkillDamageMin( count1,
+                                me.getSkill( count1, 0 ) ) >> 8;
+                _max_val = me.getSkillDamageMax( count1,
+                                me.getSkill( count1, 0 ) ) >> 8;
+                if( (_mean_val = (_min_val + _max_val)/2) > 0 ) {
+                    this.skillData[ count1 ] = _mean_val;
+                    elem = getBaseStat( D2JSP_BASE_SKILLS, count1, D2JSP_BASE_SKILLS_ETYPE );
+                    if( _mean_val > _max_dmg ) {
+                        _max_dmg = _mean_val;
+                        this.skillMostDamage = count1;
+                    }
+                    if( _mean_val > _max_dmg_elem[ elem ] ) {
+                        _max_dmg_elem[ elem ] = _mean_val;
+                        this.skillElementalMostDamage[ elem ] = count1;
+                    }
+                }
+            }
+        }
+    }
+    
+    // get highest damage skill, without regards to immunities or resistances
+    // disregards speed of casting, duration and aoe
+
+    this.getBestAttackQuick = function( ) {
+        return this.skillMostDamage;
+    }
+    
+    // get highest damage skill, using immunities and resistances to base damage off of
+    // disregards speed of casting, duration and aoe
+    this.getBestAttackBasic = function( _target_unit ) {
+        bestSkillId = -1;
+        if( _target_unit ) {
+            _max_dmg = 0;
+            _max_dmg_elem = [0, 0, 0, 0, 0];
+            for( count1 = 0; count1 < 5; count1+=1 ) {
+                if( this.skillElementalMostDamage[ count1 ] != -1 ) {
+                    if( (_dmg = (( 100 - _target_unit.getStat( elementalToStatLookup[ count1 ] ) ) / 100) * this.skillData[ this.skillElementalMostDamage[ count1 ] ]) > _max_dmg ) {
+                        _max_dmg = _dmg
+                        bestSkillId = this.skillElementalMostDamage[ count1 ];
+                    }
+//                    DC_DPrint( "dmg for skill " + this.skillElementalMostDamage[ count1 ] + " is " + (( 100 - _target_unit.getStat( elementalToStatLookup[ count1 ] ) ) / 100) * this.skillData[ this.skillElementalMostDamage[ count1 ] ]);
+                }            
+            }
+        
+        }
+        return bestSkillId;
+    }
+    
+    // gets highest damage skill, based on resistances, as well as casting time
+    // disregards freezing effects, duration, and aoe
+    this.getBestAttack = function( _target_unit ) {
+        return -1;
+    }
+
+    // gets best attack based on resistances, full weights for freezing, duration + aoe
+    this.getBestAttackComplex = function( _target_unit ) {
+        return -1;
+    }
+}
+*/
+
+
+/*
+// -----------------------------------------------------------------------------
+//                         AutoSkill & Attack Related
+// -----------------------------------------------------------------------------
+function IC_AS_GetRange(Primary, Secondary)
+{
+	var LongRange = ["Fire Wall", "Meteor", "Blizzard", "Hydra", "Frozen Orb"];
+	var InThere = false;
+
+	for (var i=0; i<LongRange.length; i+=1)
+		if (Primary == LongRange[i])
+		{
+			InThere = true;
+			break;
+		}
+
+	if (InThere && Secondary != "Nova" && Secondary != "Static Field")
+		return 15;
+	else
+		return 9;
+
+}
+
+function IC_AS_GetSecondarySkill(enemy, spells, Primary)
+{
+	var SkillName = "";
+	var SkillStr = -99999;
+
+	var TempStr = -99999;
+
+	var IsFireImm  = (enemy.getStat(39) > 99) ? true : false;
+	var IsLightImm = (enemy.getStat(41) > 99) ? true : false;
+	var IsColdImm  = (enemy.getStat(43) > 99) ? true : false;
+	var IsFireRes  = (enemy.getStat(39) == 75) ? true : false;
+	var IsLightRes = (enemy.getStat(41) == 75) ? true : false;
+	var IsColdRes  = (enemy.getStat(43) == 75) ? true : false;
+
+	// Always use StaticField if > 64 & Not Immune to Lightning.
+	if (!IsLightImm && !IsLightRes && enemy.hp > 64 && me.getSkill("Static Field"))
+	{
+		// If we have Static && *NOT* Lightning Immune && Monster > 64 life we *ALWAYS* use Static
+		return "Static Field";
+	}
+
+	// Insert Special Combos here.
+
+	// Normal Process
+	for (var i=spells.length; i>=0 ; i--)
+	{
+		if (me.getSkill(spells[i]))
+		{
+			// spells[i] = Nom du Skill
+			TempStr = me.getSkill(spells[i]);
+
+			// Immunities & Resistance Penalities
+			if (IC_AS_IsFire(spells[i]))
+			{
+				if (IsFireImm) TempStr -= 1000;
+				if (IsFireRes) TempStr -= 3;
+			}
+			if (IC_AS_IsCold(spells[i]))
+			{
+				if (IsColdImm) TempStr -= 1000;
+				if (IsColdRes) TempStr -= 3;
+			}
+			if (IC_AS_IsLight(spells[i]))
+			{
+				if (IsLightImm) TempStr -= 1000;
+				if (IsLightRes) TempStr -= 3;
+			}
+
+			// Do we have a Weaner?
+			if (TempStr > 0 && TempStr >= SkillStr)
+			{
+				SkillName = spells[i];
+				SkillStr = TempStr;
+			}
+		}
+	}
+
+	return SkillName;
+}
+
+function IC_AS_GetPrimarySkill(enemy, spells)
+{
+	var SkillName = "";
+	var SkillStr = -99999;
+
+	var TempStr = -99999;
+
+	var IsFireImm  = (enemy.getStat(39) > 99) ? true : false;
+	var IsLightImm = (enemy.getStat(41) > 99) ? true : false;
+	var IsColdImm  = (enemy.getStat(43) > 99) ? true : false;
+	var IsFireRes  = (enemy.getStat(39) == 75) ? true : false;
+	var IsLightRes = (enemy.getStat(41) == 75) ? true : false;
+	var IsColdRes  = (enemy.getStat(43) == 75) ? true : false;
+
+	for (var i=spells.length; i>=0 ; i--)
+	{
+		if (me.getSkill(spells[i]))
+		{
+			// spells[i] = Nom du Skill
+			TempStr = me.getSkill(spells[i]);
+
+			// Immunities & Resistance Penalities
+			if (IC_AS_IsFire(spells[i]))
+			{
+				if (IsFireImm) TempStr -= 1000;
+				if (IsFireRes) TempStr -= 3;
+			}
+			if (IC_AS_IsCold(spells[i]))
+			{
+				if (IsColdImm) TempStr -= 1000;
+				if (IsColdRes) TempStr -= 3;
+			}
+			if (IC_AS_IsLight(spells[i]))
+			{
+				if (IsLightImm) TempStr -= 1000;
+				if (IsLightRes) TempStr -= 3;
+			}
+
+			// Do we have a Weaner?
+			if (TempStr > 0 && TempStr >= SkillStr)
+			{
+				SkillName = spells[i];
+				SkillStr = TempStr;
+			}
+		}
+	}
+
+	// Check for Nova
+	if (!IsLightImm && me.getSkill("Nova"))
+	{
+		// For Nova to be the primary it must:
+		// 1) No Immune Lightning
+		// 2) Have Nova
+		// 3) PreviousSkill must not have a casting delay
+		// 4) Nova > PreviousSkill
+		switch (SkillName)
+		{
+			case "Frozen Orb":
+			case "Meteor":
+			case "Fire Wall":
+			case "Hydra":
+			case "Blizzard":
+				// Casting delay: Nova is gonna be better as a secondary unless
+				//		-> it has +10 skill advantage (random value in my head)
+				TempStr = me.getSkill("Nova");
+				if (IsLightRes) TempStr-=3;
+				TempStr-=SkillStr;
+				if (TempStr > 12)
+				{
+					SkillName = "Nova";
+					SkillStr = me.getSkill("Nova");
+				}
+
+				break
+			default:
+				TempStr = me.getSkill("Nova");
+				if (IsLightRes) TempStr-=5;
+
+				if (TempStr > SkillStr)
+				{
+					SkillName = "Nova";
+					SkillStr = me.getSkill("Nova");
+				}
+				break;
+		}
+	}
+
+	return SkillName;
+}
+
+function IC_AS_IsFire(SkillName)
+{
+	var FireSpells = ["Fire Bolt", "Warmth", "Inferno", "Blaze", "Fire Ball", "Fire Wall", "Enchant", "Meteor", "Fire Mastery", "Hydra"];
+	for (var i=0; i<FireSpells.length; i+=1)
+		if (SkillName == FireSpells[i])
+			return true;
+	return false;
+}
+
+function IC_AS_IsCold(SkillName)
+{
+	var ColdSpells = ["Ice Bolt", "Frozen Armor", "Frost Nova", "Ice Blast", "Shiver Armor", "Glacial Spike", "Blizzard", "Chilling Armor", "Frozen Orb", "Cold Mastery"];
+	for (var i=0; i<ColdSpells.length; i+=1)
+		if (SkillName == ColdSpells[i])
+			return true;
+	return false;
+}
+
+function IC_AS_IsLight(SkillName)
+{
+	var LightSpells = ["Charged Bolt", "Static Field", "Telekinesis", "Nova", "Lightning", "Chain Lightning", "Teleport", "Thunder Storm", "Energy Shield", "Lightning Mastery"];
+	for (var i=0; i<LightSpells.length; i+=1)
+		if (SkillName == LightSpells[i])
+			return true;
+	return false;
+}
+
+function IC_AutoSkill(enemy,debug)
+{
+	// Normal attack -> "Attack"
+
+	var SorcPrimList = ["Frozen Orb", "Meteor", "Fire Wall", "Hydra", "Blizzard", "Glacial Spike", "Fire Ball", "Chain Lightning", "Lightning", "Frost Nova", "Ice Blast", "Inferno", "Ice Bolt", "Charged Bolt", "Fire Bolt", "Attack"];
+	var SorcSecList = ["Nova", "Glacial Spike", "Fire Ball", "Frost Nova", "Inferno", "Ice Blast",  "Chain Lightning", "Lightning", "Ice Bolt", "Fire Bolt", "Charged Bolt", "Attack"];
+
+	var Selection = new Object();
+
+	if (me.classid == 1)
+	{
+		// Get Primary Skill
+		Selection["Primary"] = IC_AS_GetPrimarySkill(enemy, SorcPrimList);
+
+		// Strip PrimarySkill from Secondary Array before sending it...
+		for (var i=0; i<SorcPrimList; i+=1)
+			if (SorcPrimList[i] == Selection["Primary"])
+			{
+				SorcPrimList.splice(i,1);
+				break;
+			}
+
+		// Get Secondary Skill
+		Selection["Secondary"] = IC_AS_GetSecondarySkill(enemy, SorcSecList, Selection["Primary"]);
+
+		// Get Range
+		Selection["MaxRange"] = IC_AS_GetRange(Selection["Primary"],Selection["Secondary"]);
+
+		// Return our Findings!
+		if (debug) debug("[AutoSkill()] "+enemy.name+"'s Resistances -> Fire("+enemy.getStat(39)+") Lightning("+enemy.getStat(41)+") Cold("+enemy.getStat(43)+")");
+		if (debug) debug("[AutoSkill()] Primary("+Selection["Primary"]+")("+me.getSkill(Selection["Primary"])+") Secondary("+Selection["Secondary"]+")("+me.getSkill(Selection["Secondary"])+") Range("+Selection["MaxRange"]+")");
+		return Selection;
+	}
+	else
+	{
+		DC_Print("AutoSkill does not support this class!");
+		return null;
+	}
+
+}
+*/

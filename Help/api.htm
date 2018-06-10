@@ -1,0 +1,262 @@
+<head>
+<title></title>
+</head>
+
+<body background="bkgnd.gif">
+
+<h2><b><a name="top" href="#top"></a>SIG使用帮助</b></h2>
+<hr>
+<ul>
+  <li><a href="#api">开发接口</a></li>
+  <li><a href="#poststring">PostString</a></li>
+  <li><a href="#pause">Pause</a></li>
+  <li><a href="#resume">Resume</a></li>
+  <li><a href="#stop">Stop</a></li>
+  <li><a href="#leave">Leave</a></li>
+  <li><a href="#quitd2">QuitD2</a></li>
+  <li><a href="#key">Key</a></li>
+  <li><a href="#next">Next...命令组</a></li>
+</ul>
+<p><a name="api" href="#api"></a><b>开发接口</b></p>
+<p>&nbsp;&nbsp;&nbsp; 作为一个通用型GUI，SIG为其它模块或脚本提供了一系列开发接口，以使它们能够和GUI之间进行必要的交流，同时也得以将必要的信息及时以直观的方式发送给用户。目前笔者公开的命令有以下几项。</p>            
+<p><a href="#top">返回页顶</a></p>      
+<p><a name="poststring" href="#poststring"></a><b>PostString</b></p>    
+<table border="1" width="100%">
+  <tr>
+    <td width="23%">功能</td>
+    <td width="77%">从游戏内向SIG主界面发送文字信息</td>
+  </tr>
+  <tr>
+    <td width="23%">命令</td>
+    <td width="77%"><b>SIG PostString &lt;</b><i>文字内容</i><b>&gt;</b></td>             
+  </tr>
+  <tr>
+    <td width="23%">效果</td>
+    <td width="77%">将 &lt;<i>文字内容</i>&gt; 显示在SIG程序主界面的信息条中，支持中文字符。</td>             
+  </tr>
+  <tr>
+    <td width="23%">使用举例</td>
+    <td width="77%">在SIG程序主界面的信息条中显示&quot;<b>找到一把Windforce啦!</b>&quot;</td>
+  </tr>
+  <tr>
+    <td width="23%">D2Hackit模块开发者</td>
+    <td width="77%">server-&gt;GameCommandLine(&quot;SIG PostString 找到一把Windforce啦!&quot;);</td>             
+  </tr>
+  <tr>
+    <td width="23%">D2JSP脚本开发者&nbsp;</td>   
+    <td width="77%">&lt;暂时无法支持&gt;</td>        
+  </tr>
+  <tr>
+    <td width="23%">结果</td>
+    <td width="77%"><img border="0" src="api.ht1.gif" width="303" height="195"></td>
+  </tr>
+</table>
+<p><a href="#top">返回页顶</a>&nbsp;&nbsp; </p>
+<p><a name="pause" href="#pause"></a><b>Pause</b> </p>
+<table border="1" width="100%">
+  <tr>
+    <td width="23%">功能</td>
+    <td width="77%">暂停SIG运行</td>
+  </tr>
+  <tr>
+    <td width="23%">命令</td>
+    <td width="77%"><b>SIG Pause</b></td>             
+  </tr>
+  <tr>
+    <td width="23%">效果</td>
+    <td width="77%">等同于从游戏内遥控点击SIG程序主界面的&quot;暂停<img border="0" src="intro.3.gif" width="16" height="15">&quot;按钮。</td>
+  </tr>
+  <tr>
+    <td width="100%" colspan="2">使用举例</td>
+  </tr>
+  <tr>
+    <td width="23%">D2Hackit模块开发者</td>
+    <td width="77%">server-&gt;GameCommandLine(&quot;SIG Pause&quot;);</td>             
+  </tr>
+  <tr>
+    <td width="23%">D2JSP脚本开发者</td>   
+    <td width="77%">&lt;暂时无法支持&gt;</td>            
+  </tr>
+</table>
+<p><a href="#top">返回页顶</a></p>
+<p><a name="resume" href="#resume"></a><b>Resume</b></p>
+<table border="1" width="100%">
+  <tr>
+    <td width="23%">功能</td>
+    <td width="77%">恢复SIG运行</td>
+  </tr>
+  <tr>
+    <td width="23%">命令</td>
+    <td width="77%"><b>SIG Resume</b></td>             
+  </tr>
+  <tr>
+    <td width="23%">效果</td>
+    <td width="77%">等同于从游戏内遥控点击SIG程序主界面的&quot;继续<img border="0" src="intro.7.gif" width="17" height="17">&quot;按钮。</td>
+  </tr>
+  <tr>
+    <td width="100%" colspan="2">使用举例</td>
+  </tr>
+  <tr>
+    <td width="23%">D2Hackit模块开发者</td>
+    <td width="77%">server-&gt;GameCommandLine(&quot;SIG Resume&quot;);</td>             
+  </tr>
+  <tr>
+    <td width="23%">D2JSP脚本开发者</td>   
+    <td width="77%">&lt;暂时无法支持&gt;</td>           
+  </tr>
+</table>
+<p><a href="#top">返回页顶</a></p>
+<p><a name="stop" href="#stop"></a><b>Stop</b></p>
+<table border="1" width="100%">
+  <tr>
+    <td width="23%">功能</td>
+    <td width="77%">停止SIG运行</td>
+  </tr>
+  <tr>
+    <td width="23%">命令</td>
+    <td width="77%"><b>SIG Stop</b></td>             
+  </tr>
+  <tr>
+    <td width="23%">效果</td>
+    <td width="77%">等同于从游戏内遥控点击SIG程序主界面的&quot;停止<img border="0" src="intro.4.gif" width="16" height="15">&quot;按钮。</td>
+  </tr>
+  <tr>
+    <td width="100%" colspan="2">使用举例</td>
+  </tr>
+  <tr>
+    <td width="23%">D2Hackit模块开发者</td>
+    <td width="77%">server-&gt;GameCommandLine(&quot;SIG Stop&quot;);</td>             
+  </tr>
+  <tr>
+    <td width="23%">D2JSP脚本开发者</td>   
+    <td width="77%">&lt;暂时无法支持&gt;</td>           
+  </tr>
+</table>
+<p><a href="#top">返回页顶</a></p>
+<p><a name="leave" href="#leave"></a><b>Leave</b></p>
+<table border="1" width="100%">
+  <tr>
+    <td width="23%">功能</td>
+    <td width="77%">退出当前游戏</td>
+  </tr>
+  <tr>
+    <td width="23%">命令</td>
+    <td width="77%"><b>SIG Leave</b></td>             
+  </tr>
+  <tr>
+    <td width="23%">效果</td>
+    <td width="77%">退出当前游戏，并由SIG立即创建一个新游戏。</td>
+  </tr>
+  <tr>
+    <td width="100%" colspan="2">使用举例</td>
+  </tr>
+  <tr>
+    <td width="23%">D2Hackit模块开发者</td>
+    <td width="77%">server-&gt;GameCommandLine(&quot;SIG Leave&quot;);</td>             
+  </tr>
+  <tr>
+    <td width="23%">D2JSP脚本开发者</td>   
+    <td width="77%">&lt;暂时无法支持&gt;</td>           
+  </tr>
+</table>
+<p><a href="#top">返回页顶</a></p>
+<p><a name="quitd2" href="#quitd2"></a><b>QuitD2</b></p>
+<table border="1" width="100%">
+  <tr>
+    <td width="23%">功能</td>
+    <td width="77%">关闭Diablo II程序</td>          
+  </tr>
+  <tr>
+    <td width="23%">命令</td>
+    <td width="77%"><b>SIG QuitD2</b></td>         
+  </tr>
+  <tr>
+    <td width="23%">效果</td>
+    <td width="77%">关闭Diablo II程序，并由SIG重新启动Diablo II。</td>         
+  </tr>
+  <tr>
+    <td width="100%" colspan="2">使用举例</td>
+  </tr>
+  <tr>
+    <td width="23%">D2Hackit模块开发者</td>
+    <td width="77%">server-&gt;GameCommandLine(&quot;SIG QuitD2&quot;);</td>         
+  </tr>
+  <tr>
+    <td width="23%">D2JSP脚本开发者</td>   
+    <td width="77%">&lt;暂时无法支持&gt;</td>           
+  </tr>
+</table>
+<p><a href="#top">返回页顶</a></p>
+<p><a name="key"></a><b>Key</b></p>
+<table border="1" width="100%">
+  <tr>
+    <td width="23%">功能</td>
+    <td width="77%">向Diablo II进程发送模拟键盘按键消息</td>       
+  </tr>
+  <tr>
+    <td width="23%">命令</td>
+    <td width="77%"><b>SIG Key <i>&lt;16进制键码&gt;</i></b></td>      
+  </tr>
+  <tr>
+    <td width="100%" colspan="2">使用举例</td>
+  </tr>
+  <tr>
+    <td width="23%">D2Hackit模块开发者</td>
+    <td width="77%">server-&gt;GameCommandLine(&quot;SIG key 20&quot;); //   
+      模拟空格键按键</td>    
+  </tr>
+  <tr>
+    <td width="23%">D2JSP脚本开发者</td> 
+    <td width="77%">&lt;暂时无法支持&gt;</td>        
+  </tr>
+</table>
+<p><a href="#top">返回页顶</a></p>
+<p><b><a name="next"></a>Next...命令组</b></p>
+<table border="1" width="100%">
+  <tr>
+    <td width="23%">功能</td>
+    <td width="77%">预设下一个游戏的状态(创建/加入、游戏名、密码)，在当前游戏结束后，SIG将会以指定的方式创建或加入下一个游戏。</td>     
+  </tr>
+  <tr>
+    <td width="23%">命令</td>
+    <td width="77%"><b>SIG NextGame <i>&lt;</i></b><b><i>create/join&gt;<br>  
+      </i>SIG NextName <i>&lt;game name&gt;<br>
+      </i>SIG NextPassword <i>&lt;game password&gt;</i></b></td>    
+  </tr>
+  <tr>
+    <td width="100%" colspan="2">　</td>
+  </tr>
+  <tr>
+    <td width="100%" colspan="2">使用举例1：下一个游戏<b>加入</b>名叫&quot;<b>abcde</b>&quot;，密码为&quot;<b>123</b>&quot;的游戏</td>
+  </tr>
+  <tr>
+    <td width="23%">D2Hackit模块开发者</td>
+    <td width="77%">server-&gt;GameCommandLine(&quot;SIG NextGame join&quot;); //   
+      类型为join<br>
+      server-&gt;GameCommandLine(&quot;SIG NextName abcde&quot;); //   
+      游戏名为abcde<br>
+      server-&gt;GameCommandLine(&quot;SIG NextPassword 123&quot;); // 密码为123</td>      
+  </tr>
+  <tr>
+    <td width="23%">D2JSP脚本开发者</td> 
+    <td width="77%">&lt;暂时无法支持&gt;</td>        
+  </tr>
+  <tr>
+    <td width="100%" colspan="2">　</td>
+  </tr>
+  <tr>
+    <td width="100%" colspan="2">使用举例2：下一个游戏<b>创建</b>名叫&quot;<b>pkpk</b>&quot;的无密码的游戏</td>
+  </tr>
+  <tr>
+    <td width="23%">D2Hackit模块开发者</td>
+    <td width="77%">server-&gt;GameCommandLine(&quot;SIG NextGame create&quot;); //   
+      类型为create<br>
+      server-&gt;GameCommandLine(&quot;SIG NextName pkpk&quot;); // 游戏名为pkpk<br>  
+      server-&gt;GameCommandLine(&quot;SIG NextPassword &quot;); // 密码为空</td>      
+  </tr>
+  <tr>
+    <td width="23%">D2JSP脚本开发者</td> 
+    <td width="77%">&lt;暂时无法支持&gt;</td>        
+  </tr>
+</table>
+<p><a href="#top">返回页顶</a></p>

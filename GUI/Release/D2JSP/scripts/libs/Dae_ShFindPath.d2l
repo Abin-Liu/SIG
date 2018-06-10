@@ -1,0 +1,529 @@
+/*
+
+ ShFindPath.d2l v0.3 - Sherpya Path Finding library
+ Copyright (C) 2002 Gianluigi Tiesi <sherpya@hotmail.com>
+
+ This is an improved version of Syadasti's one, so mainly
+ the fame goes to syadasti :-P
+ The difference is my lib simplify the graph by using bounding boxes
+ around the rooms and tries to enlarge node distance if path is not found
+ Note: This lib is not heavy tested, please report me if fails
+       It's also less precise than syadasti one, so your char may need
+       more random hops to reach destination
+
+ This program is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by the
+ Free Software Foundation; either version 2, or (at your option) any later
+ version.
+
+ This program is distributed in the hope that it will be useful, but
+ WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY
+ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ for more details.
+
+ -------------------------------------------------------------------------
+
+ You need dprint function to use this lib and also include SyLib.d2l
+ function & variable names are renamed from Sy_ to Sh_ to avoid clashing
+
+ usage:
+ dest = Sh_BuildMap(mintile, maxtile, offset);
+ // use 18 for offset... I think I will hardcode into func
+
+ // or 
+ dest = Sh_BuildOpenMap(roomnumber, offset);
+
+ if (!dest.x || !dest.y)
+ {
+      print("Today isn't really a god day ;-(");
+      return false;
+ }
+
+ path = Sh_FindPath(dest.x, dest.y, 80);
+ // I suggest 80 as starting sep or 60 with dense maps like maggotlair bot
+
+ Sh_FollowPathToThing(path, dest.x, dest.y);
+
+ HISTORY:
+ 0.1 - First release
+ 0.2 - Added deadlock detection, tweaked some values
+ 0.3 - Added Sh_BuildOpenMap to build paths in open spaces
+
+ 0.42 - Correct point in Sh_BuildMap (IchLiebeDich)
+ 0.50 - Faster speed on 0.32 core.
+*/
+
+var MaxSepAllowed = 300;        // Bogus?
+var TeleportDeadlock = 20; // To detect deadlock in teleport to dest
+
+/* Used for open space path finding */
+var MinRoom = 1;
+var MaxRoom = 1089;
+
+// constructor for Point object
+function Point()
+{
+   this.x = 0;
+   this.y = 0;
+   this.number = 0;
+}
+
+function Box()
+{
+   this.number = 0;
+   this.x1 = 0x0fffffff;
+   this.x2 = 0;
+   this.y1 = 0x0fffffff;
+   this.y2 = 0;
+}
+
+function Sh_FindPath(targetx, targety, maxsep)
+{
+//
+// PARAMETER: targetx = stairs down X
+// PARAMETER: targety = stairs down Y
+// PARAMETER: maxsep = starting max separation between vertices, divided by sqrt(2)
+//            the script will try to elarge maxsep if path is not found
+// RETURNS: an array of Point objects containing the path
+//
+   DebugWrite( "Sh_FindPath begin" );
+   var v = new Array;
+   for (_ii = 0; _ii < _Sh_Path_Max; _ii++)
+   {
+      v[_ii] = new Vertex();
+   }
+
+   _Points[0].x = me.x;
+   _Points[0].y = me.y;
+   _Points[1].x = targetx;
+   _Points[1].y = targety;
+
+
+   //i_Points++;
+
+   var found = false;
+   while (maxsep < MaxSepAllowed)
+   {
+      // Create the graph
+      dprint("Sh_FindPath() has " + i_Points + " locations to work with.");
+
+      for (i = 0; i < i_Points; i++)
+      {
+         for (j = 0; j < i_Points; j++)
+         {
+            if (i != j)
+            {
+               d = Dist2(_Points[i].x, _Points[i].y, _Points[j].x,
+                         _Points[j].y);
+               if (d <= 2 * maxsep * maxsep)
+               {
+                  //dprint("Arc from " + i + " to " + j);
+                  v[i].push(j, Math.sqrt(d));
+               }
+            }
+         }
+      }
+
+      Sh_Dijkstra(v, i_Points, 0);
+      i_ThingPath = 0;
+
+      if (Sh_CreatePath(v, 0, 1))
+      {
+         found = true;
+         break;
+      }
+
+      maxsep++;
+      dprint("Unable to build path, trying to enlarge node sep distance to " + maxsep);
+
+   }
+
+   DebugWrite( "Sh_FindPath end" );
+   if (!found)
+   {
+      dprint("It's not really a good day... no suitable path found...");
+      delay(1000);
+//      stop();
+      return false;
+   }
+   _HopsToThing = i_ThingPath;
+   _ThingPath.length = i_ThingPath; //yy IchLiebeDich
+   dprint("Sh_FindPath() built a path with " + _HopsToThing + " hops.");
+   //dprint("Player at (" + me.x.toString(16) + ", " + me.y.toString(16) + ")");
+   //for (k = 0; k < i_ThingPath; k++) {
+   // dprint("Hop " + k + ": (" + _ThingPath[k][0].toString(16) + ", " + _ThingPath[k][1].toString(16) + ")"); }
+   //dprint("Target at (" + targetx.toString(16) + ", " + targety.toString(16) + ")");
+   return _ThingPath;
+}
+
+function Sh_CheckRoom( room ) {
+	var init = false;
+   	DebugWrite( "Sh_CheckRoom number "+room.number+" x "+room.x*5+" y "+room.y*5+" level "+room.level );
+	if(!room.getStat(11)) { room.init(); init = true; }
+
+	var yc = room.getStat(12);
+	yc >>= 1;
+	var xc = room.getStat(11);
+	xc >>= 1;
+	var nx = -1;
+	var ny = -1;
+   	DebugWrite( "xc "+xc+" yc "+yc );
+
+	for(var y = 0; y < yc && nx < 0 ; y++) {
+		for(var x = 0; x< xc && nx < 0 ; x++) {
+			if ( ( room.getCollision( xc+x, yc+y ) & 1 ) == 0 ) {
+				nx = xc+x;
+				ny = yc+y;
+			}
+			else if ( ( room.getCollision( xc+x, yc-y ) & 1 ) == 0 ) {
+				nx = xc+x;
+				ny = yc-y;
+			}
+			else if ( ( room.getCollision( xc-x, yc+y ) & 1 ) == 0 ) {
+				nx = xc-x;
+				ny = yc+y;
+			}
+			else if ( ( room.getCollision( xc-x, yc-y ) & 1 ) == 0 ) {
+				nx = xc-x;
+				ny = yc-y;
+			};
+		};
+	};
+	if(init && !sets["code_anti_crash"] ) {room.release(); init = false;}
+   	DebugWrite( "Sh_CheckRoom end" );
+
+	if ( nx >= 0 ) {
+         _Points[i_Points].x = room.x*5+nx;
+         _Points[i_Points].y = room.y*5+ny;
+         _Points[i_Points].number = room.number;
+         i_Points++;
+	};
+};
+
+function Sh_BuildOnlyMap()
+{
+	i_Points = 2;
+	i_area = me.area;
+	var room = getRoom();
+	if ( room ) do {
+		if ((room.number <= MinRoom) || (room.number > MaxRoom))
+			continue;
+//		Sh_CheckRoom( room );
+	var init = false;
+   	DebugWrite( "Sh_CheckRoom number "+room.number+" x "+room.x*5+" y "+room.y*5+" level "+room.level );
+	if(!room.getStat(11) || !room.getStat(12) ) { 
+   		DebugWrite( "need to initialize"  );
+		//room.init(); 
+		init = true; 
+	   	DebugWrite( "room initialized"  );
+	};
+
+	var yc = room.getStat(12);
+		//yc >>= 1;
+		var xc = room.getStat(11);
+		//xc >>= 1;
+		var nx = -1;
+		var ny = -1;
+   		DebugWrite( "xc "+xc+" yc "+yc );
+
+		var coldata=room.getCollision();
+		if (!coldata) continue;
+		for(var y = 0; y < yc && nx < 0 ; y++) {
+			for(var x = 0; x< xc && nx < 0 ; x++) {
+				
+				if (coldata[y])
+				{
+					if ((coldata[y][x] & 1 )==0)
+					{
+						nx=x;
+						ny=y;
+					}
+				}
+			};
+		};
+	//if(init && !sets["code_anti_crash"] ) {//room.release(); init = false;}
+   	DebugWrite( "Sh_CheckRoom end" );
+
+	if ( nx >= 0 ) {
+         _Points[i_Points].x = room.x*5+nx;
+         _Points[i_Points].y = room.y*5+ny;
+         _Points[i_Points].number = room.number;
+         i_Points++;
+	};
+	} while (room.getNext());
+};
+
+		 
+function Sh_BuildMap(lo, hi, offset)
+{
+//
+// PARAMETER: lo = room number of the first type of room to match
+// PARAMETER: hi = room number of the last type of room to match
+// PARAMETER: offset = number of game coordinates to offset the x/y
+//                     coordinates of room corners to arrive at teleport
+//                     hop target coordinates
+// RETURNS: a Point object containing the X/Y position of the target room
+//
+	i_Points = 2;
+	i_area = me.area;
+   DebugWrite( "Sh_BuildMap lo "+lo+" hi "+hi+" offset "+offset+" area "+me.area+" me.x "+me.x+" y "+me.y );
+   var ret = new Box();
+   var destfound = false;
+   var room = getRoom(me.area);
+   do
+   {
+      if (room)
+      {
+         var nx = room.x * 5 + offset;
+         var ny = room.y * 5 + offset;
+
+         if (room.number >= lo && room.number <= hi)
+         {
+            if (nx < ret.x1)
+               ret.x1 = nx;
+            if (nx > ret.x2)
+               ret.x2 = nx;
+            if (ny < ret.y1)
+               ret.y1 = ny;
+            if (ny > ret.y2)
+               ret.y2 = ny;
+            ret.number = room.number;
+            destfound = true;
+         }
+
+		if ((room.number <= MinRoom) || (room.number > MaxRoom))
+			continue;
+		var yc = room.getStat(12);
+		//yc >>= 1;
+		var xc = room.getStat(11);
+		//xc >>= 1;
+		var nx = -1;
+		var ny = -1;
+   		DebugWrite( "xc "+xc+" yc "+yc );
+
+		var coldata=room.getCollision();
+		if (!coldata) continue;
+		for(var y = 0; y < yc && nx < 0 ; y++) {
+			for(var x = 0; x< xc && nx < 0 ; x++) {
+				
+				if (coldata[y])
+				{
+					if ((coldata[y][x] & 1 )==0)
+					{
+						nx=x;
+						ny=y;
+					}
+				}
+			};
+		};
+		//if(init && !sets["code_anti_crash"] ) {room.release(); init = false;}
+   		DebugWrite( "Sh_CheckRoom end" );
+
+		if ( nx >= 0 ) {
+     	    		_Points[i_Points].x = room.x*5+nx;
+			_Points[i_Points].y = room.y*5+ny;
+			_Points[i_Points].number = room.number;
+			i_Points++;
+		};
+      }
+   }
+   while (room && room.getNext());
+   runGC();
+
+/*	if ( i_area != me.area )
+		Sh_BuildOnlyMap();*/
+
+   DebugWrite( "Sh_BuildMap end" );
+   if (destfound)
+   {
+      var result = new Point();
+      result.x = ret.x1 + ((ret.x2 - ret.x1) / 2);
+      result.y = ret.y1 + ((ret.y2 - ret.y1) / 2);
+      result.number = ret.number;
+      dprint("Destination found room number " + result.number);
+      return result;
+   }
+   else
+   {
+      dprint("Destination not found... aborting");
+      delay(1000);
+      return false;
+   }
+}
+
+//----------------------------------------------------------------------------
+function Sh_BuildOpenMap(number, offset)
+{
+	return Sh_BuildMap( number, number, offset );
+}
+
+
+
+//----------------------------------------------------------------------------
+
+
+var _Sh_Path_Max = 256;
+var _Points = new Array;
+for (_ii = 0; _ii < _Sh_Path_Max; _ii++)
+{
+   _Points[_ii] = new Point();
+}
+
+var _ThingPath = new Array;
+for (_ii = 0; _ii < _Sh_Path_Max; _ii++)
+{
+   _ThingPath[_ii] = new Array;
+}
+
+var i_Points = 2;               // start at 2 to avoid PLAYER and STAIRS
+var i_ThingPath = 0;
+var _HopsToThing = 0;
+var i_area = 0;
+
+// constructor for Vertex objects
+function Vertex()
+{
+   this.NumAdjacencies = 0;
+   this.Adjacent = new Array;
+   this.AdjacencyWeight = new Array;
+   this.Previous = 0;
+   this.Cost = 0;
+   this.push = PushMethod;
+}
+
+// the Vertex object's sole method
+function PushMethod(neighbor, Cost)
+{
+   this.Adjacent[this.NumAdjacencies] = neighbor;
+   this.AdjacencyWeight[this.NumAdjacencies] = Cost;
+   this.NumAdjacencies++;
+}
+
+function Sh_Dijkstra(v, size, source)
+{
+   var _Sh_Path_Max = 256;
+   var _INFINITY = 32767;
+   var Cost = new Array;
+   var done = new Array;
+   var to_do = size;
+
+   for (i = 0; i < size; i++)
+   {
+      v[i].Cost = Cost[i] = _INFINITY;
+      v[i].Previous = -1;
+      done[i] = 0;
+   }
+
+   Cost[source] = 0;
+   while (to_do)
+   {
+
+      for (i = 0; i < size; i++)
+      {
+         if (!done[i])
+         {
+            iMin = i;
+            break;
+         }
+      }
+
+      for (i = iMin + 1; i < size; i++)
+      {
+         if (!done[i] && Cost[i] < Cost[iMin])
+         {
+            iMin = i;
+         }
+      }
+
+      done[iMin] = 1;
+      to_do--;
+      for (i = 0; i < v[iMin].NumAdjacencies; i++)
+      {
+         if (Cost[iMin] + v[iMin].AdjacencyWeight[i] <
+             Cost[v[iMin].Adjacent[i]])
+         {
+            v[v[iMin].Adjacent[i]].Previous = iMin;
+            v[v[iMin].Adjacent[i]].Cost = Cost[v[iMin].Adjacent[i]] =
+               Cost[iMin] + v[iMin].AdjacencyWeight[i];
+         }
+      }
+   }
+}
+
+function Sh_CreatePath(v, source, dest)
+{
+   if (source == dest)
+   {
+      _ThingPath[i_ThingPath] =[_Points[dest].x, _Points[dest].y];
+      i_ThingPath++;
+   }
+   else
+   {
+      if (v[dest].Previous != -1)
+      {
+         Sh_CreatePath(v, source, v[dest].Previous);
+         _ThingPath[i_ThingPath] =[_Points[dest].x, _Points[dest].y];
+         i_ThingPath++;
+      }
+      else
+      {
+         return false;
+      }
+   }
+   return true;
+}
+
+function Sh_FollowPathToThing(path, x, y)
+{
+   var _delta = 40;             // was DeltaTeleport
+   var deadlock = 0;
+   i = 0;
+   var t1 = 0, t2 = 0, t3 = 0;
+   while (i < path.length && myDist(x, y) > _delta)
+   {
+      oldx = me.x;
+      oldy = me.y;
+
+      if (deadlock > TeleportDeadlock)
+      {
+          dprint("Deadlock teleporting to destination...aborting...");
+          return false;
+      }
+
+      //dprint("Teleporting Toward hop #" + i_StairsPath);
+      TeleportToward(path[i][0], path[i][1],
+                     Math.floor(_delta /* / 2/* + rnd(0, 4) - 2 */ ));
+      t1++;
+      if (myDist(oldx, oldy) < 5)
+      {
+         TeleportToward(x, y, _delta);
+         t2++;
+         if (myDist(oldx, oldy) < 5)
+         {
+            TeleportRandomly();
+            t3++;
+         }
+      }
+
+      if (myDist(path[i][0], path[i][1]) < 20)
+      {
+         ++i;
+         deadlock = 0;
+      }
+      else
+         deadlock++;
+   }
+   dprint("We have arrived near 0x" + x.toString(16) + ", 0x" +
+          y.toString(16));
+   dprint("We took " + t1 + " path hop" + (t1 != 1 ? "s" : "") + ", " + t2 +
+          " direct hop" + (t2 !=
+                           1 ? "s" : "") + ", and " + t3 + " random hop" +
+          (t3 != 1 ? "s" : "") + ".");
+   return true;
+}
+
+function TeleportRandomly()
+{
+   sy_TeleportTo(me.x + Math.floor(DeltaTeleport * (rnd(0, 1) * 2 - 1)),
+              me.y + Math.floor(DeltaTeleport * (rnd(0, 1) * 2 - 1)));
+}

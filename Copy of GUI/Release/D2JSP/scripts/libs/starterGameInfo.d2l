@@ -1,0 +1,74 @@
+/*
+	starter's gameInfo() class written by njaguar
+	v1.0
+*/
+
+function gameInfo() {
+	this.location = "No Location";
+	this.totalGames = 0;
+	this.failedGames = 0;
+	this.isPaused = false;
+
+	// account info
+	this.accountName="";
+	this.accountPass="";
+	this.realm=0;
+	this.subRealm=0;
+	this.gameFileName="";
+
+	// misc settings
+	this.gameName = "";
+	this.gamePass = "";
+	this.useRandomGameName = true;
+	this.useRandomGamePass = true;
+	this.botScript = "default.d2j";
+	this.gameDifficulty = 2;
+	this.charLocation = 0;
+	this.gameType = 1; // closed bnet
+	
+	this.isRunning = true;
+	this.needsData = true;
+	
+	this.oldLocation = null;
+
+	this.requestSettings = function() {
+		this.accountName = this.requestString( "accountName" );
+		this.accountPass = this.requestString( "accountPass" );
+		this.gameFileName = this.requestString( "gameFileName" );
+		this.gameDifficulty = parseInt(this.requestString( "gameDifficulty" ));
+		this.charLocation = parseInt(this.requestString( "charLocation" ));
+		this.gameName = this.requestString( "gameName" );
+		this.gamePass = this.requestString( "gamePass" );
+		this.useRandomGameName = parseInt(this.requestString( "useRandomGameName" ));
+		this.useRandomGamePass = parseInt(this.requestString( "useRandomGamePass" ));
+		this.gameType = parseInt(this.requestString( "gameType" ));
+		
+		this.setGameSettings();
+		
+		this.needsData = false;
+	}
+	
+	this.setLocation = function( _location ) {
+		if( this.location != _location ) {
+			this.location = _location;
+			this.updateStatus();
+		}
+	}
+	
+	this.setGameSettings = function() {
+		// if paused, set the game start script to blank
+		me.gamefilename = (this.isPaused ? "" : this.gameFileName);
+	}
+	
+	this.getStatusString = function() {
+		return this.location + "," + this.totalGames + "," + this.failedGames;
+	}
+	
+	this.updateStatus = function() {
+		sendDDE(1, "autod2jsp", "status", "", getMyPID() + "," + gameData.getStatusString());
+	}
+	
+	this.requestString = function( reqString ) {
+		return sendDDE(0, "autod2jsp", "session"+getMyPID(), reqString, "");
+	}
+}

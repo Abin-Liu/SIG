@@ -1,0 +1,37 @@
+include("BotOS/Pathing/BotOS.Pathing.d2l");
+
+function main()
+{
+	cMapping = new BotOS.Pathing.Area({AreaNumber:6, Name:"MATTSMAP" + me.area});
+	print("We have " + cMapping.Rooms.length + " rooms to be inited");
+	var counter = 0;
+	while(!cMapping.Initialize(true)) { me.overhead("room " + ++counter + " inited")};
+	
+	var unit = getPresetUnits(6,2,119,null);
+	if (!unit.length)
+		return;
+
+	var cPather = new BotOS.Pathing.Pather({Pathable:cMapping, PathToMap:true, OutTownPathing:true});
+	cPather.FindPathToWarp(mlWARPTOWER, unit[0].roomx*5 + unit[0].x, unit[0].roomy*5+unit[0].y, 12, mlREDUCESORC, mlASTAR, mlFHEUCLIDIANNOSQRT, false);
+	
+	print("now you have 10 seconds to run to Black Marsh via Waypoint!");
+	print("run baby!");
+	for (var p=10; p>=0;p--)
+	{
+		me.overhead(p + " secs left for you to run....");
+		delay(1000);
+	}
+	
+	if (me.area!=6)
+	{
+		print("oh my! guy, why you are still not in Black Marsh?..");
+		return;
+	}
+	
+	print("gotcha, going now!");
+	
+	var cMover = new BotOS.Linear.Mover({Pather:cPather});
+	cMover.PathMove();
+	
+	print("haven't we get the target? don't kid me.... :p");
+}

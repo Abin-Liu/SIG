@@ -1,0 +1,21 @@
+%PrevVer%
+0
+HKLM
+SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{23C821F6-DC9A-4D2E-A799-FA3CBECC92C4}
+UninstallString
+
+
+%PrevVer% <> 0
+发现版本冲突
+安装程序检测到您的计算机上已经安装了其它版本的%ProductName%，您必须先卸载以前安装的%ProductName%版本才能安装%ProductName% %ProductVer%。
+
+是否要在继续安装前卸载以前版本的%ProductName%？
+
+选择“Yes”将卸载以前版本%ProductName%(推荐)。
+选择"No"将忽略以前版本%ProductName%的存在而继续安装(不推荐)。
+%YesNoResult%
+
+
+%YesNoResult% = YES
+
+%PrevVer%

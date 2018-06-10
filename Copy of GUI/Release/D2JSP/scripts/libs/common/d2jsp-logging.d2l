@@ -1,0 +1,587 @@
+//////////////////////////////////////////////////////////////////////
+//
+// d2jsp-logging.d2l Common functions library
+//
+// Original concept by Rayzer and Scavenger
+//
+// Core scripters team : Xizeta, Muellsammler, Darien, Killkeeper
+// Version 1.1
+// Updated on 2004/07/22
+//
+// Legal stuff :
+// This program is free software; You can redistrubute freely as long as this
+// header and contents stays intact. Modifications for redistribution can only
+// be done by submitting to the core scripters team for approval. If you don't
+// want to submit the modifications and wanted to redistribute this script, you
+// must rename it by remplacing d2jsp with your own name to avoid conflicts.
+//
+// This program is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY
+// or FITNESS FOR A PARTICULAR PURPOSE.
+//
+// How to use this library :
+//
+// When you start a run, you call DL_LoadRun() to init the logging. A chronometer
+// will be started too to get the run time. Any call to the functions below will
+// stop the chronometer and get the run time.
+//
+// For any events during the run, call their respective functions :
+//
+// -Chickens : DL_AddChicken()
+// -Aborts (often due to errors) : DL_AddAbort()
+// -Successful run : DL_AddKill()
+// -Deaths : DL_AddDeath() (Note : This will just increment the counter because
+//                                 you will surely not leave the game.)
+//
+// You must use a command to leave the game yourself if needed after the call
+// to one of the counter functions.
+//
+//////////////////////////////////////////////////////////////////////
+DL_version="1.1";
+include("common/d2jsp-common.d2l");
+
+
+//////////////////////////////////////////////////////////////////////
+// Public global variables
+//////////////////////////////////////////////////////////////////////
+// Configuration
+var DL_LogMode = 0;	// 0 = minimum (snagged,kept,bought and gambled only)
+			// 1 = normal (added dropped,ignored and sold)
+			// 2 = full (added snagged for val. and full stats of identified items)
+
+// Log file path
+var DL_RunLogPath = "output/" + me.name + "RunLog.html";
+var DL_ItemLogPath = "output/" + me.name + "ItemLog.html";
+var DL_RuneLogPath = "output/" + me.name + "RuneLog.html";
+
+// Counters (return value only)
+var DL_Total = 0;
+var DL_Kills = 0;
+var DL_Aborts = 0;
+var DL_Chickens = 0;
+var DL_Crashes = 0;
+var DL_Deaths = 0;
+
+// Stats (return value only)
+var DL_TotalTime = 0;
+var DL_LastTime = 0;
+var DL_BestTime = 0;
+var DL_TotalExp = 0;
+var DL_LastExp = 0;
+
+
+//////////////////////////////////////////////////////////////////////
+// Private global variables
+//////////////////////////////////////////////////////////////////////
+var _DL_CalcLogPath = "output/" + me.name + "-Calc.log";
+var _DL_SavedExp = 0;
+var _DL_FirstLog = false;
+var _DL_AverageTime = 0;
+var _DL_Runes = new Array();
+
+//var _DL_LogToautod2jsp;
+//if (!sendDDE(1, "autod2jsp", "command", "", "")) { _DL_LogToautod2jsp = false; }
+//else { _DL_LogToautod2jsp = true; }
+
+
+//////////////////////////////////////////////////////////////////////
+// Public functions
+//////////////////////////////////////////////////////////////////////
+
+// Function by Xizeta
+// Init the logging by getting all the values from the calculatio file
+function DL_LoadRun() {
+
+	// Start the chrono
+	DC_ChronoRun();
+
+	// Obtain the path of the calculation log file from the given run log file path
+	var _tempstring = DL_RunLogPath.split(".");
+	_DL_CalcLogPath = _tempstring[0] + "-Calc.log";
+
+	// Get the values from the calculation log file
+	_DL_GetValues(_DL_CalcLogPath);
+
+	// If the total of runs is equal to 0, it is the first logging done
+	if (DL_Total === 0) { _DL_FirstLog = true; }
+
+	// Calculate the average run time if we got at least one kill
+	if (DL_Kills > 0) { _DL_AverageTime = parseInt(DL_TotalTime / DL_Kills); }
+
+	// Get the current experience amount
+	_DL_SavedExp = me.getStat(13);
+
+	// Check if we have crashed and adjust the counter if it is the case
+	var _crashed = DL_Total - DL_Kills - DL_Aborts - DL_Crashes - DL_Chickens - DL_Deaths;
+	if (_crashed > 0) { DL_Crashes += _crashed; }
+
+	// Add the total
+	DL_Total+=1;
+
+	// Save the preliminary info in the calculation log
+	_DL_WriteLog();
+}
+
+// Function by Xizeta
+// Put the runes log file into a array
+function DL_LoadRuneLog() {
+
+	// First create a new rune array
+	for (var i = 1; i <= 33; i+=1) {
+
+		var _code = "r";
+		if (i < 10) { _code = _code + "0" + i; }
+		else { _code = _code + i; }
+
+		var _name = DC_RuneCodeToName(_code);
+		_DL_Runes[i-1] = new Array(_name,0,0);
+	}
+
+	var _file = fileOpen(DL_RuneLogPath, 0);
+
+	// If the file is unavailable, create a empty array
+	if (!_file) {
+
+		DC_DPrint("DL_LoadRuneLog() : No file is found, creating a new log!");
+	}
+
+	else {
+
+		var _count = 0;
+
+		// Put the list in the array
+		while(!_file.eof) {
+
+			var _line = _file.readLine();
+			a = _line.split("=");
+			if (a.length == 2) {
+
+				_DL_Runes[_count][0] = a[0];
+
+				n = a[1].split(",");
+				if (n.length == 2) {
+
+					_DL_Runes[_count][1] = parseInt(n[0]);
+					_DL_Runes[_count][2] = parseInt(n[1]);
+				}
+			}
+
+			_count+=1;
+		}
+
+		_file.close();
+		return true;
+	}
+
+	return false;
+}
+
+// Function by Xizeta fixed by njaguar
+// Parameters :
+// -runecode	Code of the rune to add
+// -type	type of addition, 1 = dropped, 2 = snagged
+function DL_AddRune(runecode,type) {
+
+	var _index = parseInt(String(runecode.substr(1,3)),10) - 1;
+        if (typeof(_DL_Runes[_index])=="undefined") { DC_QuitMessage("DL_AddRune() : runecode: " + runecode + " / type: " + type + " / _index: " + _index); }
+	_DL_Runes[_index][type]+=1;
+}
+
+// Function by Xizeta
+// save the array to the runes log file
+function DL_SaveRuneLog() {
+
+	var _file = fileOpen(DL_RuneLogPath, 1);
+
+	if (_file) {
+
+		for (var i = 0; i <= 32; i+=1) {
+
+			_file.writeLine(_DL_Runes[i][0] + "=" + _DL_Runes[i][1] + "," + _DL_Runes[i][2]);
+		}
+
+		_file.close();
+	}
+
+	else {
+
+		DC_DPrint("DL_SaveRuneLog() : Unable to open the rune log for write!");
+	}
+}
+
+// Function by Xizeta
+// Increment the kills counter and save the info
+function DL_AddKill() {
+
+	DL_Kills+=1;
+	_DL_SaveRun(0);
+}
+
+// Function by Xizeta
+// Increment the chicken counter and close the log
+function DL_AddChicken() {
+
+	DL_Chickens+=1;
+	_DL_SaveRun(1);
+}
+
+// Function by Xizeta
+// Increment the abort counter and close the log
+function DL_AddAbort() {
+
+	DL_Aborts+=1;
+	_DL_SaveRun(1);
+}
+
+// Function by Xizeta
+// Increment the abort counter and save the info
+function DL_AddDeath() {
+
+	DL_Deaths+=1;
+	_DL_WriteLog(_DL_CalcLogPath);
+}
+
+// Function from IceCountess, modified by Xizeta
+// Parameters :
+// -itemname	Name of the item to log
+// -itemquality	Quality of the item
+// -prefix	String to enter before the item name
+// -suffix	String to enter after the item name
+// Return value : None, will write the item in the log file
+function DL_LogItem(itemname,itemquality,prefix,suffix) {
+
+	// My Format:
+	// [2002/12/28] [00:44:25] [-] [Normal] Rejuvenation Potion
+
+	var _logdatetime = DC_LeadDateAndTime();
+	var _logstring = "";
+
+	if (arguments.length > 2) { _logstring = _logstring + " " + prefix; }
+
+	if (itemquality == 1) { _logstring = _logstring + " [Low Quality]"; }
+	else if (itemquality == 2) { _logstring = _logstring + " [Normal]"; }
+	else if (itemquality == 3) { _logstring = _logstring + " [Superior]"; }
+	else if (itemquality == 4) { _logstring = _logstring + " [Magic]"; }
+	else if (itemquality == 5) { _logstring = _logstring + " [Set]"; }
+	else if (itemquality == 6) { _logstring = _logstring + " [Rare]"; }
+	else if (itemquality == 7) { _logstring = _logstring + " [Unique]"; }
+	else if (itemquality == 8) { _logstring = _logstring + " [Crafted]"; }
+	else { _logstring = _logstring + " [Misc]"; }
+
+	_logstring = _logstring + " " + itemname;
+
+	if (arguments.length > 3) { _logstring = _logstring + " " + suffix; }
+
+	// Write the entry to the log file
+	DC_WriteLogEntry(DL_ItemLogPath,DL_HTMLColorLine(_logstring,itemquality));
+
+	// If logging to autod2jsp is set, log it
+	DC_LogToautod2jsp(_logstring);
+
+	// Add a small delay to make sure it is written to file
+	DC_DoDel(50);
+}
+
+// Function by Xizeta
+// Parameter :
+// -string	String to add color tags
+// Return value : String with the added HTML color tags
+function DL_HTMLColorLine(itemstring,itemquality) {
+
+        switch (itemquality) {
+
+		case 4:
+			itemstring = "<font color=#0000FF>" + itemstring + "</font>";
+			break;
+		case 5:
+			itemstring = "<font color=#008000>" + itemstring + "</font>";
+			break;
+		case 6:
+			itemstring = "<font color=#BBBB00>" + itemstring + "</font>";
+			break;
+		case 7:
+			itemstring = "<font color=#808000>" + itemstring + "</font>";
+			break;
+		case 8:
+			itemstring = "<font color=#FF9900>" + itemstring + "</font>";
+			break;
+	}
+
+	return itemstring;
+}
+
+/*
+// Function by Xizeta
+// Parameters :
+// -filepath	Path to the log file to write
+// -message	Message to be displayed on the autod2jsp log window
+// -timestamp	Timestamp to display on the window (facultative, will create his own if none is entered)
+// Return value : Success of the function
+function DL_WriteLogEntry(filepath,message,timestamp) {
+
+	if (!filepath) {
+
+		DC_DPrint("DL_WriteLogEntry() : Log file path is not valid");
+		return false;
+	}
+
+	if (arguments.length < 3) { timestamp = DC_LeadDateAndTime(); }
+
+	_file = fileOpen(filepath, 2); // 0 = Read, 1 = Write, 2 = Append
+	if (!_file) {
+
+		DC_DPrint("DL_WriteLogEntry() :  Couldn't open the itemlog file (" + filepath + ").");
+		DC_LogError("DL_WriteLogEntry() :  Couldn't open the itemlog file (" + filepath + ").");
+		return false;
+	}
+
+	else {
+		_file.writeLine(timestamp + " " + message + "<br>");
+		_file.close();
+	}
+
+	// As logging is successful, return true
+	return true;
+}
+*/
+
+// Function by Xizeta
+// Parameter :
+// -item	Item object to get the name
+// Return value : Full and proper item name
+function DL_GetItemName(item) {
+
+	var _itemname = false;
+
+	// If the item is a unidentified unique or set item, get the real name from the translation files
+	if ((item.quality == 5 || item.quality == 7) && item.getFlag(0x10) === 0) {
+
+		_itemname = _DL_AutoId(item.code,item.quality);
+	}
+
+	// If the string is still empty, get the displayed name
+	if (!_itemname) { return DC_ItemToFullName(item); }
+
+	// There is a string so return it
+	else { return _itemname; }
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// Private functions
+//////////////////////////////////////////////////////////////////////
+
+// Function by Xizeta
+function _DL_GetValues(logfile) {
+
+	// Open the file for reading
+	_file = fileOpen(logfile, 0);
+
+	// If the file cannot be opened, return false
+	// ToDo : Create a empty calc log if we cannot find the official log
+	if (!_file) {
+
+		DC_DPrint("_DL_GetValues() : " + logfile + " not available, skipping!");
+		return false;
+	}
+
+	// Get the values
+	while(!_file.eof) {
+
+		var _line = _file.readLine();
+		a = _line.split("=");
+		if (a.length == 2) {
+
+			switch (DC_StripSpaces(a[0])) {
+
+				case "DL_TotalRuns":
+					DL_Total = parseInt(a[1]);
+					break;
+				case "DL_TotalKills":
+					DL_Kills = parseInt(a[1]);
+					break;
+				case "DL_TotalAborts":
+					DL_Aborts = parseInt(a[1]);
+					break;
+				case "DL_TotalChickens":
+					DL_Chickens = parseInt(a[1]);
+					break;
+				case "DL_TotalCrashes":
+					DL_Crashes = parseInt(a[1]);
+					break;
+				case "DL_TotalDeaths":
+					DL_Deaths = parseInt(a[1]);
+					break;
+				case "DL_TotalTime":
+					DL_TotalTime = parseInt(a[1]);
+					break;
+				case "DL_BestTime":
+					DL_BestTime = parseInt(a[1]);
+					break;
+				case "DL_TotalExp":
+					DL_TotalExp = parseInt(a[1]);
+					break;
+			}
+		}
+	}
+
+	// Close the file
+	_file.close();
+
+	// Return the succes to the caller
+	return true;
+}
+
+// Function by Xizeta
+function _DL_WriteLog(logfile) {
+
+	// Save the raw informations in the calculation file
+	
+	_calcfile = fileOpen(logfile, 1);
+
+	// If the file cannot be opened, return false
+	if (!_calcfile) {
+
+		DC_DPrint("_DL_WriteLog() : Failed to open " + logfile);
+		return false;
+	}
+
+	// Add a warning header and a pointer to the right file
+	_calcfile.writeLine("This file is for calculation and backup only. For actual run informations, open " + DL_RunLogPath + ".");
+
+	// Write the calculation values in the file
+	_calcfile.writeLine("DL_TotalRuns=" + DL_Total);
+	_calcfile.writeLine("DL_TotalKills=" + DL_Kills);
+	_calcfile.writeLine("DL_TotalAborts=" + DL_Aborts);
+	_calcfile.writeLine("DL_TotalChickens="+ DL_Chickens);
+	_calcfile.writeLine("DL_TotalCrashes=" + DL_Crashes);
+	_calcfile.writeLine("DL_TotalDeaths=" + DL_Deaths);
+	_calcfile.writeLine("DL_TotalTime=" + DL_TotalTime);
+	_calcfile.writeLine("DL_BestTime=" + DL_BestTime);
+	_calcfile.writeLine("DL_TotalExp=" + DL_TotalExp);
+
+	// Close the calculation file
+	_calcfile.close();
+
+	// Return the succes to the caller
+	return true;
+}
+
+// Function by Xizeta
+function _DL_SaveLog(logfile) {
+
+	// Open the existing log file for write
+	var _file = fileOpen(logfile, 1);
+
+	// If the logfile cannot be opened, return with a error
+	if (!_file) {
+
+		DC_DPrint("_DL_SaveLog() : Failed to open " + logfile);
+		return false;
+	}
+
+	// Write the formatted informations to the file
+	_file.writeLine("Success Rate = " + _DL_SuccessRate + "%<br>");
+	_file.writeLine("Total runs = " + DL_Total + "<br>");
+	_file.writeLine("Total kills = " + DL_Kills + "<br>");
+	_file.writeLine("Total aborts = " + DL_Aborts + "<br>");
+	_file.writeLine("Total chickens = "+ DL_Chickens + "<br>");
+	_file.writeLine("Total deaths = " + DL_Deaths + "<br>");
+	_file.writeLine("Total crashes = " + DL_Crashes + "<br>");
+	_file.writeLine("Total run time = " + DL_TotalTime + "ms<br>");
+	_file.writeLine("Best run time = " + DL_BestTime + "ms<br>");
+	if (DL_LastTime != "aborted") {	_file.writeLine("Last run time = " + DL_LastTime + "ms<br>"); }
+	else { _file.writeLine("Last run time = run aborted<br>"); }
+	_file.writeLine("Average Time = " + _DL_AverageTime + "ms<br>");
+	_file.writeLine("Total exp. gained = " + DL_TotalExp + "<br>");
+	if (DL_LastExp != "aborted") {	_file.writeLine("Exp. gained on last run = " + DL_LastExp + "<br>"); }
+	else { _file.writeLine("Exp. gained on last run = run aborted<br>"); }
+
+	// Close the log file
+	_file.close();
+}
+
+// Function by Xizeta
+// Parameter :
+// -type	Type of end, 0 = success and 1 = failure (facultative)
+function _DL_SaveRun(type) {
+
+	// If nothing is entered, use 0 as default
+	if (arguments.length < 1) { type = 0; }
+
+	// End the chrono
+	DL_LastTime = DC_ChronoRun();
+
+	// If it is a success, calculate all the info
+	if (type === 0) {
+
+		// Calculate the experience for the run
+		DL_LastExp = me.getStat(13) - _DL_SavedExp;
+
+		// Add the experience gained to the total
+		DL_TotalExp = DL_TotalExp + parseInt(DL_LastExp);
+
+		// Add the run time to the total time
+		DL_TotalTime = DL_TotalTime + parseInt(DL_LastTime);
+
+		// Get the best time
+		if (DL_LastTime < DL_BestTime || DL_BestTime === 0) { DL_BestTime = DL_LastTime; }
+	}
+
+	else {
+		// Put aborted because it is a failed run
+		DL_LastExp = 0;
+		DL_LastTime = 0;
+	}
+
+	// Calculate the success rate
+	_DL_SuccessRate = String((DL_Kills / DL_Total) * 100).substring(0,5);
+
+	// Save the updated values to the calculation log
+	_DL_WriteLog(_DL_CalcLogPath);
+
+	// Write the formatted informations to the run log
+	_DL_SaveLog(DL_RunLogPath);
+}
+
+function _DL_AutoId(itemcode,itemquality) {
+
+	var _file = false;
+
+	// If the item is a set item, open snagset.ini for reading
+	if (itemquality == 5) { _file = fileOpen("libs/common/autoset.lst", 0); }
+
+	// If it is a unique item, open snagunique.ini for reading
+	else if (itemquality == 7) { _file = fileOpen("libs/common/autounique.lst", 0); }
+
+	// if the file is opened correctly, find the corresponding item code
+	if (_file) {
+
+		// Loop while the end of file is not reached
+		while(!_file.eof) {
+
+			// Get the line
+			var _line = _file.readLine();
+
+			// Split the line in 2 parts
+			var _string = _line.split("=");
+
+			// If there is 2 parts, check the code
+			if (_string.length == 2) {
+
+				// if the code match the one in the file, close the file and return the string
+				if (_string[0] == itemcode) {
+
+						_file.close();
+						return _string[1];
+				}
+			}
+		}
+
+		// No entry is found so close it
+		_file.close();
+	}
+
+	// No entry is found so return false
+	return false;
+}

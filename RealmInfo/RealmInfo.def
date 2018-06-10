@@ -1,0 +1,7 @@
+; RealmInfo.def : Declares the module parameters for the DLL.
+
+LIBRARY      "RealmInfo"
+DESCRIPTION  'RealmInfo Windows Dynamic Link Library'
+
+EXPORTS
+    ; Explicit exports can go here

@@ -1,0 +1,1385 @@
+//////////////////////////////////////////////////////////////////////
+// MephXP configuration file
+//
+// Author : Xizeta
+// Last update : 2004/07/26
+//
+// Version : 1.01 Beta
+//////////////////////////////////////////////////////////////////////
+//
+// This is the file you should be editing!!!
+//
+// General configs can be found at the top.
+// Character specific configuration can be found in one of the 6 sections
+// below the general configuration section.
+//
+// For skills change, refer to "sdk/skills.txt" for the exact code or use the exact skill name
+// Example : For using Frozen Orb, use the code 64 or the name "Frozen Orb" (the skill
+// names are case sensitive so be sure to get it right).
+// For any foreign language versions of D2 and LOD, it is mandatory to use codes.
+//
+// For potion drinking settings, edit pwnlifewatch.d2j
+//////////////////////////////////////////////////////////////////////
+
+
+//////////////////////////////////////////////////////////////////////
+// General configuration
+//====================================================================
+// DC_Language=0/1/2		Preferred language for messages (doesn't affect debug messages)
+//				0 = English, 1 = German, 2 = French.
+// DC_Verbose=true/false	Set to true to display various action messages, false for silent mode.
+// MXP_AbortNoMerc=true/false	If set to true, abort the game if the merc is dead and not ressurected.
+// MXP_StopFullInv=true/false	Set to true to stop botting if the inventory is full.
+// MXP_StartGameDelay=xxxx	Delay before beginning script in ms (1000ms = 1 second). Set a value here if you are
+//				having trouble with the script not detecting your merc or other problems
+//				at the beginning of the game.
+// MXP_MaxGameLength=xxxxx	Maximum game length before aborting, in SECONDS. Set to 0 for infinite game length.
+// MXP_SkipCredits=true/false	Set this to true to skip printing the credits.
+// MXP_UseConsole=true/false	Set to true to use the 1337 console (Can be toggled on and off in game with "U")
+// MXP_UseTaunts=true/false	Set to true to have Meph sling random taunts your direction.
+// MXP_SellBackItems=true/false	Turn this off if you don't want to sell items.
+// MXP_FormatHTML=true/false	Set to on to use formatted html logging.
+// DA_LogChickens=true/false    Set true or false to log chickens
+// DL_LogMode = 0/1/2		Item logging level, 0 by default
+//				0 = minimum (snagged,kept,bought and gambled only)
+//				1 = normal (added dropped,ignored and sold)
+//				2 = full (added snagged for val. and full stats of identified items)
+// MXP_AlwaysGoAct4=true/false	Set to true to always go to act 4 no matter what
+// MXP_MephSafeCheck=true/false Set to true to check for curses and hp/mp (go to town if needed before the fight)	
+//--------------------------------------------------------------------
+
+DC_Language=0;
+DC_Verbose=true;
+MXP_AbortNoMerc=true;
+MXP_StopFullInv=true;
+MXP_StartGameDelay=0;
+MXP_MaxGameLength=150;
+MXP_SkipCredits=false;
+MXP_UseConsole=true;
+MXP_UseTaunts=true;
+MXP_SellBackItems=true;
+MXP_FormatHTML=true;
+DA_LogChickens=true;
+DL_LogMode=1;
+MXP_AlwaysGoAct4=true;
+MXP_MephSafeCheck=true;
+
+
+///////////////////////////////////////////////////////////////////
+// Sicojola's Automule configuration
+//
+// AUTOMULE DISCLAIMER:
+// Automule is solely the work of Sicojola. Although the XP scripters have been nice enough
+// to include my script as an option in their bots, they are not responsible for Automule. 
+// SEND ALL QUESTIONS, COMMENTS, OR COMPLAINTS REGARDING AUTOMULE TO SICOJOLA VIA THE FORUMS
+// OR PM. Do not bother the XP scripters with Automule-related material if you choose to use this option.
+// 
+// Furthermore, although I consider Automule safe for your items, I take no responsibility for any items
+// you lose due to this script. *** YOU USE THIS SCRIPT AT YOUR OWN RISK ***.
+//=================================================================
+// MXP_Automule=true/false 	Set true or false to use Sicojola's Automule script
+// 				MXP_StopFullInv MUST be true to use this feature
+// ------------------------------------------------------------------
+
+MXP_Automule=false;
+
+
+///////////////////////////////////////////////////////////////////
+// These are the .ini settings for MephXP
+// These are generic .ini files that we supply so your script will work(Thanks to Gill_105)
+// Feel free to edit this section as needed so they point to the files you wish to use
+//=================================================================
+// DSN_SnagItINIFile="which"	Set this to the ini you want used for snagit
+// DT_BMitemsINIFile="which"	Set this to the ini you want used for the bmitems file you want to use
+// DT_GamblItINIFile="which"	Set this to the ini you want used for the bmgambleit file you want to use
+// DT_ShopItINIFile="which"	Set this to the ini you want used for the bmshopit file you want to use
+// ------------------------------------------------------------------
+
+DSN_SnagItINIFile = "snagit_XP.ini";
+DT_BMitemsINIFile = "bmitems_XP.ini";
+DT_GambleItINIFile = "bmGambleIt_XP.ini";
+DT_ShopItINIFile = "bmShopIt_XP.ini";
+
+
+///////////////////////////////////////////////////////////////////
+// Public Snagit Variables
+// Change these for options in how you want your snagit to act
+//================================================================
+// DSN_MinGoldStack=xxxx	Minimum gold stack amount to pickup (ignore small stacks), set to 0 to ignore all gold stacks
+// DSN_PickPotions=true/false	Set to true to include potions in the checking
+// DSN_SnagType=x		Type of pickup, 0 = Best item first and 1 = Closest item first
+// DSN_LogGold=true/false	Set to true to log gold stacks pickup
+// DSN_UseTK=true;		Set to true to use Telekinesis on certain items
+// DSN_SnagRange=xx		Radius to check for dropped items. 40 is a good number here
+// DSN_SnagDelay=xxx		This is the amount of time to wait before snagit picks up items.
+// ------------------------------------------------------------------
+
+DSN_MinGoldStack=0;
+DSN_PickPotions=false;
+DSN_SnagType=0;
+DSN_LogGold=false;
+DSN_UseTK=true;
+DSN_SnagRange=40;
+DSN_SnagDelay=150;
+
+
+//////////////////////////////////////////////////////////////////////
+// Stashing configuration
+//====================================================================
+// DT_FreeSpace=x		Number of free columns. If less full columns are free stashing is set.
+//--------------------------------------------------------------------
+
+DT_FreeSpace=3; 
+
+//--------------------------------------------------------------------
+// The numbers correspond to your inventory. Set 0 to keep whatever is there, 1 to stash it.
+// This allows you to keep charms in inventory. Note: If you have an empty spot set to 0
+// the item that appears there during a run will NEVER get stashed. (Useful if you have
+// lots of space and want to use the bonuses of freshly-ID'd charms).
+//--------------------------------------------------------------------
+
+DT_Columns[0]=[1,1,1,0,0,0,0,0,0,0];
+DT_Columns[1]=[1,1,1,0,0,0,0,0,0,0];
+DT_Columns[2]=[1,1,1,0,0,0,0,0,0,0];
+DT_Columns[3]=[1,1,1,0,0,0,0,0,0,0]; 
+
+
+//////////////////////////////////////////////////////////////////////
+// Belt configuration
+//====================================================================
+// MXP_UseBeltManager = true/false	Set to true if you want to be able to use the
+//					belt management to buy potions. May slow the bot.
+//--------------------------------------------------------------------
+
+MXP_UseBeltManager = true;
+
+//--------------------------------------------------------------------
+// Type of potion used in each belt column
+// Available types : "hp" = health | "mp" = mana | "rv" = rejuv. Can use other potion types too (untested!).
+// Keep equal types at adjacent columns. First HP then MP and then HP again is a bad choice.
+// Keep HP and MP at the beginning of the belt (in case you want to use rejuv and other types).
+// Rejuvenations MUST, I REPEAT MUST be at the end of the belt (last x columns).
+// To use rejuvenations only, put "rv" in all columns.
+//--------------------------------------------------------------------
+
+DT_BeltColType[0]="mp"; // Column 1 in belt
+DT_BeltColType[1]="mp"; // Column 2
+DT_BeltColType[2]="hp"; // 3
+DT_BeltColType[3]="hp"; // Yep, you guessed it, 4.
+
+//--------------------------------------------------------------------
+// Minimum amount of potions in each column before needing refilling
+// If there's less potions then this number in the column we go and shop.
+// Set to 4 to go shopping as soon as there's a potion missing.
+// Recommend leaving columns set to "rv" at 0. Since shops won't carry rejuvs.
+//--------------------------------------------------------------------
+
+DT_BeltColMin[0]=3; 
+DT_BeltColMin[1]=3;
+DT_BeltColMin[2]=3;
+DT_BeltColMin[3]=3;
+
+
+//////////////////////////////////////////////////////////////////////
+// Randomizations to avoid detection
+//====================================================================
+// DC_RandomDel=true/false	This will randomize all delays to make the script harder to detect by blizz
+// DM_RandomMove=true/false	This will make your movements random
+// DM_RandomMoveDel=true/false	This will make movement delays random
+// DT_RandomNPC=true/false	Visit random npcs during your runs
+//--------------------------------------------------------------------
+
+DC_RandomDel=true;
+DM_RandomMove=true;
+DM_RandomMoveDel=true;
+DT_RandomNPC=false;
+
+
+//////////////////////////////////////////////////////////////////////
+// Debugging informations
+//====================================================================
+// DC_DebugLevel=0/1/2/3        	0 = none, 1 = print to file only, 2 = print to screen only and 3 = both
+// DC_DebugPrintDel=xxxx		How long you want to have the script pause after a debug print
+// DC_AbortPrintDel=xxxx		How much time to display the error message before stopping or aborting the game 
+// MXP_UseOverheads=true/false		Set to true to show overheads
+// DA_DisplayImmunities=true/false	Set this to true to see what Meph is immune to on screen.
+//--------------------------------------------------------------------
+
+DC_DebugLevel=0;
+DC_DebugPrintDel=0;
+DC_AbortPrintDel=5000;
+MXP_UseOverheads=true;
+DA_DisplayImmunities=true;
+
+
+//////////////////////////////////////////////////////////////////////
+// ADVANCED SETTINGS. Change the values only if you are experiencing
+// problems running the script.
+//====================================================================
+// DT_NPCDelay=xxx		Amount of time after interaction or trade with npc to avoid missing menu or trade window.
+// DC_LagDelay=xxx		Lag delay for all interactions with items in milliseconds (Increase if it miss items sometime.)
+// DC_Timeout=x			Timeout delay for various loops, in SECONDS.
+// DC_SwitchTimeout=x		Timeout delay for weapon switch loops, in SECONDS.
+// DC_ClickDel=xx		Delay used when using mouseclicks, in milliseconds (increase if you are missing clicks).
+// DM_WalkDel=xx		This is the delay between steps.  Change this if you are having problems with black walls
+// DM_AreaChangeDel=xxx		Delay to wait until the area change (using wp or stairs).
+//				Increase this if you get too much "Failed to interact".
+// DC_UseCheckLoop=true/false	Set to true to use a loop to check up to 3 times (may slow the run a little)
+//				This will be useful to solve the problem with the monster detection
+// MXP_BridgeWait=xxxx		Set the amount of ms to wait until the bridge is up when using red portal to act4
+//--------------------------------------------------------------------
+
+DT_NPCDelay=750;
+DC_LagDelay=10;
+DC_Timeout=3;
+DC_SwitchTimeout=3;
+DC_ClickDel=100;
+DM_WalkDel=150;
+DM_AreaChangeDel=750;
+DC_UseCheckLoop=false;
+MXP_BridgeWait=1000;
+
+
+//////////////////////////////////////////////////////////////////////
+// End of general configuration section
+//////////////////////////////////////////////////////////////////////
+
+
+
+
+
+
+
+
+
+
+//////////////////////////////////////////////////////////////////////
+// Sorceress section
+//////////////////////////////////////////////////////////////////////
+function Sorcvariables() {
+
+
+//////////////////////////////////////////////////////////////////////
+// Precasting configuration
+//====================================================================
+// DA_UseCTA=true/false		If you have a CTA weapon, set to true to use the precasts from the runeword
+//				It will automatically figure which weapon tab has the CTA weapon
+// DA_AutoPrecasts=true/false	Set to true to use precasts before killing Meph
+//				When DA_AutoPrecasts is set to true, the config below is ignored
+// XP_ColdArmor = 0;		Cast a cold armor (0 = disabled, 1 = Frozen, 2 = Shiver and 3 = Chilling)
+// XP_EnergyShield = false;	Set to true to cast Energy Shield
+// XP_ThunderStorm = false;	set to true to cast Thunderstorm
+//--------------------------------------------------------------------
+
+DA_UseCTA=false;
+DA_AutoPrecasts=true;
+XP_ColdArmor=2;
+XP_EnergyShield=false;
+XP_ThunderStorm=false;
+
+
+//////////////////////////////////////////////////////////////////////
+// Attack configuration
+//====================================================================
+// timedfirst=true/false	If set true, will cast your first listed timed spell before casting static field
+//				Recommended with Frozen Orb or Blizzard, spells which freeze and slow Meph
+// statictimes=x		This is the number of times you want static field to be cast
+//				If set to 0, it will not be cast.
+// spelllist.push"xxxxx"	The first attack in the list will be used first
+// spelllist.push("Hydra");	To use a new skill, remove the comments, like nova and orb are setup
+// 				//Put comments like the one at the start of this line in front of spells to disclude them
+//
+// You can use any number of timed and untimed spells.  The script will alternate between them in the order
+// that you list them, in a pattern of first timed, first untimed, second timed, second untimed, etc...
+// So you can list any number of spells but the order in which you list them will determine which timed
+// spell goes off in what order, and likewise for untimed spells.  For instance, if you list Frozen Orb,
+// Meteor, Blizzard and Nova, the script will cast Frozen Orb, Nova, Meteor, Nova, Blizzard, Nova etc...
+//
+// untimedrepeat=x		This is the number of times to cast each untimed spell when only using untimed spells
+// XP_MaxAttacks=xx		This is the maximum number of attack sequences used to attack Mephisto
+//				If he is still alive after this many attacks, the game will abort
+// XP_MephDodge=true/false	Enable/disable Meph dodging (disable if you want to tank and attack him up close)
+// XP_SwitchOnKill=true/false	Set this to true to switch to the weapon with the greatest magic find upon killing Mephisto
+// XP_SwitchHP=xx		This is the amount of Meph's hp out of 128 that is remaining before switching weapon
+// XP_StallKill=true/false	Set this to true to let your merc get the last hit
+// XP_StallHP=xx		This is the amount of hp of 128 that you will stall for Meph to die on
+// XP_StallSkipPhys=true/false	Set this to true along with XP_StallKill and you won't stall if Meph is immune to phys
+//--------------------------------------------------------------------
+
+timedfirst=true;
+statictimes=0;
+
+spelllist.push(59); 	// "Blizzard"
+spelllist.push(45); 	// "Ice Blast"
+//spelllist.push(55); 	// "Glacial Spike"
+//spelllist.push(64); 	// "Frozen Orb"
+//spelllist.push(48); 	// "Nova"
+//spelllist.push(62); 	// "Hydra"
+//spelllist.push(56); 	// "Meteor"
+//spelllist.push(38); 	// "Charged Bolt"
+//spelllist.push(47); 	// "Fire Ball"
+//spelllist.push(51); 	// "Fire Wall"
+//spelllist.push(53); 	// "Chain Lightning"
+untimedrepeat=5;
+
+XP_MaxAttacks=20;
+XP_MephDodge=true;
+XP_SwitchOnKill=false;
+XP_SwitchHP=40;
+XP_StallKill=false;
+XP_StallHP=40;
+XP_StallSkipPhys=true;
+
+
+//////////////////////////////////////////////////////////////////////
+// Mercenary configuration
+//====================================================================
+// DT_UseMerc=true/false	Set to true if you use a mercenary, will revive merc at Qual-Kehk if necessary
+// XP_EnchantMerc=true/false	Set to true if you want to cast Enchant on your merc with other precasts
+//--------------------------------------------------------------------
+
+DT_UseMerc=true;
+XP_EnchantMerc=false;
+
+
+//////////////////////////////////////////////////////////////////////
+// ShopIt! and GambleIt!
+//====================================================================
+// MXP_ShopIt=true/false	Set this to true to shop every npc you talk to, false to skip this
+// MXP_GambleIt=true/false	Set this to true to gamble at Gheed each time you talk to her
+// MXP_AlwaysGamble=true/false	If GambleItOn is set to true, always go to Gheed to gamble
+// MXP_GambleMinGold=xxxxxx	Set a minimun amount of gold before starting to gamble
+// MXP_AlwaysJamella=false;	Always visit Jamella no matter what
+// MXP_AlwaysHalbu=false;	Always visit Halbu no matter what
+// MXP_AlwaysOrmus=false;	Always visit Ormus no matter what (if you are in act3)// 
+//--------------------------------------------------------------------
+
+MXP_ShopIt=true;
+MXP_GambleIt=false;
+MXP_AlwaysGamble=false;
+MXP_GambleMinGold=2000000;
+MXP_AlwaysJamella=false;
+MXP_AlwaysHalbu=false;
+MXP_AlwaysOrmus=false;
+
+
+//////////////////////////////////////////////////////////////////////
+// Other configurations
+//====================================================================
+// DT_RepairPercent=xx		You will visit Charsi for repair if any of your items fall below this percent of durability
+// DT_SkipHealLife=xx		If you have more than this percent of your life, you won't go to Akara
+// DT_SkipHealMana=xx		If you have more than this percent of your mana, you won't go to Akara
+//--------------------------------------------------------------------
+
+DT_RepairPercent=25;
+DT_SkipHealLife=75;
+DT_SkipHealMana=75;
+
+
+//////////////////////////////////////////////////////////////////////
+// Immunities/Resistances/Enchantments to skip
+//====================================================================
+//Set each to true to chicken out if Meph is immune to that kind of damage
+//--------------------------------------------------------------------
+
+DA_Immunities[1]=false;	// Physical
+DA_Immunities[2]=false;	// Magic
+DA_Immunities[3]=false;	// Fire
+DA_Immunities[4]=false;	// Lightning
+DA_Immunities[5]=false;	// Cold
+DA_Immunities[6]=false;	// Poison
+
+//--------------------------------------------------------------------
+// Immunities Combinations
+// Method:  if set to true, will chicken with that immunities# / immunities# combination
+// DA_ImmunitiesCombo[next number] = new Array(immunities#,immunities#,true/false);
+//--------------------------------------------------------------------
+
+DA_ImmunitiesCombo[1]=new Array(1,2,false);	// Immune to Physical and Immune to Magic
+DA_ImmunitiesCombo[2]=new Array(4,5,false);	// Immune to Lightning and Immune to Cold
+
+//--------------------------------------------------------------------
+// Set each to true to chicken out if Meph has that enchantment 
+//--------------------------------------------------------------------
+
+DA_Enchantments[1]=false;	//Extra Strong 
+DA_Enchantments[2]=false;	//Extra Fast 
+DA_Enchantments[3]=false;	//Cursed
+DA_Enchantments[4]=false;	//Magic Resistant 
+DA_Enchantments[5]=false;	//Fire Enchanted 
+DA_Enchantments[6]=false;	//Lightning Enchanted
+DA_Enchantments[7]=false;	//Cold Enchanted 
+DA_Enchantments[8]=false;	//Mana Burn 
+DA_Enchantments[9]=false;	//Teleportation 
+DA_Enchantments[10]=false;	//Spectral Hit 
+DA_Enchantments[11]=false;	//Stone Skin 
+DA_Enchantments[12]=false;	//Multiple Shot
+
+//--------------------------------------------------------------------
+// Enchantment Combinations 
+// Method:  if set to true, will chicken with that enchantment# / enchantment# combination 
+// DA_EnchantmentsCombos[next number] = new Array(enchantment#,enchantment#,true/false); 
+//--------------------------------------------------------------------
+
+DA_EnchantmentsCombos[1]=new Array(6,12,false);	// Multiple Shot LE
+DA_EnchantmentsCombos[2]=new Array(1,3,false);	// Extra Strong Cursed
+DA_EnchantmentsCombos[3]=new Array(2,8,false);	// Extra Fast Mana Burn 
+
+//--------------------------------------------------------------------
+// Set each to true to chicken out if Meph has that aura 
+//--------------------------------------------------------------------
+
+DA_Auras[1]=false;	//Conviction
+DA_Auras[2]=false;	//Might 
+DA_Auras[3]=false;	//Holy Fire 
+DA_Auras[4]=false;	//Blessed Aim 
+DA_Auras[5]=false;	//Holy Freeze 
+DA_Auras[6]=false;	//Holy Shock
+DA_Auras[7]=false;	//Fanaticism 
+
+//--------------------------------------------------------------------
+// Enchantment / Aura Combinations 
+// Method:  if set to true, will chicken with that enchantment# / aura# combination 
+// DA_EnchantAuraCombos[next number] = new Array(enchantment#,aura#,true/false);
+//--------------------------------------------------------------------
+
+DA_EnchantAuraCombos[1]=new Array(1,2,false);	// Extra Strong Might 
+DA_EnchantAuraCombos[2]=new Array(1,7,false);	// Extra Strong Fanaticism
+DA_EnchantAuraCombos[3]=new Array(2,2,false);	// Extra Fast Might 
+DA_EnchantAuraCombos[4]=new Array(2,7,false);	// Extra Fast Fanaticism
+DA_EnchantAuraCombos[5]=new Array(2,5,false);	// Extra Fast Holy Freeze
+DA_EnchantAuraCombos[6]=new Array(6,1,false);	// LE Conviction
+
+//--------------------------------------------------------------------
+// Immunity / Aura Combinations 
+// Method:  if set to true, will chicken with that immunity# / aura# combination 
+// DA_ImmunityAuraCombos[next number] = new Array(immunity#,aura#,true/false);
+//--------------------------------------------------------------------
+
+DA_ImmunityAuraCombos[1]=new Array(5,7,false);	// Immune to Cold and Fanaticism
+DA_ImmunityAuraCombos[2]=new Array(3,2,false);	// Immune to Fire and Might
+
+}/////////////////////////////////////////////////////////////////////
+// End of sorceress section
+//////////////////////////////////////////////////////////////////////
+
+
+
+
+
+
+
+
+
+
+//////////////////////////////////////////////////////////////////////
+// Barbarian section
+//////////////////////////////////////////////////////////////////////
+function Barbvariables() {
+
+//////////////////////////////////////////////////////////////////////
+// Attack configuration
+//====================================================================
+// DA_UseCTA=true/false		If you have a CTA weapon, set to true to use the precasts from the runeword
+//				It will automatically figure which weapon tab has the CTA weapon
+// FindItem=true/false		Set this to true to use finditem on Meph's body
+// ChangeWeaponPre=true/false	Set this to true to switch weapons to cast precasts
+// ChangeWeaponHork=true/false	Set this to true to switch weapons before using Find Item
+// UseBerserk=true/false	Set this to true to use berserk when Mephisto is immune to physical
+// XP_MephDodge=true/false	Enable/disable Meph dodging (disable if you want to tank and attack him up close)
+// DT_ThrowRechTimeout=xx	Max time to stall while recharging ethereal throwing weapon.
+// wwdistance=x			Set this higher to ww further, smaller to whirlwind shorter
+// DA_AutoPrecasts=true/false	Set to true to use precasts before killing Meph
+
+DA_UseCTA=false;
+FindItem=true;
+ChangeWeaponPre=false;
+ChangeWeaponHork=false;
+UseBerserk=true;
+XP_MephDodge=false;
+DT_ThrowRechTimeout=45;
+wwdistance=5;
+DA_AutoPrecasts=true;
+
+
+//////////////////////////////////////////////////////////////////////
+// ShopIt! and GambleIt!
+//====================================================================
+// MXP_ShopIt=true/false	Set this to true to shop every npc you talk to, false to skip this
+// MXP_GambleIt=true/false	Set this to true to gamble at Gheed each time you talk to her
+// MXP_AlwaysGamble=true/false	If GambleItOn is set to true, always go to Gheed to gamble
+// MXP_GambleMinGold=xxxxxx	Set a minimun amount of gold before starting to gamble
+// MXP_AlwaysJamella=false;	Always visit Jamella no matter what
+// MXP_AlwaysHalbu=false;	Always visit Halbu no matter what
+// MXP_AlwaysOrmus=false;	Always visit Ormus no matter what (if you are in act3)// 
+//--------------------------------------------------------------------
+
+MXP_ShopIt=true;
+MXP_GambleIt=false;
+MXP_AlwaysGamble=false;
+MXP_GambleMinGold=2000000;
+MXP_AlwaysJamella=false;
+MXP_AlwaysHalbu=false;
+MXP_AlwaysOrmus=false;
+
+
+//////////////////////////////////////////////////////////////////////
+// Other configurations
+//====================================================================
+// DT_UseMerc=true/false	Set to true if you use a mercenary, will revive merc at Qual-Kehk if necessary
+// DT_RepairPercent=xx		You will visit Charsi for repair if any of your items fall below this percent of durability
+// DT_AmmoPercent=xx		Percent of remaining ammo before refilling at Charsi
+// DT_ThrowPercent=xx		Percent of remaining throwing weapon stack before repairing at Charsi
+// DT_SkipHealLife=xx		If you have more than this percent of your life, you won't go to Akara
+// DT_SkipHealMana=xx		If you have more than this percent of your mana, you won't go to Akara
+//--------------------------------------------------------------------
+
+DT_UseMerc=true;
+DT_RepairPercent=25;
+DT_AmmoPercent=30;
+DT_ThrowPercent=50;
+DT_SkipHealLife=75;
+DT_SkipHealMana=75;
+
+
+//////////////////////////////////////////////////////////////////////
+// Immunities/Resistances/Enchantments to skip
+//====================================================================
+//Set each to true to chicken out if Meph is immune to that kind of damage
+//--------------------------------------------------------------------
+
+DA_Immunities[1]=false;	// Physical
+DA_Immunities[2]=false;	// Magic
+DA_Immunities[3]=false;	// Fire
+DA_Immunities[4]=false;	// Lightning
+DA_Immunities[5]=false;	// Cold
+DA_Immunities[6]=false;	// Poison
+
+//--------------------------------------------------------------------
+// Immunities Combinations
+// Method:  if set to true, will chicken with that immunities# / immunities# combination
+// DA_ImmunitiesCombo[next number] = new Array(immunities#,immunities#,true/false);
+//--------------------------------------------------------------------
+
+DA_ImmunitiesCombo[1]=new Array(1,2,false);	// Immune to Physical and Immune to Magic
+DA_ImmunitiesCombo[2]=new Array(4,5,false);	// Immune to Lightning and Immune to Cold
+
+//--------------------------------------------------------------------
+// Set each to true to chicken out if Meph has that enchantment 
+//--------------------------------------------------------------------
+
+DA_Enchantments[1]=false;	//Extra Strong 
+DA_Enchantments[2]=false;	//Extra Fast 
+DA_Enchantments[3]=false;	//Cursed
+DA_Enchantments[4]=false;	//Magic Resistant 
+DA_Enchantments[5]=false;	//Fire Enchanted 
+DA_Enchantments[6]=false;	//Lightning Enchanted
+DA_Enchantments[7]=false;	//Cold Enchanted 
+DA_Enchantments[8]=false;	//Mana Burn 
+DA_Enchantments[9]=false;	//Teleportation 
+DA_Enchantments[10]=false;	//Spectral Hit 
+DA_Enchantments[11]=false;	//Stone Skin 
+DA_Enchantments[12]=false;	//Multiple Shot
+
+//--------------------------------------------------------------------
+// Enchantment Combinations 
+// Method:  if set to true, will chicken with that enchantment# / enchantment# combination 
+// DA_EnchantmentsCombos[next number] = new Array(enchantment#,enchantment#,true/false); 
+//--------------------------------------------------------------------
+
+DA_EnchantmentsCombos[1]=new Array(6,12,false);	// Multiple Shot LE
+DA_EnchantmentsCombos[2]=new Array(1,3,false);	// Extra Strong Cursed
+DA_EnchantmentsCombos[3]=new Array(2,8,false);	// Extra Fast Mana Burn 
+
+//--------------------------------------------------------------------
+// Set each to true to chicken out if Meph has that aura 
+//--------------------------------------------------------------------
+
+DA_Auras[1]=false;	//Conviction
+DA_Auras[2]=false;	//Might 
+DA_Auras[3]=false;	//Holy Fire 
+DA_Auras[4]=false;	//Blessed Aim 
+DA_Auras[5]=false;	//Holy Freeze 
+DA_Auras[6]=false;	//Holy Shock
+DA_Auras[7]=false;	//Fanaticism 
+
+//--------------------------------------------------------------------
+// Enchantment / Aura Combinations 
+// Method:  if set to true, will chicken with that enchantment# / aura# combination 
+// DA_EnchantAuraCombos[next number] = new Array(enchantment#,aura#,true/false);
+//--------------------------------------------------------------------
+
+DA_EnchantAuraCombos[1]=new Array(1,2,false);	// Extra Strong Might 
+DA_EnchantAuraCombos[2]=new Array(1,7,false);	// Extra Strong Fanaticism
+DA_EnchantAuraCombos[3]=new Array(2,2,false);	// Extra Fast Might 
+DA_EnchantAuraCombos[4]=new Array(2,7,false);	// Extra Fast Fanaticism
+DA_EnchantAuraCombos[5]=new Array(2,5,false);	// Extra Fast Holy Freeze
+DA_EnchantAuraCombos[6]=new Array(6,1,false);	// LE Conviction
+
+//--------------------------------------------------------------------
+// Immunity / Aura Combinations 
+// Method:  if set to true, will chicken with that immunity# / aura# combination 
+// DA_ImmunityAuraCombos[next number] = new Array(immunity#,aura#,true/false);
+//--------------------------------------------------------------------
+
+DA_ImmunityAuraCombos[1]=new Array(5,7,false);	// Immune to Cold and Fanaticism
+DA_ImmunityAuraCombos[2]=new Array(3,2,false);	// Immune to Fire and Might
+
+}/////////////////////////////////////////////////////////////////////
+// End of barbarian section
+//////////////////////////////////////////////////////////////////////
+
+
+
+
+
+
+
+
+
+
+//////////////////////////////////////////////////////////////////////
+// Amazon section
+//////////////////////////////////////////////////////////////////////
+function amazonvariables() {
+
+
+//////////////////////////////////////////////////////////////////////
+// Attack configuration
+//====================================================================
+// This script is originally built for a hybridazon with both Bow and Javelin. If you got both it will automatically use Bow when Meph is Lightning Immune and Javelin with Lightning Fury when he is Physical Immune.
+// For pure Bowazon you set JavFirst, SwitchPhys and SwitchLit to false while BowFirst should be set to true - then make a BowAttack sequence including cold and/or fire damage to handle Physical Immune Meph.
+// For pure Javazon you set BowFirst, SwitchPhys and SwitchLit to false while JavFirst should be set to true - JavAttack sequence is probably best left at Lightning Fury only since it do both Lightning and Physical damage.
+
+// Character skill configuration
+//====================================================================
+// DA_UseCTA=true/false		If you have a CTA weapon, set to true to use the precasts from the runeword
+//				It will automatically figure which weapon tab has the CTA weapon
+// CastDecoyOn=true/false	Set this to true to cast a decoy on Mephisto
+// DecoyPosition=0/1		Set to 0 if you want to cast Decoy on Meph, 1 to cast at the doorway
+// BowFirst=true/false		Set this to true to force the bow to be used first
+// JavFirst=true/false		Set this to true to force the use of the javelins first
+// SwitchPhys=true/false	Set this to true to switch attack types on high phys resists
+// PhysAmount=xx		Set this to the physical resistance number you want to switch on
+// SwitchLit=true/false		Set this to true to switch attack types on high lit resists
+// LitAmount=xx			Set this to the lightning resistance number you want to switch on
+// StartIt=x			This is the number of attacks to start off with first weapon, then switch to second
+// XP_MaxAttacks=4			The maximum number of times to repeat the Attack sequence before aborting
+// UseJavelins=true/false	This will let the javazon position correctly for throwing javelins
+//				Set it to false for hybrid/bowazon because it will get you too close
+// PickupShield=true/false	If this is true, you'll switch to a shield before picking up items
+// DT_ThrowRechTimeout=xx	Max time to stall while recharging ethereal throwing weapon.
+// SwitchTimeout=x		Timeout delay in seconds for the weapon switch before aborting
+// DA_AutoPrecasts=true/false	Set to true to use precasts before killing Meph
+
+DA_UseCTA=false;
+CastDecoyOn=true;
+DecoyPosition=0;
+BowFirst=true;
+JavFirst=false;
+SwitchPhys=false;
+PhysAmount=50;		//set to 99 for only switching when Meph is immune
+SwitchLit=false;
+LitAmount=50;		//set to 99 for only switching when Meph is immune
+StartIt=0;		//Set this to 0 to skip this "timed" weapon switch. See above for more info.
+XP_MaxAttacks=6;
+XP_MephDodge=true;
+UseJavelins=false;
+PickupShield=false;
+DT_ThrowRechTimeout=45;
+SwitchTimeout=3;
+DA_AutoPrecasts=true;
+
+// Attack Configuration
+//====================================================================
+// Attack.push"xxxxx"		The first attack in the list will be used first
+// Number.push=x;		To use a new skill, replace the skill name with the one you want to use
+// 				Select the number of skills in the BowNumber array
+// This will use the skills in the order you list them.  For instance, if you list Multiple Shot,
+// Guided Arrow, and Freezing Arrow, the script will use Multiple Shot, Guided Arrow, Freezing Arrow, Multiple etc...
+
+BowAttack.push(12);    BowNumber.push(3); // "Multiple Shot"
+BowAttack.push(31);    BowNumber.push(4); // "Freezing Arrow"
+BowAttack.push(22);    BowNumber.push(2); // "Guided Arrow"
+
+JavAttack.push(35);    JavNumber.push(6); // "Lightning Fury"
+
+
+//////////////////////////////////////////////////////////////////////
+// ShopIt! and GambleIt!
+//====================================================================
+// MXP_ShopIt=true/false	Set this to true to shop every npc you talk to, false to skip this
+// MXP_GambleIt=true/false	Set this to true to gamble at Gheed each time you talk to her
+// MXP_AlwaysGamble=true/false	If GambleItOn is set to true, always go to Gheed to gamble
+// MXP_GambleMinGold=xxxxxx	Set a minimun amount of gold before starting to gamble
+// MXP_AlwaysJamella=false;	Always visit Jamella no matter what
+// MXP_AlwaysHalbu=false;	Always visit Halbu no matter what
+// MXP_AlwaysOrmus=false;	Always visit Ormus no matter what (if you are in act3)// 
+//--------------------------------------------------------------------
+
+MXP_ShopIt=true;
+MXP_GambleIt=false;
+MXP_AlwaysGamble=false;
+MXP_GambleMinGold=2000000;
+MXP_AlwaysJamella=false;
+MXP_AlwaysHalbu=false;
+MXP_AlwaysOrmus=false;
+
+
+//////////////////////////////////////////////////////////////////////
+// Other configurations
+//====================================================================
+// DT_UseMerc=true/false	Set to true if you use a mercenary, will revive merc at Qual-Kehk if necessary
+// DT_RepairPercent=xx		You will visit Charsi for repair if any of your items fall below this percent of durability
+// DT_AmmoPercent=xx		Percent of remaining ammo before refilling at Charsi
+// DT_ThrowPercent=xx		Percent of remaining throwing weapon stack before repairing at Charsi
+// DT_SkipHealLife=xx		If you have more than this percent of your life, you won't go to Akara
+// DT_SkipHealMana=xx		If you have more than this percent of your mana, you won't go to Akara
+//--------------------------------------------------------------------
+
+DT_UseMerc=true;
+DT_RepairPercent=25;
+DT_AmmoPercent=30;
+DT_ThrowPercent=50;
+DT_SkipHealLife=75;
+DT_SkipHealMana=75;
+
+
+//////////////////////////////////////////////////////////////////////
+// Immunities/Resistances/Enchantments to skip
+//====================================================================
+//Set each to true to chicken out if Meph is immune to that kind of damage
+//--------------------------------------------------------------------
+
+DA_Immunities[1]=false;	// Physical
+DA_Immunities[2]=false;	// Magic
+DA_Immunities[3]=false;	// Fire
+DA_Immunities[4]=false;	// Lightning
+DA_Immunities[5]=false;	// Cold
+DA_Immunities[6]=false;	// Poison
+
+//--------------------------------------------------------------------
+// Immunities Combinations
+// Method:  if set to true, will chicken with that immunities# / immunities# combination
+// DA_ImmunitiesCombo[next number] = new Array(immunities#,immunities#,true/false);
+//--------------------------------------------------------------------
+
+DA_ImmunitiesCombo[1]=new Array(1,2,false);	// Immune to Physical and Immune to Magic
+DA_ImmunitiesCombo[2]=new Array(4,5,false);	// Immune to Lightning and Immune to Cold
+
+//--------------------------------------------------------------------
+// Set each to true to chicken out if Meph has that enchantment 
+//--------------------------------------------------------------------
+
+DA_Enchantments[1]=false;	//Extra Strong 
+DA_Enchantments[2]=false;	//Extra Fast 
+DA_Enchantments[3]=false;	//Cursed
+DA_Enchantments[4]=false;	//Magic Resistant 
+DA_Enchantments[5]=false;	//Fire Enchanted 
+DA_Enchantments[6]=false;	//Lightning Enchanted
+DA_Enchantments[7]=false;	//Cold Enchanted 
+DA_Enchantments[8]=false;	//Mana Burn 
+DA_Enchantments[9]=false;	//Teleportation 
+DA_Enchantments[10]=false;	//Spectral Hit 
+DA_Enchantments[11]=false;	//Stone Skin 
+DA_Enchantments[12]=false;	//Multiple Shot
+
+//--------------------------------------------------------------------
+// Enchantment Combinations 
+// Method:  if set to true, will chicken with that enchantment# / enchantment# combination 
+// DA_EnchantmentsCombos[next number] = new Array(enchantment#,enchantment#,true/false); 
+//--------------------------------------------------------------------
+
+DA_EnchantmentsCombos[1]=new Array(6,12,false);	// Multiple Shot LE
+DA_EnchantmentsCombos[2]=new Array(1,3,false);	// Extra Strong Cursed
+DA_EnchantmentsCombos[3]=new Array(2,8,false);	// Extra Fast Mana Burn 
+
+//--------------------------------------------------------------------
+// Set each to true to chicken out if Meph has that aura 
+//--------------------------------------------------------------------
+
+DA_Auras[1]=false;	//Conviction
+DA_Auras[2]=false;	//Might 
+DA_Auras[3]=false;	//Holy Fire 
+DA_Auras[4]=false;	//Blessed Aim 
+DA_Auras[5]=false;	//Holy Freeze 
+DA_Auras[6]=false;	//Holy Shock
+DA_Auras[7]=false;	//Fanaticism 
+
+//--------------------------------------------------------------------
+// Enchantment / Aura Combinations 
+// Method:  if set to true, will chicken with that enchantment# / aura# combination 
+// DA_EnchantAuraCombos[next number] = new Array(enchantment#,aura#,true/false);
+//--------------------------------------------------------------------
+
+DA_EnchantAuraCombos[1]=new Array(1,2,false);	// Extra Strong Might 
+DA_EnchantAuraCombos[2]=new Array(1,7,false);	// Extra Strong Fanaticism
+DA_EnchantAuraCombos[3]=new Array(2,2,false);	// Extra Fast Might 
+DA_EnchantAuraCombos[4]=new Array(2,7,false);	// Extra Fast Fanaticism
+DA_EnchantAuraCombos[5]=new Array(2,5,false);	// Extra Fast Holy Freeze
+DA_EnchantAuraCombos[6]=new Array(6,1,false);	// LE Conviction
+
+//--------------------------------------------------------------------
+// Immunity / Aura Combinations 
+// Method:  if set to true, will chicken with that immunity# / aura# combination 
+// DA_ImmunityAuraCombos[next number] = new Array(immunity#,aura#,true/false);
+//--------------------------------------------------------------------
+
+DA_ImmunityAuraCombos[1]=new Array(5,7,false);	// Immune to Cold and Fanaticism
+DA_ImmunityAuraCombos[2]=new Array(3,2,false);	// Immune to Fire and Might
+
+}/////////////////////////////////////////////////////////////////////
+// End of amazon section
+//////////////////////////////////////////////////////////////////////
+
+
+
+
+
+
+
+
+
+
+//////////////////////////////////////////////////////////////////////
+// Druid section
+//////////////////////////////////////////////////////////////////////
+function druidvariables() {
+
+//////////////////////////////////////////////////////////////////////
+// Attack configuration
+//====================================================================
+// DA_UseCTA=true/false		If you have a CTA weapon, set to true to use the precasts from the runeword
+//				It will automatically figure which weapon tab has the CTA weapon
+// DruidSkill="skill"		Set this to the skill you want to attack Mephisto with
+// XP_MaxAttacks=xx		This is the maximum number of attack sequences used to attack Mephisto
+//				If he is still alive after this many attacks, the game will abort
+// DA_WereBear=true/false	Set to true if you use WereBear
+// DA_WereWolf=true/false	Set to true if you use WereWolf
+// DA_Raven=x			Set the Number of Ravens you can summon, 0 to disable it
+// DA_SpiritWolf=x		Set the Number of Spirit Wolves can Summon, 0 to disable it
+// DA_DireWolf=x		Set the Number of Dire Wolves can Summon, 0 to disable it
+// DA_Grizzly=true/false	Set to true if you want to Summon Grizzly Bear
+// DA_PoisonVine=true/false	Set to true if you use Poison Vine
+// DA_CarrionVine=true/false	Set to true if you use Carrion Vine
+// DA_SolarCreeper=true/false	Set to true if you use SolarCreeper
+// DA_Oaksage=true/false	Set to true if you use Oaksage
+// DA_Wolverine=true/false	Set to true if you use Spirit of Wolverine
+// DA_SpiritBarbs=true/false	Set to true if you use Spirit of Barbs
+// DT_ThrowRechTimeout=xx	Max time to stall while recharging ethereal throwing weapon.
+// DA_AutoPrecasts=true/false	Set to true to use precasts before killing Meph
+
+DA_UseCTA=false;
+DruidSkill=248;	// "Fury"
+XP_MaxAttacks=30;
+XP_MephDodge=false;
+DA_WereBear=false;
+DA_WereWolf=true;
+DA_Raven=0;
+DA_SpiritWolf=0;
+DA_DireWolf=0;
+DA_Grizzly=false;
+DA_PoisonVine=false;
+DA_CarrionVine=true;
+DA_SolarCreeper=false;
+DA_Oaksage=false;
+DA_Wolverine=true;
+DA_SpiritBarbs=false;
+DT_ThrowRechTimeout=45;
+DA_AutoPrecasts=true;
+
+
+//////////////////////////////////////////////////////////////////////
+// ShopIt! and GambleIt!
+//====================================================================
+// MXP_ShopIt=true/false	Set this to true to shop every npc you talk to, false to skip this
+// MXP_GambleIt=true/false	Set this to true to gamble at Gheed each time you talk to her
+// MXP_AlwaysGamble=true/false	If GambleItOn is set to true, always go to Gheed to gamble
+// MXP_GambleMinGold=xxxxxx	Set a minimun amount of gold before starting to gamble
+// MXP_AlwaysJamella=false;	Always visit Jamella no matter what
+// MXP_AlwaysHalbu=false;	Always visit Halbu no matter what
+// MXP_AlwaysOrmus=false;	Always visit Ormus no matter what (if you are in act3)// 
+//--------------------------------------------------------------------
+
+MXP_ShopIt=true;
+MXP_GambleIt=false;
+MXP_AlwaysGamble=false;
+MXP_GambleMinGold=2000000;
+MXP_AlwaysJamella=false;
+MXP_AlwaysHalbu=false;
+MXP_AlwaysOrmus=false;
+
+
+//////////////////////////////////////////////////////////////////////
+// Other configurations
+//====================================================================
+// DT_UseMerc=true/false	Set to true if you use a mercenary, will revive merc at Qual-Kehk if necessary
+// DT_RepairPercent=xx		You will visit Charsi for repair if any of your items fall below this percent of durability
+// DT_AmmoPercent=xx		Percent of remaining ammo before refilling at Charsi
+// DT_ThrowPercent=xx		Percent of remaining throwing weapon stack before repairing at Charsi
+// DT_SkipHealLife=xx		If you have more than this percent of your life, you won't go to Akara
+// DT_SkipHealMana=xx		If you have more than this percent of your mana, you won't go to Akara
+//--------------------------------------------------------------------
+
+DT_UseMerc=true;
+DT_RepairPercent=25;
+DT_AmmoPercent=30;
+DT_ThrowPercent=50;
+DT_SkipHealLife=75;
+DT_SkipHealMana=75;
+
+
+//////////////////////////////////////////////////////////////////////
+// Immunities/Resistances/Enchantments to skip
+//====================================================================
+//Set each to true to chicken out if Meph is immune to that kind of damage
+//--------------------------------------------------------------------
+
+DA_Immunities[1]=false;	// Physical
+DA_Immunities[2]=false;	// Magic
+DA_Immunities[3]=false;	// Fire
+DA_Immunities[4]=false;	// Lightning
+DA_Immunities[5]=false;	// Cold
+DA_Immunities[6]=false;	// Poison
+
+//--------------------------------------------------------------------
+// Immunities Combinations
+// Method:  if set to true, will chicken with that immunities# / immunities# combination
+// DA_ImmunitiesCombo[next number] = new Array(immunities#,immunities#,true/false);
+//--------------------------------------------------------------------
+
+DA_ImmunitiesCombo[1]=new Array(1,2,false);	// Immune to Physical and Immune to Magic
+DA_ImmunitiesCombo[2]=new Array(4,5,false);	// Immune to Lightning and Immune to Cold
+
+//--------------------------------------------------------------------
+// Set each to true to chicken out if Meph has that enchantment 
+//--------------------------------------------------------------------
+
+DA_Enchantments[1]=false;	//Extra Strong 
+DA_Enchantments[2]=false;	//Extra Fast 
+DA_Enchantments[3]=false;	//Cursed
+DA_Enchantments[4]=false;	//Magic Resistant 
+DA_Enchantments[5]=false;	//Fire Enchanted 
+DA_Enchantments[6]=false;	//Lightning Enchanted
+DA_Enchantments[7]=false;	//Cold Enchanted 
+DA_Enchantments[8]=false;	//Mana Burn 
+DA_Enchantments[9]=false;	//Teleportation 
+DA_Enchantments[10]=false;	//Spectral Hit 
+DA_Enchantments[11]=false;	//Stone Skin 
+DA_Enchantments[12]=false;	//Multiple Shot
+
+//--------------------------------------------------------------------
+// Enchantment Combinations 
+// Method:  if set to true, will chicken with that enchantment# / enchantment# combination 
+// DA_EnchantmentsCombos[next number] = new Array(enchantment#,enchantment#,true/false); 
+//--------------------------------------------------------------------
+
+DA_EnchantmentsCombos[1]=new Array(6,12,false);	// Multiple Shot LE
+DA_EnchantmentsCombos[2]=new Array(1,3,false);	// Extra Strong Cursed
+DA_EnchantmentsCombos[3]=new Array(2,8,false);	// Extra Fast Mana Burn 
+
+//--------------------------------------------------------------------
+// Set each to true to chicken out if Meph has that aura 
+//--------------------------------------------------------------------
+
+DA_Auras[1]=false;	//Conviction
+DA_Auras[2]=false;	//Might 
+DA_Auras[3]=false;	//Holy Fire 
+DA_Auras[4]=false;	//Blessed Aim 
+DA_Auras[5]=false;	//Holy Freeze 
+DA_Auras[6]=false;	//Holy Shock
+DA_Auras[7]=false;	//Fanaticism 
+
+//--------------------------------------------------------------------
+// Enchantment / Aura Combinations 
+// Method:  if set to true, will chicken with that enchantment# / aura# combination 
+// DA_EnchantAuraCombos[next number] = new Array(enchantment#,aura#,true/false);
+//--------------------------------------------------------------------
+
+DA_EnchantAuraCombos[1]=new Array(1,2,false);	// Extra Strong Might 
+DA_EnchantAuraCombos[2]=new Array(1,7,false);	// Extra Strong Fanaticism
+DA_EnchantAuraCombos[3]=new Array(2,2,false);	// Extra Fast Might 
+DA_EnchantAuraCombos[4]=new Array(2,7,false);	// Extra Fast Fanaticism
+DA_EnchantAuraCombos[5]=new Array(2,5,false);	// Extra Fast Holy Freeze
+DA_EnchantAuraCombos[6]=new Array(6,1,false);	// LE Conviction
+
+//--------------------------------------------------------------------
+// Immunity / Aura Combinations 
+// Method:  if set to true, will chicken with that immunity# / aura# combination 
+// DA_ImmunityAuraCombos[next number] = new Array(immunity#,aura#,true/false);
+//--------------------------------------------------------------------
+
+DA_ImmunityAuraCombos[1]=new Array(5,7,false);	// Immune to Cold and Fanaticism
+DA_ImmunityAuraCombos[2]=new Array(3,2,false);	// Immune to Fire and Might
+
+}/////////////////////////////////////////////////////////////////////
+// End of druid section
+//////////////////////////////////////////////////////////////////////
+
+
+
+
+
+
+
+
+
+
+//////////////////////////////////////////////////////////////////////
+// Necromancer section
+//////////////////////////////////////////////////////////////////////
+function necrovariables() {
+
+//////////////////////////////////////////////////////////////////////
+// Attack configuration
+//====================================================================
+// DA_UseCTA=true/false		If you have a CTA weapon, set to true to use the precasts from the runeword
+//				It will automatically figure which weapon tab has the CTA weapon
+// CorpsePopping=true/false	Set this to true to kill Meph's minions and pop their corpses
+// BodySkill=xxxx		This to the skill you want to use on the corpses
+// NecroSkill=xxxx		Set this to your attack skill
+// BoneBehind=true/false	Set this to true to cast a bone wall behind you
+// XP_BoneBoss=true/false	Set this to true to cast a bone prison around Meph
+// BoneNumber=x			This is the number of bone prisons to cast
+// NecroCurse=xxxx		Set this as the curse you want to use
+// XP_MaxAttacks=xx		The number of attack you'll reach before leaving the game
+// XP_MephDodge=true/false	Enable/disable Meph dodging (disable if you want to tank and attack him up close)
+// DA_AutoPrecasts=true/false	Set to true to use precasts before killing Meph
+
+DA_UseCTA=false;
+CorpsePopping=false;	//For some reason, it won't switch to corpse explosion...
+BodySkill=74; 		// "Corpse Explosion"
+NecroSkill=93; 		// "Bone Spirit"
+BoneBehind=true;
+XP_BoneBoss=true;
+BoneNumber=1;
+NecroCurse=91; 		// "Lower Resist"
+XP_MaxAttacks=40;
+XP_MephDodge=true;
+DA_AutoPrecasts=true;
+
+
+//////////////////////////////////////////////////////////////////////
+// ShopIt! and GambleIt!
+//====================================================================
+// MXP_ShopIt=true/false	Set this to true to shop every npc you talk to, false to skip this
+// MXP_GambleIt=true/false	Set this to true to gamble at Gheed each time you talk to her
+// MXP_AlwaysGamble=true/false	If GambleItOn is set to true, always go to Gheed to gamble
+// MXP_GambleMinGold=xxxxxx	Set a minimun amount of gold before starting to gamble
+// MXP_AlwaysJamella=false;	Always visit Jamella no matter what
+// MXP_AlwaysHalbu=false;	Always visit Halbu no matter what
+// MXP_AlwaysOrmus=false;	Always visit Ormus no matter what (if you are in act3)// 
+//--------------------------------------------------------------------
+
+MXP_ShopIt=true;
+MXP_GambleIt=false;
+MXP_AlwaysGamble=false;
+MXP_GambleMinGold=2000000;
+MXP_AlwaysJamella=false;
+MXP_AlwaysHalbu=false;
+MXP_AlwaysOrmus=false;
+
+
+//////////////////////////////////////////////////////////////////////
+// Other configurations
+//====================================================================
+// DT_UseMerc=true/false	Set to true if you use a mercenary, will revive merc at Qual-Kehk if necessary
+// DT_RepairPercent=xx		You will visit Charsi for repair if any of your items fall below this percent of durability
+// DT_AmmoPercent=xx		Percent of remaining ammo before refilling at Charsi
+// DT_ThrowPercent=xx		Percent of remaining throwing weapon stack before repairing at Charsi
+// DT_SkipHealLife=xx		If you have more than this percent of your life, you won't go to Akara
+// DT_SkipHealMana=xx		If you have more than this percent of your mana, you won't go to Akara
+//--------------------------------------------------------------------
+
+DT_UseMerc=true;
+DT_RepairPercent=25;
+DT_AmmoPercent=30;
+DT_ThrowPercent=50;
+DT_SkipHealLife=75;
+DT_SkipHealMana=75;
+
+
+//////////////////////////////////////////////////////////////////////
+// Immunities/Resistances/Enchantments to skip
+//====================================================================
+//Set each to true to chicken out if Meph is immune to that kind of damage
+//--------------------------------------------------------------------
+
+DA_Immunities[1]=false;	// Physical
+DA_Immunities[2]=false;	// Magic
+DA_Immunities[3]=false;	// Fire
+DA_Immunities[4]=false;	// Lightning
+DA_Immunities[5]=false;	// Cold
+DA_Immunities[6]=false;	// Poison
+
+//--------------------------------------------------------------------
+// Immunities Combinations
+// Method:  if set to true, will chicken with that immunities# / immunities# combination
+// DA_ImmunitiesCombo[next number] = new Array(immunities#,immunities#,true/false);
+//--------------------------------------------------------------------
+
+DA_ImmunitiesCombo[1]=new Array(1,2,false);	// Immune to Physical and Immune to Magic
+DA_ImmunitiesCombo[2]=new Array(4,5,false);	// Immune to Lightning and Immune to Cold
+
+//--------------------------------------------------------------------
+// Set each to true to chicken out if Meph has that enchantment 
+//--------------------------------------------------------------------
+
+DA_Enchantments[1]=false;	//Extra Strong 
+DA_Enchantments[2]=false;	//Extra Fast 
+DA_Enchantments[3]=false;	//Cursed
+DA_Enchantments[4]=false;	//Magic Resistant 
+DA_Enchantments[5]=false;	//Fire Enchanted 
+DA_Enchantments[6]=false;	//Lightning Enchanted
+DA_Enchantments[7]=false;	//Cold Enchanted 
+DA_Enchantments[8]=false;	//Mana Burn 
+DA_Enchantments[9]=false;	//Teleportation 
+DA_Enchantments[10]=false;	//Spectral Hit 
+DA_Enchantments[11]=false;	//Stone Skin 
+DA_Enchantments[12]=false;	//Multiple Shot
+
+//--------------------------------------------------------------------
+// Enchantment Combinations 
+// Method:  if set to true, will chicken with that enchantment# / enchantment# combination 
+// DA_EnchantmentsCombos[next number] = new Array(enchantment#,enchantment#,true/false); 
+//--------------------------------------------------------------------
+
+DA_EnchantmentsCombos[1]=new Array(6,12,false);	// Multiple Shot LE
+DA_EnchantmentsCombos[2]=new Array(1,3,false);	// Extra Strong Cursed
+DA_EnchantmentsCombos[3]=new Array(2,8,false);	// Extra Fast Mana Burn 
+
+//--------------------------------------------------------------------
+// Set each to true to chicken out if Meph has that aura 
+//--------------------------------------------------------------------
+
+DA_Auras[1]=false;	//Conviction
+DA_Auras[2]=false;	//Might 
+DA_Auras[3]=false;	//Holy Fire 
+DA_Auras[4]=false;	//Blessed Aim 
+DA_Auras[5]=false;	//Holy Freeze 
+DA_Auras[6]=false;	//Holy Shock
+DA_Auras[7]=false;	//Fanaticism 
+
+//--------------------------------------------------------------------
+// Enchantment / Aura Combinations 
+// Method:  if set to true, will chicken with that enchantment# / aura# combination 
+// DA_EnchantAuraCombos[next number] = new Array(enchantment#,aura#,true/false);
+//--------------------------------------------------------------------
+
+DA_EnchantAuraCombos[1]=new Array(1,2,false);	// Extra Strong Might 
+DA_EnchantAuraCombos[2]=new Array(1,7,false);	// Extra Strong Fanaticism
+DA_EnchantAuraCombos[3]=new Array(2,2,false);	// Extra Fast Might 
+DA_EnchantAuraCombos[4]=new Array(2,7,false);	// Extra Fast Fanaticism
+DA_EnchantAuraCombos[5]=new Array(2,5,false);	// Extra Fast Holy Freeze
+DA_EnchantAuraCombos[6]=new Array(6,1,false);	// LE Conviction
+
+//--------------------------------------------------------------------
+// Immunity / Aura Combinations 
+// Method:  if set to true, will chicken with that immunity# / aura# combination 
+// DA_ImmunityAuraCombos[next number] = new Array(immunity#,aura#,true/false);
+//--------------------------------------------------------------------
+
+DA_ImmunityAuraCombos[1]=new Array(5,7,false);	// Immune to Cold and Fanaticism
+DA_ImmunityAuraCombos[2]=new Array(3,2,false);	// Immune to Fire and Might
+
+}/////////////////////////////////////////////////////////////////////
+// End of necromancer section
+//////////////////////////////////////////////////////////////////////
+
+
+
+
+
+
+
+
+
+
+//////////////////////////////////////////////////////////////////////
+// Paladin section
+//////////////////////////////////////////////////////////////////////
+function paladinvariables() {
+
+
+//////////////////////////////////////////////////////////////////////
+// Precasting configuration
+//====================================================================
+// DA_UseCTA=true/false		If you have a CTA weapon, set to true to use the precasts from the runeword
+//				It will automatically figure which weapon tab has the CTA weapon
+// DA_AutoPrecasts=true/false	Set to true to use precasts before killing Meph
+//				When DA_AutoPrecasts is set to true, the precasting config below is ignored
+// MXP_UseVigor=true/false	Set to true if you want to cast Vigor in town
+// XP_HolyShield=true/false	Precast Holy Shield before attacking Meph
+//--------------------------------------------------------------------
+
+DA_UseCTA=false;
+DA_AutoPrecasts=true;
+MXP_UseVigor=true;
+XP_HolyShield=true;
+
+
+//////////////////////////////////////////////////////////////////////
+// Attack configuration
+//====================================================================
+// DT_ThrowRechTimeout=xx	Max time to stall while recharging ethereal throwing weapon.
+// XP_MephDodge=true/false	Enable/disable Meph dodging (disable if you want to tank and attack him up close)
+// XP_FOHatStart=x		Number of times to use FOH.  0 to not use it
+// XP_FOHAura=xxx		Aura to use when using FOH
+// XP_Caster=true/false		Set to true to act as a caster (no moving to Meph before attack)
+// XP_PallyAttack="skill"	Set this to the skill you want to attack Mephisto with
+// XP_PallyAura = xxx		What aura do you want to use on attack
+// XP_PhysAttPercent=xx		Set this to the physical resistance number you want to switch on
+// XP_PhysAttack="skill"	If you want this to switch to a skill when Meph is has high phys resists, assign it here
+// XP_PhysAura=xxx		Aura to use when using a physical attack
+// XP_MaxAttacks=xx		This is the maximum number of attack sequences used to attack Mephisto
+//				If he is still alive after this many attacks, the game will abort
+// XP_SwitchOnKill=true/false	Set this to true to switch to the weapon with the greatest magic find upon killing Mephisto
+// XP_SwitchHP=xx		This is the amount of Meph's hp out of 128 that is remaining before switching weapon
+// XP_StallKill=true/false	Set this to true to let your merc get the last hit
+// XP_StallHP=xx		This is the amount of hp of 128 that you will stall for Meph to die on
+// XP_StallSkipPhys=true/false	Set this to true along with XP_StallKill and you won't stall if Meph is immune to phys
+
+DT_ThrowRechTimeout=45;
+XP_MephDodge=true;
+XP_FOHatStart=0;
+XP_FOHAura=123; 	// "Conviction"
+XP_Caster=true;
+XP_PallyAttack=112; 	// "Blessed Hammers"
+XP_PallyAura=113; 	// "Concentration"
+XP_PhysAttPercent=50;
+XP_PhysAttack=112;	// "Blessed Hammers"
+XP_PhysAura=113;	// "Concentration"
+XP_MaxAttacks=80;
+XP_SwitchOnKill=false;
+XP_SwitchHP=40;
+XP_StallKill=false;
+XP_StallHP=40;
+XP_StallSkipPhys=true;
+
+
+//////////////////////////////////////////////////////////////////////
+// ShopIt! and GambleIt!
+//====================================================================
+// MXP_ShopIt=true/false	Set this to true to shop every npc you talk to, false to skip this
+// MXP_GambleIt=true/false	Set this to true to gamble at Gheed each time you talk to her
+// MXP_AlwaysGamble=true/false	If GambleItOn is set to true, always go to Gheed to gamble
+// MXP_GambleMinGold=xxxxxx	Set a minimun amount of gold before starting to gamble
+// MXP_AlwaysJamella=false;	Always visit Jamella no matter what
+// MXP_AlwaysHalbu=false;	Always visit Halbu no matter what
+// MXP_AlwaysOrmus=false;	Always visit Ormus no matter what (if you are in act3)// 
+//--------------------------------------------------------------------
+
+MXP_ShopIt=true;
+MXP_GambleIt=false;
+MXP_AlwaysGamble=false;
+MXP_GambleMinGold=2000000;
+MXP_AlwaysJamella=false;
+MXP_AlwaysHalbu=false;
+MXP_AlwaysOrmus=false;
+
+
+//////////////////////////////////////////////////////////////////////
+// Other configurations
+//====================================================================
+// DT_UseMerc=true/false	Set to true if you use a mercenary, will revive merc at Qual-Kehk if necessary
+// DT_RepairPercent=xx		You will visit Charsi for repair if any of your items fall below this percent of durability
+// DT_AmmoPercent=xx		Percent of remaining ammo before refilling at Charsi
+// DT_ThrowPercent=xx		Percent of remaining throwing weapon stack before repairing at Charsi
+// DT_SkipHealLife=xx		If you have more than this percent of your life, you won't go to Akara
+// DT_SkipHealMana=xx		If you have more than this percent of your mana, you won't go to Akara
+//--------------------------------------------------------------------
+
+DT_UseMerc=true;
+DT_RepairPercent=25;
+DT_AmmoPercent=30;
+DT_ThrowPercent=50;
+DT_SkipHealLife=75;
+DT_SkipHealMana=35;
+
+
+//////////////////////////////////////////////////////////////////////
+// Immunities/Resistances/Enchantments to skip
+//====================================================================
+//Set each to true to chicken out if Meph is immune to that kind of damage
+//--------------------------------------------------------------------
+
+DA_Immunities[1]=false;	// Physical
+DA_Immunities[2]=true;	// Magic
+DA_Immunities[3]=false;	// Fire
+DA_Immunities[4]=false;	// Lightning
+DA_Immunities[5]=false;	// Cold
+DA_Immunities[6]=false;	// Poison
+
+//--------------------------------------------------------------------
+// Immunities Combinations
+// Method:  if set to true, will chicken with that immunities# / immunities# combination
+// DA_ImmunitiesCombo[next number] = new Array(immunities#,immunities#,true/false);
+//--------------------------------------------------------------------
+
+DA_ImmunitiesCombo[1]=new Array(1,2,false);	// Immune to Physical and Immune to Magic
+DA_ImmunitiesCombo[2]=new Array(4,5,false);	// Immune to Lightning and Immune to Cold
+
+//--------------------------------------------------------------------
+// Set each to true to chicken out if Meph has that enchantment 
+//--------------------------------------------------------------------
+
+DA_Enchantments[1]=false;	//Extra Strong 
+DA_Enchantments[2]=true;	//Extra Fast 
+DA_Enchantments[3]=false;	//Cursed
+DA_Enchantments[4]=false;	//Magic Resistant 
+DA_Enchantments[5]=false;	//Fire Enchanted 
+DA_Enchantments[6]=false;	//Lightning Enchanted
+DA_Enchantments[7]=false;	//Cold Enchanted 
+DA_Enchantments[8]=false;	//Mana Burn 
+DA_Enchantments[9]=false;	//Teleportation 
+DA_Enchantments[10]=false;	//Spectral Hit 
+DA_Enchantments[11]=false;	//Stone Skin 
+DA_Enchantments[12]=false;	//Multiple Shot
+
+//--------------------------------------------------------------------
+// Enchantment Combinations 
+// Method:  if set to true, will chicken with that enchantment# / enchantment# combination 
+// DA_EnchantmentsCombos[next number] = new Array(enchantment#,enchantment#,true/false); 
+//--------------------------------------------------------------------
+
+DA_EnchantmentsCombos[1]=new Array(6,12,true);	// Multiple Shot LE
+DA_EnchantmentsCombos[2]=new Array(1,3,false);	// Extra Strong Cursed
+DA_EnchantmentsCombos[3]=new Array(2,8,false);	// Extra Fast Mana Burn 
+
+//--------------------------------------------------------------------
+// Set each to true to chicken out if Meph has that aura 
+//--------------------------------------------------------------------
+
+DA_Auras[1]=false;	//Conviction
+DA_Auras[2]=false;	//Might 
+DA_Auras[3]=false;	//Holy Fire 
+DA_Auras[4]=false;	//Blessed Aim 
+DA_Auras[5]=false;	//Holy Freeze 
+DA_Auras[6]=false;	//Holy Shock
+DA_Auras[7]=false;	//Fanaticism 
+
+//--------------------------------------------------------------------
+// Enchantment / Aura Combinations 
+// Method:  if set to true, will chicken with that enchantment# / aura# combination 
+// DA_EnchantAuraCombos[next number] = new Array(enchantment#,aura#,true/false);
+//--------------------------------------------------------------------
+
+DA_EnchantAuraCombos[1]=new Array(1,2,false);	// Extra Strong Might 
+DA_EnchantAuraCombos[2]=new Array(1,7,false);	// Extra Strong Fanaticism
+DA_EnchantAuraCombos[3]=new Array(2,2,true);	// Extra Fast Might 
+DA_EnchantAuraCombos[4]=new Array(2,7,true);	// Extra Fast Fanaticism
+DA_EnchantAuraCombos[5]=new Array(2,5,false);	// Extra Fast Holy Freeze
+DA_EnchantAuraCombos[6]=new Array(6,1,true);	// LE Conviction
+
+//--------------------------------------------------------------------
+// Immunity / Aura Combinations 
+// Method:  if set to true, will chicken with that immunity# / aura# combination 
+// DA_ImmunityAuraCombos[next number] = new Array(immunity#,aura#,true/false);
+//--------------------------------------------------------------------
+
+DA_ImmunityAuraCombos[1]=new Array(5,7,false);	// Immune to Cold and Fanaticism
+DA_ImmunityAuraCombos[2]=new Array(3,2,false);	// Immune to Fire and Might
+
+}/////////////////////////////////////////////////////////////////////
+// End of paladin section
+//////////////////////////////////////////////////////////////////////

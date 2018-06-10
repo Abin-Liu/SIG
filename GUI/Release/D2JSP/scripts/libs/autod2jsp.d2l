@@ -1,0 +1,37 @@
+/*
+	autod2jsp.d2l
+	Utility functions for autod2jsp
+*/
+
+function findScript( scriptName ) {
+	script = getScript();
+	if(script) do {
+		if(script.name.indexOf( scriptName )!=-1) {
+			return script;
+		} 
+	} while(script.getNext());
+	return 0;
+}
+
+function sendMsgToStarter( msg ) {
+	if(starter = findScript("scripts\\starter.d2j")) {
+		starter.send( msg );
+	}
+}
+
+function sendMsgToScript( scriptName, msg ) {
+	if(starter = findScript( scriptName )) {
+		starter.send( msg );
+	}
+}
+
+function stopScript( scriptName ) {
+	script = findScript( scriptName );
+	if(script) {
+		script.stop();
+	}
+}
+
+function debug_log( string ) {
+	sendDDE(1,"autod2jsp","log","",getMyPID() + "," + new Date() + "," + string);
+}

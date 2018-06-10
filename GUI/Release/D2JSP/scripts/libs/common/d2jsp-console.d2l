@@ -1,0 +1,721 @@
+/**************************************************************            
+*		Daemon Multi-MF Bot Pro Console Library       *
+*                         Version : 0.4 Beta                  *
+*                        Written by Killkeeper                *
+***************************************************************/
+
+/*
+:. History:
+  	0.4 : Added oConsole.Line ; Added oConsole.System.UpdateEnchant; oConsole.System.UpdateItem
+  	0.32 : Added oConsole.Text.ReleaseAll ; oConsole.Text.Allocate
+	0.3 : Added oConsole.Text
+	0.21 : Rewrite some parts of Console system
+	0.2 : Added oConsole.System
+	0.1 : First release
+
+:. ToDo:
+	oConsole.Shape
+	oConsole.Button
+
+*/
+
+const FONT_PIXEL_11 = 0;
+const FONT_EXCOET = 1;
+const FONT_EXCOETGOLDBIG = 2;
+const FONT_EXCOETGOLDLARGE =3;
+const FONT_PIXEL_10_NARROW = 4;
+const FONT_PIXEL_15 = 5;
+const FONT_PIXEL_9 = 6;
+const FONT_EXCOETGOLD = 7;
+const FONT_PIXEL_12 = 8;
+const FONT_BLACK = 9;
+const FONT_BLACKSMALL = 10;
+const FONT_EXCOETSMALL = 11;
+const FONT_PIXEL_8 = 12;
+
+const COLORWHITE = 0;
+const COLORRED = 1;
+const COLORGREEN = 2;
+const COLORBLUE = 3;
+const COLORGOLD = 4;
+const COLORGREY = 5;
+const COLORBLACK = 6;
+const COLORDARKYELLOW = 7;
+const COLORCRAFT = 8;
+const COLORYELLOW = 9;
+
+const COLORSTRING = "ÿc";
+
+const FILE_READONLY = 0;
+const FILE_OVERWRITE = 1;
+const FILE_APPEND = 2;
+
+function oConsole()
+{
+	this.System = new oConsole.System;	
+}
+
+oConsole.System = function()
+{	
+	this.pMsgPtr = 0;
+	this.pItemPtr = 0;
+	this.pBossProPtr = 0;
+	this.pBossEncPtr = 0;
+	this.pBossLifePtr = 0;
+	this.pBossStatPtr = 0;
+	this.pItemTook = 0;
+	this.pMsgLines = 6;
+	this.Texter = new oConsole.Text;
+	this.Painter = new oConsole.Line;
+	this.Logger = new oMessanger;
+	this.oLBCache = new Array();  //LifeBar Cache
+	this.oICCache = new Array();  //Item Colors Cache
+	this.Messages = new Array(7);
+	this.oItemCache = new Array(4);
+	
+	this.oPos = new Object();
+	this.oPos["ConsoleN"] = [30,30,770,30];
+	this.oPos["ConsoleS"] = [30,124,770,124];
+	this.oPos["ConsoleTitle"] = [30,27];
+	this.oPos["BossN"] = [580,300,770,300];
+	this.oPos["BossS"] = [580,370,770,370];
+	this.oPos["Info"]= [10,20];
+	this.oPos["Boss_Title"] = [585,297];
+	this.oPos["Boss_Profile"] = [585,318];
+	this.oPos["Boss_Enc"] = [585,330];
+	this.oPos["Boss_Life"] = [585,342];
+	this.oPos["Boss_Status"] = [585,354];
+	this.oPos["Item_Title"] = [10,517];
+	this.oPos["ItemN"] = [10,520,790,520];
+	this.oPos["ItemS"] = [10,550,790,550];
+	this.oPos["Item_Entry"] = [15,538];
+	
+	this.Initialize = function()
+	{
+		this._InitArray();
+		this._InitLog();
+		this._CreateConsole();
+		this._ShowItem();
+	}
+	
+	this.AddMessage = function(pMessage)
+	{
+		if (!pMessage)
+			return false;
+		
+		if (this.MessageTook<=this.pMsgLines)
+		{
+			this.Messages[this.MessageTook] = pMessage;
+			this.MessageTook++;
+		}
+		else	
+		{
+			for(var pN=0;pN<this.pMsgLines;pN++)
+				this.Messages[pN] = this.Messages[pN+1];
+			this.Messages[this.pMsgLines] = pMessage;
+		}
+		
+		for(var pN=0;pN<this.MessageTook;pN++)
+		{
+			this.Texter.Update(this.pMsgPtr + pN, this.Messages[pN]);
+		}
+	}
+	
+	this.UpdateItem = function(oItem)
+	{
+		var pItemName = "";
+		var pItemQual = 0;
+		var pSplitArr = null;
+		var oFile = fileOpen("output/DaemonLogging/" + me.name +"_itemlog.log", FILE_OVERWRITE);
+		
+		if (!oItem || !oItem.name || !oFile)
+		{
+			this.Logger.TypeError("oConsole.System.UpdateItem : item name is undefined or cannot create log file");
+			return false;
+		}
+		
+		if (this.pItemTook<=3)
+		{
+			this.oItemCache[this.pItemTook] = oItem.name + "," + oItem.quality ;
+			this.pItemTook++;
+		}
+		else
+		{
+			for(var pN=0;pN<3;pN++)
+				this.oItemCache[pN] = this.oItemCache[pN+1];
+			this.oItemCache[3] = oItem.name + "," + oItem.quality ;
+		}
+		
+		for (pN=0;pN<this.pItemTook;pN++)
+		{
+			pSplitArr = this.oItemCache[pN].split(",");
+			if (pSplitArr instanceof Array)
+			{
+				pItemName = pSplitArr[0];
+				pItemQual = pSplitArr[1];
+				this.Texter.Update(this.pItemPtr + pN, (pN+1) + "." + pItemName, this.oICCache[pItemQual]);
+				oFile.writeLine(pItemName + "," + pItemQual);
+			}
+		}
+	}
+
+	
+	this.UpdateEnchant = function(oTarget)
+	{
+		if(!oTarget || !oTarget.name)
+		{
+			this.Logger.TypeError("oConsole.System.UpdateEnchant : target to be display is missing");
+			return false;
+		}
+		this.Texter.Update(this.pBossProPtr,COLORSTRING + COLORBLUE + ":. " + COLORSTRING + COLORWHITE + "Boss : " + oTarget.name);
+		this.ShowLife(oTarget.hp);
+		//this.Texter.Update(this.pBossLifePtr	
+	}
+	
+	this.ShowLife = function(pHealth)
+	{
+		var pLifeBar = "";
+		
+		if (isNaN(pHealth))
+			pLifeBar = "Not detected";
+		
+		var pPercent = Math.floor(pHealth / 128 * 100);
+		var pColor = 0;
+		if (pHealth >= 60)
+			pColor = COLORGREEN;
+		else if (pHealth < 60 && pHealth >= 30)
+			pColor = COLORDARKYELLOW;
+		else
+			pColor = COLORRED;
+		
+		pLifeBar = this.oLBCache[Math.ceil(pPercent/2)];
+		
+		if (pHealth>0)
+			this.Texter.Update(this.pBossLifePtr, COLORSTRING + COLORBLUE + ":. " + COLORSTRING + COLORWHITE + "Life : " + COLORSTRING + pColor + pLifeBar);
+		else
+			this.Texter.Update(this.pBossLifePtr, COLORSTRING + COLORBLUE + ":. " + COLORSTRING + COLORWHITE + "Life : " + COLORSTRING + COLORRED + "DEAD");
+	}
+	
+	
+	this._ShowItem = function()
+	{
+		var pItemName = "";
+		var pItemQual = 0;
+		var pSplitArr = null;
+		
+		if (!this.oItemCache || !this.oItemCache.length)
+			return true;
+			
+		for (pN=0;pN<this.pItemTook;pN++)
+		{
+			pSplitArr = this.oItemCache[pN].split(",");
+			if (pSplitArr instanceof Array)
+			{
+				pItemName = (pN+1) + "." + pSplitArr[0];
+				pItemQual = pSplitArr[1];
+				this.Texter.Update(this.pItemPtr + pN, pItemName, this.oICCache[pItemQual]);
+			}
+		}
+	}
+	
+	this._InitArray = function()
+	{
+		var pLifeBar = "";
+		this.MessageTook = 0;
+		
+		for (var pN=0;pN<7;pN++)
+			this.Messages[pN]=" ";
+			
+		for (pN=0;pN<51;pN++)
+		{
+			pLifeBar += "|"
+			this.oLBCache.push(pLifeBar);
+		}
+		
+		this.oICCache = [COLORWHITE,COLORWHITE,COLORWHITE,COLORWHITE,COLORBLUE,COLORGREEN,COLORYELLOW,COLORGOLD,COLORCRAFT];
+	}
+	
+	this._InitLog = function()
+	{
+		//used for this.UpdateItem, need output/DaemonLogging/name_itemlog.txt
+		var oFile = fileOpen("output/DaemonLogging/" + me.name + "_itemlog.log",FILE_READONLY);
+		var pCur = 0;
+		var pString = "";
+
+		if (!oFile)
+			return true;
+		
+		while(!oFile.eof && pCur <= 4)
+		{
+			 pString = oFile.readLine();
+			 if (pString && pString.length>=3)
+			 {
+			 	this.oItemCache[pCur] = pString;
+			 	pCur++;
+			 }
+		}
+		if (pCur>0) this.pItemTook = pCur;
+		
+		oFile.close();
+	}
+	
+	this._CreateConsole = function()
+	{
+		this.Painter.Put(this.oPos["ConsoleN"][0],this.oPos["ConsoleN"][1],this.oPos["ConsoleN"][2],this.oPos["ConsoleN"][3],21);
+		this.Painter.Put(this.oPos["ConsoleS"][0],this.oPos["ConsoleS"][1],this.oPos["ConsoleS"][2],this.oPos["ConsoleS"][3],21);
+		this.Painter.Put(this.oPos["BossN"][0],this.oPos["BossN"][1],this.oPos["BossN"][2],this.oPos["BossN"][3],21);
+		this.Painter.Put(this.oPos["BossS"][0],this.oPos["BossS"][1],this.oPos["BossS"][2],this.oPos["BossS"][3],21);
+		this.Painter.Put(this.oPos["ItemN"][0],this.oPos["ItemN"][1],this.oPos["ItemN"][2],this.oPos["ItemN"][3],21);
+		this.Painter.Put(this.oPos["ItemS"][0],this.oPos["ItemS"][1],this.oPos["ItemS"][2],this.oPos["ItemS"][3],21);
+		
+		for (var pN=0;pN<7;pN++)
+			this.pMsgPtr = this.Texter.Allocate(this.oPos["ConsoleN"][0] + 5, this.oPos["ConsoleN"][1] + 18 + pN*12, " ", COLORWHITE, FONT_PIXEL_9);
+		this.pMsgPtr -= 6;
+		
+		for(pN=0;pN<4;pN++)
+			this.pItemPtr = this.Texter.Allocate(this.oPos["Item_Entry"][0]+ 194 * pN, this.oPos["Item_Entry"][1], " ", COLORWHITE, FONT_PIXEL_9);
+		this.pItemPtr -= 3;
+		
+		this.pBossProPtr = this.Texter.Put(this.oPos["Boss_Profile"][0],this.oPos["Boss_Profile"][1]," ",COLORWHITE,FONT_PIXEL_9);
+		this.pBossEncPtr = this.Texter.Put(this.oPos["Boss_Enc"][0],this.oPos["Boss_Enc"][1]," ",COLORWHITE,FONT_PIXEL_9);
+		this.pBossLifePtr = this.Texter.Put(this.oPos["Boss_Life"][0],this.oPos["Boss_Life"][1]," ",COLORWHITE,FONT_PIXEL_9);
+		this.pBossStatPtr = this.Texter.Put(this.oPos["Boss_Status"][0],this.oPos["Boss_Status"][1]," ",COLORWHITE,FONT_PIXEL_9);
+		
+		for(var pY = this.oPos["ConsoleN"][1]; pY<this.oPos["ConsoleS"][1]; pY+=2)
+			this.Painter.Put(this.oPos["ConsoleN"][0],pY,this.oPos["ConsoleN"][2],pY,2);
+		for(pY = this.oPos["BossN"][1]; pY<this.oPos["BossS"][1]; pY+=2)
+			this.Painter.Put(this.oPos["BossN"][0],pY,this.oPos["BossN"][2],pY,2);
+		for(pY = this.oPos["ItemN"][1]; pY<this.oPos["ItemS"][1]; pY+=2)
+			this.Painter.Put(this.oPos["ItemN"][0],pY,this.oPos["BossN"][2],pY,2);
+			
+
+		this.Texter.Put(this.oPos["ConsoleTitle"][0],this.oPos["ConsoleTitle"][1],"[ Message.X ]",COLORCRAFT,FONT_PIXEL_11);
+		this.Texter.Put(this.oPos["Boss_Title"][0],this.oPos["Boss_Title"][1],"[ BossSpy.X ]",COLORCRAFT,FONT_PIXEL_11);
+		this.Texter.Put(this.oPos["Item_Title"][0],this.oPos["Item_Title"][1],"[ Trophy.X ]",COLORCRAFT,FONT_PIXEL_11);
+	}
+}
+
+oConsole.Text = function()
+{
+	this.CurrentID = 0;
+	this.CacheIn = new Array();
+	this.CacheOut = new Array();
+	this.Stack = new Object();
+
+	this.Logger = new oMessanger();
+	
+	this.Put = function(x,y,pMsg,pColor,pFont)
+	{
+		if (!x || !y || !pMsg)
+		{
+			this.Logger.TypeError("oConsole.Text.Put : too few parameters");
+			return false;
+		}
+		if (isNaN(pColor))
+			pColor = COLORWHITE;
+		if (!pFont)
+			pFont = FONT_PIXEL_11;
+			
+		var sh = getScreenHook();
+		sh.x = x;
+		sh.y = y;
+		sh.text = pMsg;
+		sh.font = pFont;
+		sh.color = pColor;
+		
+		return this._GetUsableID(sh);
+	}
+	
+	this.Allocate = function(x,y,pMsg,pColor,pFont)
+	{
+		if (!x || !y || !pMsg)
+		{
+			this.Logger.TypeError("oConsole.Text.Allocate : too few parameters");
+			return false;
+		}
+		if (isNaN(pColor))
+			pColor = COLORWHITE;
+		if (!pFont)
+			pFont = FONT_PIXEL_11;
+			
+		var sh = getScreenHook();
+		sh.x = x;
+		sh.y = y;
+		sh.text = pMsg;
+		sh.font = pFont;
+		sh.color = pColor;
+		
+		return this._AllocateID(sh);
+	}
+	
+	this.Get = function(pID)
+	{
+		if (isNaN(pID))
+		{
+			this.Logger.TypeError("oConsole.Text.Get : unexpected ID number - NaN");
+			return false;
+		}
+		
+		if (this.Stack["Element" + pID])
+			return this.Stack["Element" + pID];
+		else
+			return null;
+	}
+	
+	this.Move = function(pID,x,y)
+	{
+		if (!this.Stack["Element" + pID] || isNaN(pID))
+		{
+			this.Logger.TypeError("oConsole.Text.Move : unexcepted ID number, NaN or no such index");
+			return false;
+		}
+		if (isNaN(x) || x<0 || x>800 || isNaN(y) || y<0 || y>600)
+		{
+			this.Logger.TypeError("oConsole.Text.Move : unexcepted coordinate : NaN or out of range");
+			return false;
+		}
+		
+		if (this.Stack["Element" + pID].x && this.Stack["Element" + pID].y)
+		{
+			this.Stack["Element" + pID].x = x;
+			this.Stack["Element" + pID].y = y;
+		}
+	}
+	
+	this.MoveTowards = function(pID,x,y)
+	{
+		var oSH;
+		if (!this.Stack["Element" + pID] || isNaN(pID))
+		{
+			this.Logger.TypeError("oConsole.Text.MoveTowards : unexcepted ID number, NaN or no such index");
+			return false;
+		}
+		
+		oSH = this.Stack["Element" + pID];
+		if (isNaN(x) || (oSH.x+x)<0 || (oSH.x+x)>800 || isNaN(y) || (oSH.y+y)<0 || (oSH.y+y)>600)
+		{
+			this.Logger.TypeError("oConsole.Text.MoveTowards : unexcepted coordinate : NaN or out of range");
+			return false;
+		}
+		
+		if (this.Stack["Element" + pID].x && this.Stack["Element" + pID].y)
+		{
+			this.Stack["Element" + pID].x += x;
+			this.Stack["Element" + pID].y += y;
+		}
+	} 
+	
+	this.Update = function(pID,pMsg,pColor,pFont)
+	{
+		if (!this.Stack["Element" + pID] || isNaN(pID))
+		{
+			this.Logger.TypeError("oConsole.Text.Update : unexcepted ID number, NaN or no such index");
+			return false;
+		}
+		if (!pMsg && isNaN(pColor) && isNaN(pFont))
+		{
+			this.Logger.TypeError("oConsole.Text.Update : no parameter");
+			return false;
+		}
+		
+		if (pMsg)
+			this.Stack["Element" + pID].text = pMsg;
+		if (!isNaN(pColor))
+			this.Stack["Element" + pID].color = pColor;
+		if (!isNaN(pFont))
+			this.Stack["Element" + pID].font = pFont;
+		
+	}
+	
+	this.Release = function(pID)
+	{
+		var pNID;
+		for(var pCur = 0; pCur<this.CacheIn.length; pCur++)
+		{
+			if (this.CacheIn[pCur] == pID)
+			{
+				pNID = this.CacheIn.splice (pCur,1);
+				if (isNaN(pNID))
+				{
+					this.Logger.TypeError("oConsole.Text.Release : bad ID got from CacheOut array");
+					return false;
+				}
+				this._StackRelease(pNID);
+				this.CacheOut.push(pNID);
+			}
+		}
+	}
+	
+	this.ReleaseAll = function()
+	{
+		var pCur;
+		for (pCur=0; pCur<this.CacheIn.length; pCur++)
+		{
+			if (this.Stack["Element" + this.CacheIn[pCur]])
+			{
+				this._StackRelease(this.CacheIn[pCur]);
+				this.CacheOut.push(this.CacheIn[pCur]);
+			}
+		}	
+	}
+	
+	this._StackPush = function(pID,oSH)
+	{
+		if (!oSH || isNaN(pID))
+		{
+			this.Logger.TypeError("oConsole.Text._StackPush : bad parameters");
+			return false;
+		}
+		this.Stack["Element" + pID] = oSH;
+	}
+	
+	this._StackRelease = function(pID)
+	{
+		if (isNaN(pID) || !this.Stack["Element" + pID])
+		{
+			this.Logger.TypeError("oConsole.Text._StackRelease : bad ID number or screenhook is not exist");
+			return false;
+		}
+		
+		this.Stack["Element" + pID].text = "";
+		this.Stack["Element" + pID].x = -1;
+		this.Stack["Element" + pID].y = -1;
+		this.Stack["Element" + pID] = null;
+		runGC();
+	}
+		
+	
+	this._GetUsableID = function(oSH)
+	{
+		var pID = 0;
+		if (!this.CacheOut || !this.CacheOut.length)
+		{
+			pID = this.CurrentID++;
+			this.CacheIn.push (pID);
+			this._StackPush (pID,oSH);
+		}
+		else
+		{
+			pID = this.CacheOut.shift();
+			if (isNaN(pID))
+			{
+				this.Logger.TypeError("oConsole.Text._GetUsableID : cannot get a cached text ID");
+				return false;
+			}
+			
+			this.CacheIn.push (pID);
+			this._StackPush (pID,oSH);
+		}	
+		return pID;
+	}
+	
+	this._AllocateID = function(oSH)
+	{
+		var pID = 0;
+		pID = this.CurrentID++;
+		this.CacheIn.push (pID);
+		this._StackPush (pID,oSH);
+
+		return pID;
+	}
+}
+
+oConsole.Line = function()
+{
+	this.CurrentID = 0;
+	this.CacheIn = new Array();
+	this.CacheOut = new Array();
+	this.Stack = new Object();
+
+	this.Logger = new oMessanger();
+	
+	this.Put = function(x,y,x2,y2,pColor)
+	{
+		if (isNaN(x) || isNaN(y) || isNaN(x2) || isNaN(y2))
+		{
+			this.Logger.TypeError("oConsole.Line.Put : bad parameter : NaN");
+			return false;
+		}
+		if (isNaN(pColor))
+			pColor = 1;
+			
+		var sh = getScreenHook();
+		sh.x = x;
+		sh.y = y;
+		sh.x2 = x2;
+		sh.y2 = y2;
+		sh.text = "";
+		sh.color = pColor;
+		
+		return this._GetUsableID(sh);
+	}
+	
+	this.Get = function(pID)
+	{
+		if (isNaN(pID))
+		{
+			this.Logger.TypeError("oConsole.Line.Get : unexpected ID number - NaN");
+			return false;
+		}
+		
+		if (this.Stack["Element" + pID])
+			return this.Stack["Element" + pID];
+		else
+			return null;
+	}
+	
+	this.Redraw = function(pID,x,y,x2,y2)
+	{
+		if (!this.Stack["Element" + pID] || isNaN(pID))
+		{
+			this.Logger.TypeError("oConsole.Line.Redraw : unexcepted ID number, NaN or no such index");
+			return false;
+		}
+		if (isNaN(x) || x<0 || x>800 || isNaN(y) || y<0 || y>600 || isNaN(x2) || isNaN(y2))
+		{
+			this.Logger.TypeError("oConsole.Line.Redraw : unexcepted coordinate : NaN or out of range");
+			return false;
+		}
+		
+		if (!isNaN(this.Stack["Element" + pID].x) && !isNaN(this.Stack["Element" + pID].y))
+		{
+			this.Stack["Element" + pID].x = x;
+			this.Stack["Element" + pID].y = y;
+			this.Stack["Element" + pID].x2 = x2;
+			this.Stack["Element" + pID].y2 = y2;
+		}
+	}
+	
+	this.MoveTowards = function(pID,x,y)
+	{
+		var oSH;
+		if (!this.Stack["Element" + pID] || isNaN(pID))
+		{
+			this.Logger.TypeError("oConsole.Line.MoveTowards : unexcepted ID number, NaN or no such index");
+			return false;
+		}
+		
+		oSH = this.Stack["Element" + pID];
+		if (isNaN(x) || (oSH.x+x)<0 || (oSH.x+x)>800 || isNaN(y) || (oSH.y+y)<0 || (oSH.y+y)>600)
+		{
+			this.Logger.TypeError("oConsole.Line.MoveTowards : unexcepted coordinate : NaN or out of range");
+			return false;
+		}
+		
+		if (this.Stack["Element" + pID].x && this.Stack["Element" + pID].y)
+		{
+			this.Stack["Element" + pID].x += x;
+			this.Stack["Element" + pID].y += y;
+			this.Stack["Element" + pID].x2 += x;
+			this.Stack["Element" + pID].y2 += y;
+		}
+	} 
+	
+	this.Update = function(pID,x,y,x2,y2)
+	{
+		if (!this.Stack["Element" + pID] || isNaN(pID))
+		{
+			this.Logger.TypeError("oConsole.Line.Update : unexcepted ID number, NaN or no such index");
+			return false;
+		}
+		if (isNaN(x) && isNaN(y) && isNaN(x2) && isNaN(y2))
+		{
+			this.Logger.TypeError("oConsole.Line.Update : no parameter");
+			return false;
+		}
+		
+		if (!isNaN(x))
+			this.Stack["Element" + pID].x = x;
+		if (!isNaN(x2))
+			this.Stack["Element" + pID].x2 = x2;
+		if (!isNaN(y))
+			this.Stack["Element" + pID].y = y;
+		if (!isNaN(y2))
+			this.Stack["Element" + pID].y = y2;
+		
+	}
+	
+	this.Release = function(pID)
+	{
+		var pNID;
+		for(var pCur = 0; pCur<this.CacheIn.length; pCur++)
+		{
+			if (this.CacheIn[pCur] == pID)
+			{
+				pNID = this.CacheIn.splice (pCur,1);
+				if (isNaN(pNID))
+				{
+					this.Logger.TypeError("oConsole.Line.Release : bad ID got from CacheOut array");
+					return false;
+				}
+				this._StackRelease(pNID);
+				this.CacheOut.push(pNID);
+			}
+		}
+	}
+	
+	this.ReleaseAll = function()
+	{
+		var pCur;
+		for (pCur=0; pCur<this.CacheIn.length; pCur++)
+		{
+			if (this.Stack["Element" + this.CacheIn[pCur]])
+			{
+				this._StackRelease(this.CacheIn[pCur]);
+				this.CacheOut.push(this.CacheIn[pCur]);
+			}
+		}	
+	}
+	
+	this._StackPush = function(pID,oSH)
+	{
+		if (!oSH || isNaN(pID))
+		{
+			this.Logger.TypeError("oConsole.Line._StackPush : bad parameters");
+			return false;
+		}
+		this.Stack["Element" + pID] = oSH;
+	}
+	
+	this._StackRelease = function(pID)
+	{
+		if (isNaN(pID) || !this.Stack["Element" + pID])
+		{
+			this.Logger.TypeError("oConsole.Line._StackRelease : bad ID number or screenhook is not exist");
+			return false;
+		}
+		
+		this.Stack["Element" + pID].text = "";
+		this.Stack["Element" + pID].x = -1;
+		this.Stack["Element" + pID].y = -1;
+		this.Stack["Element" + pID].y2 = -1;
+		this.Stack["Element" + pID].x2 = -1;
+		this.Stack["Element" + pID] = null;
+		runGC();
+	}
+		
+	
+	this._GetUsableID = function(oSH)
+	{
+		var pID = 0;
+		if (!this.CacheOut || !this.CacheOut.length)
+		{
+			pID = this.CurrentID++;
+			this.CacheIn.push (pID);
+			this._StackPush (pID,oSH);
+		}
+		else
+		{
+			pID = this.CacheOut.shift();
+			if (isNaN(pID))
+			{
+				this.Logger.TypeError("oConsole.Text._GetUsableID : cannot get a cached text ID");
+				return false;
+			}
+			
+			this.CacheIn.push (pID);
+			this._StackPush (pID,oSH);
+		}	
+		return pID;
+	}
+}

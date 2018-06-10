@@ -1,0 +1,57 @@
+// v0.34
+// written from the scratch by IchLiebeDich
+// v0.38d extend to all monster in the game, check alignement of monster 
+// check monster (only valable in act 5 and i lost some monster at the baal throne
+// v0.54
+//    check monster in a very simple way now,thx njag.
+
+//
+// return -1 => i do not know, but probably not attackable
+// return 0 => unattackable
+// return 1 => normal attackable
+// return 2 => boss attackable
+
+
+
+// monster ID
+c_DaeClassID_Mephisto = 242; // attackable
+
+c_DaeClassID_Nihlathak = 526; // attackable
+
+c_MonsterClassID_Baal_Throne = 543; // unattackable
+c_DaeClassID_Baal = 544; // attackable
+
+// objects
+c_ObjClassID_The_Worldstone_Chamber = 563;
+
+
+function CheckMonster( monster )
+{
+	if ( !monster )
+		return 0;
+	if (  monster.classid > 573 )
+		return -1;
+		
+	if (monster.classid==c_MonsterClassID_Baal_Throne) return 0;
+	
+	if (monster.name=="Valkyrie" || monster.name=="Decoy") return 0;
+		
+	var merc=Town.GetMerc();
+	if (merc){
+		if (monster.name==merc.name) return 0; }		
+      
+	if ( monster.mode == 12 || monster.hp <= 0 )
+		return 0;
+    if ( monster.getStat(172) ==2 ) // check the alignement
+	    return 0;
+
+    //if ( monster.getState(143) ) // not directly attackable
+	//return 0;
+
+    if (CheckIsWrongType(monster)) return 0;
+
+    if (monster.spectype & 1 || monster.spectype & 4) return 2;
+    
+    return 1;
+};
+

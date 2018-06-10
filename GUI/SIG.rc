@@ -1,0 +1,791 @@
+//Microsoft Developer Studio generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// Chinese (P.R.C.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_CHS)
+#ifdef _WIN32
+LANGUAGE LANG_CHINESE, SUBLANG_CHINESE_SIMPLIFIED
+#pragma code_page(936)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "#define _AFX_NO_SPLITTER_RESOURCES\r\n"
+    "#define _AFX_NO_OLE_RESOURCES\r\n"
+    "#define _AFX_NO_TRACKER_RESOURCES\r\n"
+    "#define _AFX_NO_PROPERTY_RESOURCES\r\n"
+    "\r\n"
+    "#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_CHS)\r\n"
+    "#ifdef _WIN32\r\n"
+    "LANGUAGE 4, 2\r\n"
+    "#pragma code_page(936)\r\n"
+    "#endif //_WIN32\r\n"
+    "#include ""res\\SIG.rc2""  // non-Microsoft Visual C++ edited resources\r\n"
+    "#include ""l.chs\\afxres.rc""          // Standard components\r\n"
+    "#endif\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDR_MAINFRAME           ICON    DISCARDABLE     "res\\SIG.ico"
+IDI_START_ACTIVATE      ICON    DISCARDABLE     "res\\icon1.ico"
+IDI_START_DEACTIVATE    ICON    DISCARDABLE     "res\\ico00001.ico"
+IDI_STOP_ACTIVATE       ICON    DISCARDABLE     "res\\ico00002.ico"
+IDI_STOP_DEACTIVATE     ICON    DISCARDABLE     "res\\ico00003.ico"
+IDI_PAUSE_ACTIVATE      ICON    DISCARDABLE     "res\\ico00004.ico"
+IDI_PAUSE_DEACTIVATE    ICON    DISCARDABLE     "res\\ico00005.ico"
+IDI_EXIT_DEACTIVATE     ICON    DISCARDABLE     "res\\ico00006.ico"
+IDI_EXIT_ACTIVATE       ICON    DISCARDABLE     "res\\ico00007.ico"
+IDI_SETTINGS_ACTIVATE   ICON    DISCARDABLE     "res\\ico00008.ico"
+IDI_SETTINGS_DEACTIVATE ICON    DISCARDABLE     "res\\ico00009.ico"
+IDI_YES                 ICON    DISCARDABLE     "res\\yes.ico"
+IDI_NO                  ICON    DISCARDABLE     "res\\no.ico"
+IDI_UP                  ICON    DISCARDABLE     "res\\up.ico"
+IDI_DOWN                ICON    DISCARDABLE     "res\\down.ico"
+IDI_MULEMODE_DEACTIVATE ICON    DISCARDABLE     "res\\mulemode.ico"
+IDI_MULEMODE_ACTIVATE   ICON    DISCARDABLE     "res\\ico00010.ico"
+IDI_MULEMODE_CHECKED    ICON    DISCARDABLE     "res\\ico00018.ico"
+IDI_SHOWD2_DEACTIVATE   ICON    DISCARDABLE     "res\\showd2_d.ico"
+IDI_SHOWD2_ACTIVATE     ICON    DISCARDABLE     "res\\showd2_a.ico"
+IDI_QUESTIONMARK        ICON    DISCARDABLE     "res\\ico00019.ico"
+IDI_EDITDIC             ICON    DISCARDABLE     "res\\edititem.ico"
+IDI_REMOVE              ICON    DISCARDABLE     "res\\ico00020.ico"
+IDI_NEW                 ICON    DISCARDABLE     "res\\ico00021.ico"
+IDI_KILLD2_ACTIVATE     ICON    DISCARDABLE     "res\\ico00022.ico"
+IDI_KILLD2_DEACTIVATE   ICON    DISCARDABLE     "res\\icon2.ico"
+IDI_SELFILE_ACTIVATE    ICON    DISCARDABLE     "res\\selfile_.ico"
+IDI_SELFILE_DEACTIVATE  ICON    DISCARDABLE     "res\\ico00023.ico"
+IDI_VIEWFILE_ACTIVATE   ICON    DISCARDABLE     "res\\ico00024.ico"
+IDI_VIEWFILE_DEACTIVATE ICON    DISCARDABLE     "res\\ico00025.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_ABOUTBOX DIALOG DISCARDABLE  0, 0, 235, 77
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "关于 SIG"
+FONT 9, "宋体"
+BEGIN
+    ICON            IDR_MAINFRAME,IDC_STATIC,12,11,20,20
+    LTEXT           "",IDC_VER,40,10,119,8,SS_NOPREFIX
+    LTEXT           "版权所有 (C) 2003, Abin",IDC_STATIC,40,25,126,8
+    DEFPUSHBUTTON   "确定",IDOK,178,6,50,14,WS_GROUP
+    LTEXT           "abinn32@yahoo.com",IDC_ABIN,40,55,74,8
+    LTEXT           "http://www.wxjindu.com/abin/",IDC_HOMEPAGE,40,40,166,8
+END
+
+IDD_SIG_DIALOG DIALOGEX 0, 0, 198, 113
+STYLE DS_MODALFRAME | WS_MINIMIZEBOX | WS_POPUP | WS_VISIBLE | WS_CAPTION | 
+    WS_SYSMENU
+EXSTYLE WS_EX_APPWINDOW
+CAPTION "Stay In Game"
+FONT 9, "宋体"
+BEGIN
+    PUSHBUTTON      "文件(&F)",IDC_FILE,0,0,36,12,NOT WS_TABSTOP
+    PUSHBUTTON      "统计(&S)",IDC_STATISTICS,36,0,36,12,NOT WS_TABSTOP
+    PUSHBUTTON      "帮助(&H)",IDC_MENUHELP,72,0,36,12,NOT WS_TABSTOP
+    LTEXT           "<app name>",IDC_APPNAME,7,15,127,24,SS_CENTERIMAGE
+    LTEXT           "<app ver>",IDC_APPVER,139,23,43,14,SS_CENTERIMAGE
+    RTEXT           "<class & name>",IDC_CLASSNAME,85,42,99,11,
+                    SS_CENTERIMAGE
+    CONTROL         "",IDC_MULEMODE,"Button",BS_AUTOCHECKBOX | BS_PUSHLIKE | 
+                    WS_TABSTOP,7,73,15,14
+    PUSHBUTTON      "",IDC_START,23,73,15,14
+    PUSHBUTTON      "",IDC_STOP,39,73,15,14
+    PUSHBUTTON      "",IDC_SETTINGS,55,73,15,14
+    PUSHBUTTON      "",IDCANCEL,71,73,15,14
+    PUSHBUTTON      "",IDC_SHOWD2,94,73,15,14
+    PUSHBUTTON      "",IDC_KILLD2,110,73,15,14
+    PUSHBUTTON      "",IDC_VIEWFILE,126,73,15,14
+    PUSHBUTTON      "",IDC_SELFILE,142,73,7,14
+    CONTROL         "",IDC_STATIC,"Static",SS_ETCHEDHORZ,0,89,201,1
+    CTEXT           "就绪",IDC_LABEL,4,94,187,16,SS_CENTERIMAGE
+    RTEXT           "D2JSP",IDC_D2JSP,169,73,24,11,SS_CENTERIMAGE | NOT 
+                    WS_VISIBLE
+    LTEXT           "",IDC_HPMANABAR,160,63,31,8
+    LTEXT           "L",IDC_LC,89,55,8,10
+    LTEXT           "H",IDC_HB,99,55,8,10
+    LTEXT           "R",IDC_RV,107,55,8,10
+    LTEXT           "S",IDC_ST,115,55,8,10
+    LTEXT           "A",IDC_AI,123,55,8,10
+END
+
+IDD_PAGE_GENERAL DIALOG DISCARDABLE  0, 0, 230, 259
+STYLE WS_CHILD | WS_DISABLED | WS_CAPTION | WS_SYSMENU
+CAPTION "一般"
+FONT 9, "宋体"
+BEGIN
+    LTEXT           "Diablo II 游戏程序可执行文件：",IDC_STATIC,7,7,173,9
+    PUSHBUTTON      "Button1",IDC_D2EXEPATH,7,19,216,14
+    LTEXT           "命令行参数：",IDC_STATIC,7,41,49,8
+    EDITTEXT        IDC_PARAMETERS,7,52,216,14,ES_AUTOHSCROLL
+    LTEXT           """-w""、""-title""和""-skiptobnet""将被自动添加，请勿使用这三个参数。",
+                    IDC_STATIC,7,69,216,18
+    CONTROL         "程序启动后立即开始运行。",IDC_AUTOSTART,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,7,95,177,11
+    LTEXT           "系统中最多允许同时存在",IDC_STATIC,7,117,89,8
+    EDITTEXT        IDC_MAXD2PROC,99,113,27,14,ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "个Diablo II进程。",IDC_STATIC,129,117,69,8
+    GROUPBOX        "自动关闭",IDC_STATIC,7,135,216,74
+    CONTROL         "不使用自动关闭功能",IDC_AUTOCLOSE_NONE,"Button",
+                    BS_AUTORADIOBUTTON | WS_GROUP,15,149,123,9
+    CONTROL         "自动关闭于",IDC_AUTOCLOSE_BYDATE,"Button",
+                    BS_AUTORADIOBUTTON,15,163,59,10
+    CONTROL         "DateTimePicker1",IDC_DATETIMEPICKER1,"SysDateTimePick32",
+                    DTS_RIGHTALIGN | WS_TABSTOP,75,161,62,14
+    CONTROL         "DateTimePicker1",IDC_DATETIMEPICKER2,"SysDateTimePick32",
+                    DTS_RIGHTALIGN | DTS_UPDOWN | WS_TABSTOP | 0x8,141,161,
+                    65,14
+    CONTROL         "自动关闭于SIG启动后",IDC_AUTOCLOSE_BYLEN,"Button",
+                    BS_AUTORADIOBUTTON,15,179,94,10
+    EDITTEXT        IDC_AUTOCLOSELEN,111,177,37,13,ES_AUTOHSCROLL
+    LTEXT           "小时",IDC_STATIC,151,179,17,8
+    CONTROL         "同时关闭计算机。",IDC_SHUTDOWNWINDOWS,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,15,193,93,11
+END
+
+IDD_PAGE_LOGIN DIALOG DISCARDABLE  0, 0, 230, 259
+STYLE WS_CHILD | WS_DISABLED | WS_CAPTION | WS_SYSMENU
+CAPTION "登录"
+FONT 9, "宋体"
+BEGIN
+    GROUPBOX        "登录国度",IDC_STATIC,7,7,216,53
+    COMBOBOX        IDC_REALMS,17,23,112,214,CBS_DROPDOWNLIST | CBS_SORT | 
+                    WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON      "编辑(&E)",IDC_REALMEDIT,132,23,41,13
+    PUSHBUTTON      "刷新(&F)",IDC_REALMREFRESH,173,23,41,13
+    EDITTEXT        IDC_BNETIP,17,41,112,14,ES_AUTOHSCROLL | ES_READONLY
+    EDITTEXT        IDC_PREFERRED,132,41,82,14,ES_AUTOHSCROLL | ES_READONLY
+    GROUPBOX        "账号",IDC_STATIC,7,67,216,66
+    LTEXT           "账号名：",IDC_STATIC,17,81,33,8
+    EDITTEXT        IDC_ACCOUNT,74,77,118,14,ES_AUTOHSCROLL
+    LTEXT           "密码：",IDC_STATIC,17,99,25,8
+    EDITTEXT        IDC_PASSWORD,74,95,118,14,ES_PASSWORD | ES_AUTOHSCROLL
+    LTEXT           "重复密码：",IDC_STATIC,17,117,41,8
+    EDITTEXT        IDC_REPEATPASSWORD,74,113,118,14,ES_PASSWORD | 
+                    ES_AUTOHSCROLL
+    GROUPBOX        "角色位置",IDC_STATIC,7,139,216,113
+    CONTROL         "角色一",IDC_CHAR1,"Button",BS_AUTOCHECKBOX | 
+                    BS_PUSHLIKE | WS_TABSTOP,31,151,82,23
+    CONTROL         "角色二",IDC_CHAR2,"Button",BS_AUTOCHECKBOX | 
+                    BS_PUSHLIKE | WS_TABSTOP,113,151,82,23
+    CONTROL         "角色三",IDC_CHAR3,"Button",BS_AUTOCHECKBOX | 
+                    BS_PUSHLIKE | WS_TABSTOP,31,175,82,23
+    CONTROL         "角色四",IDC_CHAR4,"Button",BS_AUTOCHECKBOX | 
+                    BS_PUSHLIKE | WS_TABSTOP,113,175,82,23
+    CONTROL         "角色五",IDC_CHAR5,"Button",BS_AUTOCHECKBOX | 
+                    BS_PUSHLIKE | WS_TABSTOP,31,199,82,23
+    CONTROL         "角色六",IDC_CHAR6,"Button",BS_AUTOCHECKBOX | 
+                    BS_PUSHLIKE | WS_TABSTOP,113,199,82,23
+    CONTROL         "角色七",IDC_CHAR7,"Button",BS_AUTOCHECKBOX | 
+                    BS_PUSHLIKE | WS_TABSTOP,31,223,82,23
+    CONTROL         "角色八",IDC_CHAR8,"Button",BS_AUTOCHECKBOX | 
+                    BS_PUSHLIKE | WS_TABSTOP,113,223,82,23
+END
+
+IDD_PAGE_CREATE DIALOG DISCARDABLE  0, 0, 230, 259
+STYLE WS_CHILD | WS_DISABLED | WS_CAPTION | WS_SYSMENU
+CAPTION "游戏"
+FONT 9, "宋体"
+BEGIN
+    GROUPBOX        "频道",IDC_STATIC,7,7,216,31
+    LTEXT           "登录后进入频道：",IDC_STATIC,15,23,65,8
+    EDITTEXT        IDC_CHANNELNAME,81,19,134,14,ES_AUTOHSCROLL
+    GROUPBOX        "游戏名",IDC_STATIC,7,44,216,78
+    CONTROL         "使用随机游戏名",IDC_NAMETYPE,"Button",
+                    BS_AUTORADIOBUTTON | WS_GROUP,15,56,72,9
+    CONTROL         "使用固定前缀",IDC_RADIO5,"Button",BS_AUTORADIOBUTTON,15,
+                    72,63,9
+    CONTROL         "使用自定义词典",IDC_RADIO6,"Button",BS_AUTORADIOBUTTON,
+                    15,88,74,11
+    EDITTEXT        IDC_PREFIX,99,69,115,14,ES_AUTOHSCROLL
+    PUSHBUTTON      "词典设置",IDC_DIC,99,86,68,14
+    LTEXT           "创建失败后重试次数：",IDC_STATIC,15,106,81,8
+    EDITTEXT        IDC_RETRY,101,103,37,14,ES_AUTOHSCROLL
+    GROUPBOX        "游戏密码",IDC_STATIC,7,127,216,45
+    CONTROL         "随机密码",IDC_USEFIXPWD,"Button",BS_AUTORADIOBUTTON | 
+                    WS_GROUP,15,139,48,10
+    CONTROL         "固定密码",IDC_RADIO10,"Button",BS_AUTORADIOBUTTON,15,
+                    156,48,10
+    EDITTEXT        IDC_MINPWDLEN,99,137,37,14,ES_AUTOHSCROLL
+    LTEXT           "-",IDC_STATIC,140,140,8,8
+    EDITTEXT        IDC_MAXPWDLEN,153,137,37,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_FIXEDPWD,99,154,92,14,ES_AUTOHSCROLL
+    GROUPBOX        "游戏难度",IDC_STATIC,7,177,216,25
+    CONTROL         "N/A",IDC_RADIO1,"Button",BS_AUTORADIOBUTTON | WS_GROUP,
+                    15,188,28,10
+    CONTROL         "Normal",IDC_RADIO2,"Button",BS_AUTORADIOBUTTON,55,188,
+                    40,10
+    CONTROL         "Nightmare",IDC_RADIO3,"Button",BS_AUTORADIOBUTTON,107,
+                    188,52,10
+    CONTROL         "Hell",IDC_RADIO9,"Button",BS_AUTORADIOBUTTON,171,188,32,
+                    10
+    CONTROL         "角色静止时执行""Anti-Idle""指令",IDC_ANTIIDLE,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,15,222,134,10
+    GROUPBOX        "控制",IDC_STATIC,7,208,216,44
+    CONTROL         "角色留在同一游戏内的最长时限为",IDC_INGAMELIMIT,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,15,235,134,10
+    EDITTEXT        IDC_INGAMELIMITLENGTH,154,232,40,14,ES_AUTOHSCROLL
+    LTEXT           "秒",IDC_STATIC,199,235,9,8
+END
+
+IDD_PAGE_DELAYS DIALOG DISCARDABLE  0, 0, 230, 259
+STYLE WS_CHILD | WS_DISABLED | WS_CAPTION | WS_SYSMENU
+CAPTION "延迟"
+FONT 9, "宋体"
+BEGIN
+    GROUPBOX        "完成下列指令的最大等待时限",IDC_STATIC,7,7,216,109
+    LTEXT           "从启动游戏到出现连接界面：",IDC_STATIC,15,21,105,8
+    EDITTEXT        IDC_LAUNCHDELAY,144,18,49,14,ES_AUTOHSCROLL
+    LTEXT           "毫秒",IDC_STATIC,197,21,17,8
+    LTEXT           "从登录账号到出现角色选择界面：",IDC_STATIC,15,39,121,8
+    EDITTEXT        IDC_LOGINDELAY,144,36,49,14,ES_AUTOHSCROLL
+    LTEXT           "毫秒",IDC_STATIC,197,39,17,8
+    LTEXT           "从选定角色到进入聊天室：",IDC_STATIC,15,57,97,8
+    EDITTEXT        IDC_CHARSELDELAY,144,54,49,14,ES_AUTOHSCROLL
+    LTEXT           "毫秒",IDC_STATIC,197,57,17,8
+    LTEXT           "创建游戏最大等待时限：",IDC_STATIC,15,75,89,8
+    EDITTEXT        IDC_JOINDELAY,144,72,49,14,ES_AUTOHSCROLL
+    LTEXT           "毫秒",IDC_STATIC,197,75,17,8
+    PUSHBUTTON      "什么是""最大等待时限""...",IDC_HELPMAXWAIT,15,93,178,17
+    GROUPBOX        "完成下列指令的绝对等待时限",IDC_STATIC,7,125,216,106
+    LTEXT           "连接到Battle.net最低耗时：",IDC_STATIC,15,142,105,8
+    EDITTEXT        IDC_MINCONN,143,139,49,14,ES_AUTOHSCROLL
+    LTEXT           "毫秒",IDC_STATIC,196,142,17,8
+    LTEXT           "从点击Create按钮到输入游戏名：",IDC_STATIC,15,159,121,8
+    EDITTEXT        IDC_CREATEBTNDELAY,143,156,49,14,ES_AUTOHSCROLL
+    LTEXT           "毫秒",IDC_STATIC,196,159,17,8
+    LTEXT           "新游戏创建随机延迟：",IDC_STATIC,15,176,81,8
+    EDITTEXT        IDC_CREATEDELAYMIN,108,173,35,14,ES_AUTOHSCROLL
+    LTEXT           "至",IDC_STATIC,146,176,7,8
+    EDITTEXT        IDC_CREATEDELAYMAX,157,173,35,14,ES_AUTOHSCROLL
+    LTEXT           "毫秒",IDC_STATIC,197,176,17,8
+    LTEXT           "游戏出错关闭后的等待时间：",IDC_STATIC,15,193,105,8
+    EDITTEXT        IDC_ERRORDELAY,144,190,49,14,ES_AUTOHSCROLL
+    LTEXT           "毫秒",IDC_STATIC,197,193,17,8
+    PUSHBUTTON      "什么是""绝对等待时限""...",IDC_HELPABSWAIT,15,208,178,
+                    17
+    PUSHBUTTON      "恢复默认值(&D)",IDC_DEFAULT,153,236,70,16
+END
+
+IDD_PAGE_HACKS DIALOGEX 0, 0, 230, 259
+STYLE WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "Hacks"
+FONT 9, "宋体"
+BEGIN
+    LTEXT           "可用Hack模块列表(Hacks\\*.d2h, *.dll)",IDC_STATIC,7,7,
+                    203,8
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_SORTASCENDING | 
+                    LVS_NOCOLUMNHEADER | WS_TABSTOP,7,19,216,233,
+                    WS_EX_STATICEDGE
+END
+
+IDD_PAGE_D2JSP DIALOGEX 0, 0, 230, 259
+STYLE WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "D2JSP"
+FONT 9, "宋体"
+BEGIN
+    CONTROL         "加载D2JSP",IDC_USED2JSP,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,14,7,195,10
+    LTEXT           "注意：\n要使用D2JSP，你必须拥有一个合法的“d2jsp.key”文件，并确保这个文件位于“Sig\\D2JSP”目录中，否则D2JSP将无法加载。",
+                    IDC_STATIC,13,23,203,39
+    GROUPBOX        "脚本加载方式",IDC_STATIC,7,68,216,65
+    CONTROL         "自动模式：由SIG自动加载我所选定的D2JSP脚本，并于必要时修改""Default.d2j""文件。",
+                    IDC_AUTOLOAD,"Button",BS_AUTORADIOBUTTON | BS_TOP | 
+                    BS_MULTILINE | WS_GROUP,14,84,202,20
+    CONTROL         "手动模式：我将手动加载D2JSP脚本，请不要更改我的""Default.d2j""文件。",
+                    IDC_MANUALLOAD,"Button",BS_AUTORADIOBUTTON | BS_TOP | 
+                    BS_MULTILINE,14,106,201,21
+    LTEXT           "可用脚本列表(D2JSP\\Scripts\\Bots\\*.d2j)",IDC_STATIC,7,
+                    139,204,9
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHOWSELALWAYS | WS_TABSTOP,7,151,216,
+                    101,WS_EX_STATICEDGE
+END
+
+IDD_PAGE_MULE DIALOGEX 0, 0, 230, 259
+STYLE WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "Mule"
+FONT 9, "宋体", 0, 0, 0x1
+BEGIN
+    LTEXT           "Mule模式运行账号列表",IDC_STATIC,7,7,81,8
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SHOWSELALWAYS | WS_TABSTOP,7,21,216,175,
+                    WS_EX_STATICEDGE
+    PUSHBUTTON      "",IDC_MOVEUP,126,203,29,13,WS_DISABLED
+    PUSHBUTTON      "",IDC_MOVEDOWN,156,203,29,13,WS_DISABLED
+    LTEXT           "每个角色在游戏中停留时间：",IDC_STATIC,7,241,105,8
+    EDITTEXT        IDC_MULECHARSTAYLENGTH,117,238,44,14,ES_AUTOHSCROLL
+    LTEXT           "秒",IDC_STATIC,165,241,9,8
+    PUSHBUTTON      "",IDC_ADD,36,203,29,13
+    PUSHBUTTON      "",IDC_EDIT,66,203,29,13,WS_DISABLED
+    PUSHBUTTON      "",IDC_REMOVE,96,203,29,13,WS_DISABLED
+    CONTROL         "",IDC_STATIC,"Static",SS_ETCHEDHORZ,7,225,216,1
+END
+
+IDD_DLG_ACCOUNT DIALOG DISCARDABLE  0, 0, 230, 209
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "账号配置"
+FONT 9, "宋体"
+BEGIN
+    GROUPBOX        "登录国度",IDC_STATIC,7,7,216,53
+    COMBOBOX        IDC_REALMS,17,23,112,214,CBS_DROPDOWNLIST | CBS_SORT | 
+                    WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON      "编辑(&E)",IDC_REALMEDIT,132,23,41,13
+    PUSHBUTTON      "刷新(&F)",IDC_REALMREFRESH,173,23,41,13
+    EDITTEXT        IDC_BNETIP,17,41,112,14,ES_AUTOHSCROLL | ES_READONLY
+    EDITTEXT        IDC_PREFERRED,132,41,82,14,ES_AUTOHSCROLL | ES_READONLY
+    GROUPBOX        "账号",IDC_STATIC,7,67,216,66
+    LTEXT           "账号名：",IDC_STATIC,17,81,33,8
+    EDITTEXT        IDC_ACCOUNT,74,77,118,14,ES_AUTOHSCROLL
+    LTEXT           "密码：",IDC_STATIC,17,99,25,8
+    EDITTEXT        IDC_PASSWORD,74,95,118,14,ES_PASSWORD | ES_AUTOHSCROLL
+    LTEXT           "重复密码：",IDC_STATIC,17,117,41,8
+    EDITTEXT        IDC_REPEATPASSWORD,74,113,118,14,ES_PASSWORD | 
+                    ES_AUTOHSCROLL
+    GROUPBOX        "角色",IDC_STATIC,7,142,216,35
+    LTEXT           "希望登录的角色数量：",IDC_STATIC,17,157,81,8
+    COMBOBOX        IDC_CHARCOUNT,105,155,54,83,CBS_DROPDOWNLIST | 
+                    WS_VSCROLL | WS_TABSTOP
+    DEFPUSHBUTTON   "确定(&K)",IDOK,65,188,50,14
+    PUSHBUTTON      "取消(&C)",IDCANCEL,115,188,50,14
+END
+
+IDD_EXIT_DLG DIALOGEX 0, 0, 187, 91
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+EXSTYLE WS_EX_TOOLWINDOW
+CAPTION "退出运行"
+FONT 9, "宋体", 0, 0, 0x1
+BEGIN
+    GROUPBOX        "我希望...",IDC_STATIC,7,7,173,54
+    CONTROL         "关闭SIG程序窗口。",IDC_CLOSEGUI,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,17,25,144,10
+    CONTROL         "关闭Diablo II游戏程序。",IDC_CLOSED2,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,17,39,144,10
+    DEFPUSHBUTTON   "确定(&K)",IDOK,43,70,50,14
+    PUSHBUTTON      "取消(&C)",IDCANCEL,93,70,50,14
+END
+
+IDD_DICEDITDLG DIALOGEX 0, 0, 215, 251
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU
+EXSTYLE WS_EX_TOOLWINDOW
+CAPTION "游戏名词典设置"
+FONT 9, "宋体", 0, 0, 0x1
+BEGIN
+    GROUPBOX        "词条使用方法",IDC_STATIC,2,3,209,32
+    CONTROL         "随机抽取",IDC_RADIO1,"Button",BS_AUTORADIOBUTTON | 
+                    WS_GROUP,16,18,51,9
+    CONTROL         "依序循环",IDC_RADIO2,"Button",BS_AUTORADIOBUTTON,99,18,
+                    51,9
+    LTEXT           "每个游戏名一行，建议提供10行以上各不相同的游戏名：",
+                    IDC_STATIC,1,41,209,8
+    EDITTEXT        IDC_EDIT1,0,54,215,173,ES_MULTILINE | ES_WANTRETURN | 
+                    NOT WS_BORDER | WS_VSCROLL,WS_EX_STATICEDGE
+    DEFPUSHBUTTON   "确定(&K)",IDOK,65,231,42,13
+    PUSHBUTTON      "取消(&C)",IDCANCEL,107,231,42,13
+END
+
+IDD_DESCDLG DIALOG DISCARDABLE  0, 0, 188, 86
+STYLE WS_POPUP | WS_VISIBLE
+FONT 9, "宋体"
+BEGIN
+    LTEXT           "",IDC_CONTENTS,7,28,174,51
+    LTEXT           "",IDC_HEAD,7,7,174,18
+END
+
+IDD_STATISTICSDLG DIALOGEX 0, 0, 227, 225
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+EXSTYLE WS_EX_TOOLWINDOW
+CAPTION "运行统计"
+FONT 9, "宋体", 0, 0, 0x1
+BEGIN
+    GROUPBOX        "程序",IDC_STATIC,7,7,213,92
+    LTEXT           "开始时间：",IDC_STATIC,17,21,41,8
+    LTEXT           "终止时间：",IDC_LBLENDTIME,17,36,41,8
+    LTEXT           "<>",IDC_STARTTIME,86,21,123,8
+    LTEXT           "<>",IDC_ENDTIME,86,36,123,8
+    LTEXT           "总计运行时间：",IDC_STATIC,17,51,57,8
+    LTEXT           "<>",IDC_TOTALTIME,86,51,123,8
+    GROUPBOX        "游戏",IDC_STATIC,7,109,213,108
+    LTEXT           "客户端崩溃：",IDC_STATIC,17,81,49,8
+    LTEXT           "<>",IDC_CRASH_COUNT,86,81,123,8
+    LTEXT           "创建成功：",IDC_STATIC,17,139,41,8
+    LTEXT           "创建总数：",IDC_STATIC,17,124,41,8
+    LTEXT           "<>",IDC_CREATE_SUCCESS,86,139,123,8
+    LTEXT           "<>",IDC_CREATE_TOT,86,124,123,8
+    LTEXT           "最长游戏：",IDC_STATIC,17,169,41,8
+    LTEXT           "最短游戏：",IDC_STATIC,17,184,41,8
+    LTEXT           "<>",IDC_INGAME_MAX,86,169,123,8
+    LTEXT           "<>",IDC_INGAME_MIN,86,184,123,8
+    LTEXT           "平均停留：",IDC_STATIC,17,199,41,8
+    LTEXT           "<>",IDC_INGAME_AVG,86,199,123,8
+    LTEXT           "总计游戏内时间：",IDC_STATIC,17,66,65,8
+    LTEXT           "<>",IDC_TOTALINGAMETIME,86,66,123,8
+    LTEXT           "当前游戏：",IDC_STATIC,17,154,41,8
+    LTEXT           "<>",IDC_INGAME_CUR,86,154,123,8
+END
+
+IDD_STATSDLG DIALOG DISCARDABLE  0, 0, 232, 163
+STYLE WS_POPUP
+FONT 9, "宋体"
+BEGIN
+    LTEXT           "",IDC_LBL,7,7,218,149
+END
+
+
+#ifndef _MAC
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 3,0,8,1
+ PRODUCTVERSION 3,0,8,1
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS 0x4L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "080404b0"
+        BEGIN
+            VALUE "Comments", "Diablo II 通用控制GUI\0"
+            VALUE "CompanyName", "Abin\0"
+            VALUE "FileDescription", "SIG - Diablo II 通用控制GUI\0"
+            VALUE "FileVersion", "3, 0, 8, 1\0"
+            VALUE "InternalName", "SIG\0"
+            VALUE "LegalCopyright", "版权所有 (C) 2004, Abin (abinn32@yahoo.com)\0"
+            VALUE "LegalTrademarks", "Abin\0"
+            VALUE "OriginalFilename", "SIG.EXE\0"
+            VALUE "PrivateBuild", "\0"
+            VALUE "ProductName", "SIG MFC 应用程序\0"
+            VALUE "ProductVersion", "3, 0, 8, 1\0"
+            VALUE "SpecialBuild", "\0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x804, 1200
+    END
+END
+
+#endif    // !_MAC
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO DISCARDABLE 
+BEGIN
+    IDD_ABOUTBOX, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 228
+        TOPMARGIN, 6
+        BOTTOMMARGIN, 70
+    END
+
+    IDD_SIG_DIALOG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 191
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 106
+    END
+
+    IDD_PAGE_GENERAL, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 223
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 252
+    END
+
+    IDD_PAGE_LOGIN, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 223
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 252
+    END
+
+    IDD_PAGE_CREATE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 223
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 252
+    END
+
+    IDD_PAGE_DELAYS, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 223
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 252
+    END
+
+    IDD_PAGE_HACKS, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 223
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 252
+    END
+
+    IDD_PAGE_D2JSP, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 223
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 252
+    END
+
+    IDD_PAGE_MULE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 223
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 252
+    END
+
+    IDD_DLG_ACCOUNT, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 223
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 202
+    END
+
+    IDD_EXIT_DLG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 180
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 84
+    END
+
+    IDD_DICEDITDLG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 208
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 244
+    END
+
+    IDD_DESCDLG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 181
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 79
+    END
+
+    IDD_STATISTICSDLG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 220
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 218
+    END
+
+    IDD_STATSDLG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 225
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 156
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+IDR_POPUP MENU DISCARDABLE 
+BEGIN
+    POPUP "-popup-"
+    BEGIN
+        MENUITEM "恢复SIG窗口(&R)",             ID_POPUP_RESTORE
+        MENUITEM SEPARATOR
+        POPUP "激活Diablo II窗体(&A)"
+        BEGIN
+            MENUITEM "置于前台(&A)",                ID_SHOWD2_ACTIVE
+            MENUITEM "置于后台(&B)",                ID_SHOWD2_BKGND
+        END
+        MENUITEM "杀死Diablo II进程(&K)",       ID_POPUP_KILLD2
+        MENUITEM SEPARATOR
+        MENUITEM "<>",                          ID_POPUP_STARTPAUSERESUME
+        MENUITEM "停止(&T)",                    ID_POPUP_STOP
+        MENUITEM SEPARATOR
+        MENUITEM "查看运行LOG(&L)",             ID_STATISTICS_VIEWLOG
+        MENUITEM "查看运行统计(&C)",            ID_STATISTICS_VIEWDATA
+        MENUITEM SEPARATOR
+        MENUITEM "查看bot记录文件(&V)",         IDC_VIEWFILE
+        MENUITEM "选择bot记录文件(&S)",         IDC_SELFILE
+        MENUITEM SEPARATOR
+        MENUITEM "关于SIG(&A)",                 ID_HELP_ABOUT
+        MENUITEM SEPARATOR
+        MENUITEM "退出运行(&X)",                IDCANCEL
+    END
+END
+
+IDR_FILE MENU DISCARDABLE 
+BEGIN
+    POPUP "文件(&F)"
+    BEGIN
+        MENUITEM "关闭(&X)",                    IDCANCEL
+    END
+END
+
+IDR_HELP MENU DISCARDABLE 
+BEGIN
+    POPUP "帮助(&H)"
+    BEGIN
+        MENUITEM "帮助主题(F1)",                ID_HELP_HELP
+        MENUITEM SEPARATOR
+        MENUITEM "关于SIG(&A)",                 ID_HELP_ABOUT
+    END
+END
+
+IDR_STATISTICS MENU DISCARDABLE 
+BEGIN
+    POPUP "统计(&S)"
+    BEGIN
+        MENUITEM "查看运行LOG(&L)",             ID_STATISTICS_VIEWLOG
+        MENUITEM "查看运行统计(&C)",            ID_STATISTICS_VIEWDATA
+        MENUITEM SEPARATOR
+        MENUITEM "查看bot记录文件(&V)",         IDC_VIEWFILE
+        MENUITEM "选择bot记录文件(&S)",         IDC_SELFILE
+    END
+END
+
+IDR_SHOWD2 MENU DISCARDABLE 
+BEGIN
+    POPUP "-popup2-"
+    BEGIN
+        MENUITEM "置于前台(&A)",                ID_SHOWD2_ACTIVE
+        MENUITEM "置于后台(&B)",                ID_SHOWD2_BKGND
+    END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog Info
+//
+
+IDD_DLG_ACCOUNT DLGINIT
+BEGIN
+    IDC_CHARCOUNT, 0x403, 2, 0
+0x0031, 
+    IDC_CHARCOUNT, 0x403, 2, 0
+0x0032, 
+    IDC_CHARCOUNT, 0x403, 2, 0
+0x0033, 
+    IDC_CHARCOUNT, 0x403, 2, 0
+0x0034, 
+    IDC_CHARCOUNT, 0x403, 2, 0
+0x0035, 
+    IDC_CHARCOUNT, 0x403, 2, 0
+0x0036, 
+    IDC_CHARCOUNT, 0x403, 2, 0
+0x0037, 
+    IDC_CHARCOUNT, 0x403, 2, 0
+0x0038, 
+    0
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    IDS_ABOUTBOX            "关于 SIG(&A)..."
+END
+
+#endif    // Chinese (P.R.C.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+#define _AFX_NO_SPLITTER_RESOURCES
+#define _AFX_NO_OLE_RESOURCES
+#define _AFX_NO_TRACKER_RESOURCES
+#define _AFX_NO_PROPERTY_RESOURCES
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_CHS)
+#ifdef _WIN32
+LANGUAGE 4, 2
+#pragma code_page(936)
+#endif //_WIN32
+#include "res\SIG.rc2"  // non-Microsoft Visual C++ edited resources
+#include "l.chs\afxres.rc"          // Standard components
+#endif
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

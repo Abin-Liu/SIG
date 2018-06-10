@@ -1,0 +1,816 @@
+//new file in 0.34
+//v0.35d correct a crash if inventory is full
+//v0.38 correct a useless warning when selling armor item
+//v0.48g rewrote some potion management stuff and increased sell delay
+//v.048i fixed error causing potions not to be picked up when belt is empty.
+//       function countpotions() conflicted with the BMPwnit one so I renamed it
+//       to potioncount()
+
+var IDList = null;
+
+// state
+// 0  = to id
+// 1  = to drop
+// 2  = to stash
+// 3  = to check with parse it (snagit then from shop)
+// 4  = item is gone ??
+// 5  = dropped/selled
+function elListID ( itemx, itemy, itemcode, state ) {
+    this.itemx = itemx;
+    this.itemy = itemy;
+    this.itemcode = itemcode;
+    this.state = state;
+    this.getItem = elListID_getItem;
+
+    function elListID_getItem() {
+	    var item = getUnit(4,this.itemcode,100);
+	    if(item) do
+	    {
+			var p = item.getParent();
+			if (!p || (p && p.name != me.name))
+				continue;
+
+		    if(item.itemloc == 0 && item.x==this.itemx && item.y==this.itemy && item.code==this.itemcode)
+                return item;
+	    } while (item.getNext(itemcode,100));
+        return null;
+    };
+};
+
+function GetIDList( ) {
+    List = new Array();
+
+	// dont know howmuch types there are
+	var nostashlist = new Array();
+	nostashlist[5] = true; // arrows
+	nostashlist[6] = true;  // x-arrows
+	nostashlist[18] = true; // tome tp
+	nostashlist[76] = true; // healing potion
+	nostashlist[77] = true; // mana potion
+	nostashlist[79] = true; // stamina potion
+	nostashlist[80] = true; // antidote
+	nostashlist[81] = true; // Thawing Potion
+	nostashlist[22] = true; // scroll
+	nostashlist[41] = true; // key
+	nostashlist[78] = true; // reju
+	nostashlist[39] = true; // quest
+
+    var nbID = 0;
+    var nbDrop = 0;
+    var nbStash = 0;
+
+	var item = getUnit(4,null,100);
+	if(item) do
+	{
+		if ( item.mode == 0 && item.itemloc == 0 && !nostashlist[item.itemtype]) {
+			if ((item.itemtype == 82 || item.itemtype == 83 || item.itemtype == 84) && item.getFlag(0x10))
+				continue; // we keep identified in our inventory ;)
+
+            if ( CheckItem(item, sets["snag_ini"]) ) {
+                if ( item.getFlag(0x10) && idValid ) { // identi
+                    // why not parseIt here ? because changing INI need a lot of time
+                    List.push( new elListID( item.x, item.y, item.code, 3 ) );
+                }
+                else if ( !item.getFlag(0x10) && idValid ) { // sth to identify
+                    List.push( new elListID( item.x, item.y, item.code, 0 ) );
+                    nbID++;
+                }
+                else {
+                    List.push( new elListID( item.x, item.y, item.code, 2 ) );
+                    nbStash++;
+                };
+            }
+            else {
+				if ( sets["always_stash_existing"] ) {
+                    List.push( new elListID( item.x, item.y, item.code, 2 ) );
+                    nbStash++;
+                }
+				else {
+	                if ( item.getFlag(0x10) )
+    	                	List.push( new elListID( item.x, item.y, item.code, 3 ) );
+        	        else { 
+        	        	// unidentified that we do not want
+            	        	List.push( new elListID( item.x, item.y, item.code, 1 ) );
+                	    nbDrop++;
+                	};
+				};
+            };
+        };
+	} while (item.getNext(null,100));
+/*zz    bprint( "List count "+List.length );
+    for ( var i = 0 ; i < List.length ; i++ )
+        bprint( "List"+i+" x "+List[i].itemx+" "+List[i].itemy+" code "+List[i].itemcode+" state "+List[i].state ); //zz
+*/
+
+    this.nbID = nbID;
+    this.nbDrop = nbDrop;
+    this.nbStash = nbStash;
+    this.List = List;
+    this.NeedIdOrSell = GetIDList_NeedIdOrSell;
+    this.Check = GetIDList_Check;
+    this.TryID = GetIDList_TryID;
+    this.Drop = GetIDList_Drop;
+    this.Sell = GetIDList_Sell;
+    this.Stash = GetIDList_Stash;
+    this.ParanoidCheck = GetIDList_ParanoidCheck;
+
+    this.TryID( null );
+    this.Check( true );
+};
+
+function GetIDList_NeedIdOrSell( bSellOK ) {
+    return ( this.nbID || ( bSellOK && this.nbDrop ) );
+};
+
+function GetIDList_TryID( npc ) {
+    // try identify with scroll eventually in inventory
+    for ( var i = 0 ; i < this.List.length ; i++ ) {
+        if ( this.List[i].state == 0 ) {
+            if ( IDitem( this.List[i], npc ) ) {
+                this.List[i].state = 3;
+                this.nbID--;
+            };
+        };
+    };
+    DoDel(1000);
+};
+
+function GetIDList_Check( bFinalDrop ) {
+    for ( var i = 0 ; i < this.List.length ; i++ ) {
+        if ( this.List[i].state == 3 ) {
+			if (ParseIt(sets["parseitfile"], this.List[i].itemx, this.List[i].itemy, 1)) {
+                this.List[i].state = 2;
+                this.nbStash++;
+            };
+        };
+    };
+
+    for ( var i = 0 ; i < this.List.length ; i++ ) {
+        if ( this.List[i].state == 3 ) {
+			if (ParseIt(sets["shopitfile"], this.List[i].itemx, this.List[i].itemy, 0)) {
+                this.List[i].state = 2;
+                this.nbStash++;
+            }
+            else if ( bFinalDrop ) {
+                this.List[i].state = 1;
+                this.nbDrop++;
+            };
+        };
+    };
+};
+
+function GetIDList_ParanoidCheck( ) {
+	var nostashlist = new Array();
+	nostashlist[5] = true; // arrows
+	nostashlist[6] = true;  // x-arrows
+	nostashlist[18] = true; // tome tp
+	nostashlist[76] = true; // healing potion
+	nostashlist[77] = true; // mana potion
+	nostashlist[79] = true; // stamina potion
+	nostashlist[80] = true; // antidote
+	nostashlist[81] = true; // Thawing Potion
+	nostashlist[22] = true; // scroll
+	nostashlist[41] = true; // key
+	nostashlist[78] = true; // reju
+	nostashlist[39] = true; // quest
+
+    for ( var i = 0 ; i < this.List.length ; i++ ) {
+        if ( this.List[i].state == 1 ) {
+            var item = this.List[i].getItem();
+            if ( !item ) {
+                bprint("Strange, item on droppable/sellable list but it disappeared" );
+                this.List[i].state = 4;
+                this.nbDrop--;
+                continue;
+            };
+
+		    if ( nostashlist[item.itemtype]) {
+                bprint("Strange, item on droppable/sellable list but it is on non stash list !!" );
+                this.List[i].state = 4;
+                this.nbDrop--;
+                continue;
+            };
+
+			if ( CheckItem(item, sets["snag_ini"]) && !idValid ) {
+                bprint("Strange, item on droppable/sellable list but we need to keep it" );
+                this.List[i].state = 2;
+                this.nbDrop--;
+                this.nbStash++;
+                continue;
+            };
+        };
+    };
+
+    for ( var i = 0 ; i < this.List.length ; i++ ) {
+        if ( this.List[i].state == 1 ) {
+			if ( ParseIt(sets["parseitfile"], this.List[i].itemx, this.List[i].itemy, 0)) {
+                bprint("Strange, item on droppable/sellable list but we need to keep it" );
+                this.List[i].state = 2;
+                this.nbDrop--;
+                this.nbStash++;
+            };
+        };
+    };
+};
+
+function GetIDList_Drop()
+{
+    this.ParanoidCheck();
+    	
+    for ( var i = 0 ; i < this.List.length ; i++ ) {
+        if ( this.List[i].state == 1 ) {
+            var item = this.List[i].getItem();
+                       	var bNeedDrop=true;
+                       	switch (item.code)
+                    	{
+                    		case "amb":
+                    			if (stuffneed["amb"]) 
+                    			{
+                    				stuffneed["amb"]=false;
+                    				bNeedDrop=false;
+                    			}
+                    			break;
+                    		case "amc":
+                    			if (stuffneed["amc"]) 
+                    			{
+                    				stuffneed["amc"]=false;
+                    				bNeedDrop=false;
+                    			}
+                    			break;
+                    		case "7gd":
+                    			if (stuffneed["7gd"]) 
+                    			{
+                    				stuffneed["7gd"]=false;
+                    				bNeedDrop=false;
+                    			}
+                    			break;
+                    		case "cm1":
+                    			if (stuffneed["cm1"]) 
+                    			{
+                    				stuffneed["cm1"]=false;
+                    				bNeedDrop=false;
+                    			}
+                    			break;
+                    		case "7bf":
+                    			if (stuffneed["7bf"]) 
+                    			{
+                    				stuffneed["7bf"]=false;
+                    				bNeedDrop=false;
+                    			}
+                    			break;
+                    		case "jew":
+                    			if (stuffneed["jew"]) 
+                  			{
+                    				stuffneed["jew"]=false;
+                    				bNeedDrop=false;
+                    			}
+                    			break;
+                    		case "cm2":
+                    			if (stuffneed["cm2"]) 
+                    			{
+                    				stuffneed["cm2"]=false;
+                    				bNeedDrop=false;
+                    			}
+                    			break;
+                    		case "cm3":
+                    			if (stuffneed["cm3"]) 
+                   			{
+                    				stuffneed["cm3"]=false;
+                    				bNeedDrop=false;
+                    			}
+                    			break;
+                    	}
+                    	if (!bNeedDrop)
+                    	{
+                    		this.List[i].state = 2;
+                		this.nbDrop--;
+                		this.nbStash++;
+            			continue;
+            		}
+            DebugWrite("dropping item");
+            bprint("Drop "+item.fname );
+			while(item.mode != 4) {
+				clickItem(0, item);
+				DoDel(500);
+			}
+			DebugWrite("Item put on cursor");
+			while(item.mode == 4) {
+				item.cancel(0);
+				DoDel(500);
+			}
+            item = this.List[i].getItem();
+
+            if ( !item ) {
+                this.List[i].state = 5;
+                this.nbDrop--;
+            }
+            else
+                bprint("* ERROR : dropping "+item.fname+" failed");
+
+			DebugWrite("item dropped");
+        };
+    };
+};
+
+function GetIDList_Sell( npc )
+{
+    this.ParanoidCheck();
+
+    for ( var i = 0 ; i < this.List.length ; i++ ) {
+        if ( this.List[i].state == 1 ) {
+            var item = this.List[i].getItem();
+
+			DebugWrite("Selling item");
+            		var bNeedDrop=true;
+                       	switch (item.code)
+                    	{
+                    		case "amb":
+                    			if (stuffneed["amb"]) 
+                    			{
+                    				stuffneed["amb"]=false;
+                    				bNeedDrop=false;
+                    			}
+                    			break;
+                    		case "amc":
+                    			if (stuffneed["amc"]) 
+                    			{
+                    				stuffneed["amc"]=false;
+                    				bNeedDrop=false;
+                    			}
+                    			break;
+                    		case "7gd":
+                    			if (stuffneed["7gd"]) 
+                    			{
+                    				stuffneed["7gd"]=false;
+                    				bNeedDrop=false;
+                    			}
+                    			break;
+                    		case "cm1":
+                    			if (stuffneed["cm1"]) 
+                    			{
+                    				stuffneed["cm1"]=false;
+                    				bNeedDrop=false;
+                    			}
+                    			break;
+                    		case "7bf":
+                    			if (stuffneed["7bf"]) 
+                    			{
+                    				stuffneed["7bf"]=false;
+                    				bNeedDrop=false;
+                    			}
+                    			break;
+                    		case "jew":
+                    			if (stuffneed["jew"]) 
+                  			{
+                    				stuffneed["jew"]=false;
+                    				bNeedDrop=false;
+                    			}
+                    			break;
+                    		case "cm2":
+                    			if (stuffneed["cm2"]) 
+                    			{
+                    				stuffneed["cm2"]=false;
+                    				bNeedDrop=false;
+                    			}
+                    			break;
+                    		case "cm3":
+                    			if (stuffneed["cm3"]) 
+                   			{
+                    				stuffneed["cm3"]=false;
+                    				bNeedDrop=false;
+                    			}
+                    			break;
+                    	}
+                    	if (!bNeedDrop)
+                    	{
+                    		this.List[i].state = 2;
+                		this.nbDrop--;
+                		this.nbStash++;
+            			continue;
+            		}
+            bprint("Sell "+item.fname );
+	    	
+            SellItem( npc, item );
+
+            item = this.List[i].getItem();
+            var retry = 0;
+            if ( item ) do {
+                DoDel( 200 );
+                item = this.List[i].getItem();
+            } while ( item && ( retry++ < 20 ) );
+
+            if ( !item ) {
+                this.List[i].state = 5;
+                this.nbDrop--;
+            }
+            else
+                bprint("* ERROR : selling "+item.fname+" failed");
+
+			DebugWrite("item sold");
+
+        };
+    };
+};
+
+function GetIDList_Stash()
+{
+    for ( var i = 0 ; i < this.List.length ; i++ ) {
+        if ( this.List[i].state == 2 ) {
+            var item = this.List[i].getItem();
+
+            if ( !item ) {
+                bprint("* ERROR : can not find item to stash ??");
+            }
+            else {
+                Town.StashItem(item);
+                this.List[i].state == 5;
+                this.nbStash--;
+            };
+        };
+    };
+};
+
+//=========================================================
+// check for a scroll ID in inventory
+function GetScrollID() {
+    var s = LocateItem(me, "isc", 100);
+	if (!s) {
+	    s = LocateItem(me, "ibk", 100);
+		if (!s || !s.getStat(70))
+           s = null;
+    };
+    return s;
+};
+
+// buy sth at the npc
+// mode = true shop( .., 3) else shop( .., 2)
+function BuyItem( npc, itemcode, mode ) {
+	var gld = me.getStat(14) + me.getStat(15);
+	var retry = 0;
+	do {
+    	var s = LocateItem(npc, itemcode, -1);
+	if ( s ) {
+        	if (gld<s.getItemCost(0))
+        	{
+        		bprint("Not enough money to buy " + s.name);
+        		return false;
+        	}
+        	if ( mode ) {
+			    bprint("Multiple buying "+itemcode);
+			    s.shop(npc, 3);
+            	}
+            	else {
+			    bprint("Buying "+itemcode);
+			    s.shop(npc, 2);
+            	};
+	};
+		DoDel(1000);
+	}while( ( gld == (me.getStat(14) + me.getStat(15)) ) && ( retry++ < 10 ) );
+    return ( retry < 10 );
+};
+
+// ID item, buy ID if necessary (we must be in trade mode)
+// npc can be null
+function IDitem(el,npc)
+{
+    var scroll = GetScrollID();
+    if ( !scroll ) {
+        if ( !npc ) // no scroll, no npc => impossible ;)
+            return false;
+        var book = LocateItem(me, "ibk", 100);
+		var isfull = IsInventoryFull();
+		if ( isfull && !book ) {
+        	var keys = GetKeys();
+			if ( !keys ) {
+                bprint("We are totaly full" );
+                return false;
+            };
+            print("Sell keys to make room");
+            SellItem( npc, keys );
+			isfull = IsInventoryFull();
+			if ( isfull ) {
+                bprint("We are totaly full" );
+                return false;
+            };
+            if ( !BuyItem( npc, "isc", 0 ) ) {
+                bprint("ERROR * can not buy ID scroll" );
+                return false;
+            };
+		}
+		else if ( !BuyItem( npc, "isc", book ) )
+        {
+            bprint("ERROR * can not buy ID scroll" );
+            return false;
+        };
+        scroll = GetScrollID();
+        if ( !scroll ) {
+            bprint("ERROR * have bought a scroll but i do not find it !!" );
+            return false;
+        };
+    };
+    // now we have a scroll
+    DebugWrite("Found scroll, going to id the item");
+    var item = el.getItem();
+    bprint("try to ID "+item.name );
+	var x = item.x;
+	var y = item.y;
+	do {
+		clickItem(1, scroll);
+		DebugWrite("RightClicked scroll");
+		DoDel(500);
+		clickItem(0, item);
+		DoDel(500);
+		if (item.mode == 4) {
+            DoDel(50);
+			while(item.mode == 4) {
+			    clickItem(0, x, y, 0);
+				DoDel(500)
+            }
+        }
+		DebugWrite("Using scroll on item");
+    }while(!item.getFlag(0x10));
+	DebugWrite("Item Id'd");
+
+    return true;
+}
+
+function SellItem( npc, item ) {
+    var bfullgold = me.getStat(14) >= (me.getStat(12) * 10000);
+    var retry = 0;
+    var gld = me.getStat(14) + me.getStat(15);
+
+    do {
+   	    item.shop(npc,1);
+	    DoDel(700);
+    } while ( ((me.getStat(14) + me.getStat(15)) == gld ) && ( retry++ < 10 ) && !bfullgold );
+
+    return ( retry < 10 );
+};
+
+function IsInventoryFull() {
+	var width = 10;
+	var height = 4;
+	var inventory = new Array(width);
+	for (var i = 0; i < width; i++) {
+		inventory[i] = new Array(height);
+		for (var j = 0; j < height; j++) {
+			inventory[i][j] = 0;
+		}
+	}
+
+	var item = getUnit(4,null,100);
+	do {
+		if (item && item.mode == 0) {
+			var p = item.getParent();
+			if (!p || (p && p.name != me.name))
+				continue;
+
+			for (var x = 0; x < item.xsize; x++) {
+				for (var y = 0; y < item.ysize; y++) {
+					inventory[item.x+x][item.y+y] = 1;
+				}
+			}
+		}
+	}while(item && item.getNext(null,100));
+
+	for (var i = 0; i < width; i++) {
+		for (var j = 0; j < height; j++) {
+			if ( !inventory[i][j] )
+				return false;
+		}
+	}
+
+	bprint("Oups inventory is full !!");
+	DebugWrite("Oups inventory is full !!");
+	return true;
+};
+
+function exchangepotionsinventory(belt_itemcode, inv_itemcode)
+{
+  var invitem=getUnit(4,null,100);
+  do{
+      if (invitem && invitem.mode==0 && invitem.code==inv_itemcode && invitem.getParent() && invitem.getParent().name == me.name)
+      {
+          var beltitem=getUnit(4,belt_itemcode,2);
+          if (!beltitem) return true;
+          var endwhile=false;
+          do{
+		if(beltitem && beltitem.mode==2 && beltitem.code==belt_itemcode)
+		{
+			var retries=0;
+		        while(invitem.mode==0 && retries++ < 5)
+		        {
+		            clickItem(0,invitem);
+			    DoDel(500);
+		        }
+			if (invitem.mode==0) break;
+
+			retries=0;
+			while(invitem.mode==4 && retries++ < 5)
+			{
+			    clickItem(0,beltitem);
+			    DoDel(500);
+			}
+			if(invitem.mode==4) break; 
+
+			retries=0;
+			while(beltitem.mode==4 && retries++ < 5)
+			{
+			    beltitem.cancel(1)
+			    DoDel(500);
+			}
+			if(beltitem.mode==4) break;
+			endwhile=true;
+		}
+        }while(beltitem && beltitem.getNext() && !endwhile);
+
+        //invitem=getUnit(4,null,100);
+    }
+   }while(invitem && invitem.getNext(null,100));
+}
+
+function exchangepotions(belt_itemcode, inv_itemcode)
+{
+   // exchange potions already in inventory
+   exchangepotionsinventory(belt_itemcode, inv_itemcode);
+
+   // pickup more potions off the ground if there are any around
+   var invitem=getUnit(4);
+   do{
+      if (invitem && invitem.mode==3 && invitem.code==inv_itemcode)
+      {
+          var beltitem=getUnit(4,belt_itemcode,2);
+          if (!beltitem) return true;
+          var endwhile=false;
+          do{
+		if(beltitem && beltitem.mode==2 && beltitem.code==belt_itemcode)
+		{
+			PickUpItem(invitem);
+			DoDel(500);
+			endwhile=true;
+		}
+        }while(beltitem && beltitem.getNext() && !endwhile);
+
+        //invitem=getUnit(4,inv_itemcode);
+    }
+   }while(invitem && invitem.getNext(inv_itemcode));
+
+   // Exchange the new potions you just picked up   
+   exchangepotionsinventory(belt_itemcode, inv_itemcode);
+}
+
+function potioncount()
+{
+ var counter = 0;
+ var x = 0;
+ var item = getUnit (4,null,2);
+ if (!item) return 0;
+ do
+ {
+   if (item.mode == 2) counter ++;
+ } while (item && item.getNext());
+ return (counter);
+}
+
+function beltSize()
+{
+ var item = getUnit(4,null);
+ do {
+   if (item && item.itemloc == 8 && item.getParent() && item.getParent().name == me.name)
+   {
+     if (item.name == "Stash" || item.name == "Light Belt") return 8;
+     if (item.name == "Belt" || item.name == "Heavy Belt") return 12;
+     else return 16;
+   }
+ } while(item&&item.getNext());
+  return 4;
+}
+
+function fillbelt(itemcode)
+{						
+	// check for potions in inventory
+	invitem=getUnit(4,null,100);
+	var endwhile=false;
+	do{
+		if (invitem && invitem.getParent() && invitem.getParent().name == me.name && invitem.code==itemcode && (potioncount() < beltSize()))
+		{
+			var retries=0;
+			while(invitem.mode!=4 && retries++ < 5 )
+			{
+				clickItem(0,invitem);
+				DoDel(500);
+			}
+			if (invitem.mode!=4) return false;
+			
+			var xloc=freeSpaceEx();
+			if (xloc==-1)
+			{
+				invitem.cancel(0);
+				return false;
+			}
+			
+			clickItem(0,xloc,0,5);
+		}
+			
+	}while(invitem && invitem.getNext(null,100) && (potioncount() < beltSize()));
+
+	//if(!enoughplace() || invitem.code=="hp5")
+	//	return true;
+
+	// check for potions on ground
+	var invitem=getUnit(4);
+	var pickupcount=0;
+	do{
+		if (invitem && invitem.code==itemcode && invitem.mode==3 && (potioncount() + pickupcount < beltSize()))
+		{
+			PickUpItem(invitem);
+			DoDel(500);
+			pickupcount++;
+		}
+		
+			
+	}while(invitem && invitem.getNext(itemcode) && !endwhile && enoughplace());
+	runGC();
+	DoDel(10);
+	return true;
+}
+
+function enoughplace()
+{
+	var count=0;
+	var objBelt=new Object();
+	objBelt["belt_0"]=0;
+	objBelt["belt_1"]=0;
+	objBelt["belt_2"]=0;
+	objBelt["belt_3"]=0;
+	var size=beltSize();
+	
+	beltitem=getUnit(4,null,2);
+	do{
+		if (beltitem && beltitem.mode==2 && beltitem.x<=3)
+		{
+			if (beltitem.code=="rvs" || beltitem.code=="rvl")
+			{
+				objBelt["belt_"+beltitem.x]=1;
+				item=getUnit(4,null,2);
+				do{
+					if (item && item.mode==2 && (item.x==beltitem.x+4 || item.x==beltitem.x+8 || item.x==beltitem.x+12))
+						objBelt["belt_"+beltitem.x]++;
+				}while(item && item.getNext(null,2));
+			}
+			else
+				objBelt["belt_"+beltitem.x]=-1;
+		}
+	}while(beltitem && beltitem.getNext(null,2));
+	
+	for(i=0;i<4;i++)
+		if (objBelt["belt_"+i]>=0 && objBelt["belt_"+i]<(size/4)) count++;
+	
+	runGC();
+	if (count>0) return true;
+	return false;
+}
+
+function freeSpaceEx()
+{
+	var size=beltSize();
+	var BeltStore=new Array(size);
+	
+	for(var k=0;k<size;k++)
+		BeltStore[k]="e";
+	
+	
+	beltitem=getUnit(4,null,2);
+	do{
+	
+		if (beltitem && beltitem.mode==2)
+			BeltStore[beltitem.x]="f";
+	
+	}while(beltitem && beltitem.getNext(null,2));
+	
+	for(var k=0;k<size;k++)
+	{
+		if (BeltStore[k]=="e")
+			return k;
+	}
+	
+	return -1;
+}
+	
+
+function DoPotions()
+{
+ 	fillbelt ("rvl");
+	fillbelt ("rvs");
+	fillbelt ("mp5");
+	fillbelt ("hp5");
+	exchangepotions ("mp5", "rvl");
+	exchangepotions ("hp5", "rvl");
+	exchangepotions ("rvs", "rvl");
+	exchangepotions ("mp5", "rvs");
+	exchangepotions ("hp5", "rvs");
+ 	fillbelt ("rvl")
+	fillbelt ("rvs");
+	fillbelt ("mp5");
+	fillbelt ("hp5");
+}

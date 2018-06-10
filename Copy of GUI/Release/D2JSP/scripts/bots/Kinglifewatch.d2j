@@ -1,0 +1,197 @@
+include( "Dae_EleIniLib.d2l" );
+
+var beginexp = 0;
+var log = new Object();
+log["inifile"] = "output/Dae_" + me.name + "_Log.txt"; //log file
+log["Total"]=0;	//total
+log["Success"]=0;	//success
+log["Died"]=0;	//died
+log["Chicken"]=0;	//chicken
+log["Merc_Chicken"]=0;	//merc_chicken
+log["Ping"]=0;	//ping
+log["Finish"]=0;	//number of finished game (with fail eventually)
+log["TotalTime"]=0;	//total time
+log["TimeInTown"]=0;   //time in town
+log["ShopTimes"]=0;
+log["CubeTimes"]=0;
+log["DictNumber"]=0;
+log["GameName"]="";
+var logname=new Array("inifile","Total","Success","Died","Chicken","Merc_Chicken","Ping","Finish","TotalTime","TimeInTown","ShopTimes","CubeTimes","DictNumber","GameName");
+var nlistboss = 22;
+var nlog = 14;
+var listboss = new Array(nlistboss);
+
+
+
+
+function GetExperience()
+{
+	var e = me.getStat(13);
+	if (e < 0)
+		return (e + 0xFFFFFFFF + 1);
+	return e;
+}
+
+function writeLog()
+{
+    var addexp = ( GetExperience() - beginexp);
+    if ( addexp <= 100000 )
+	{
+	  quit (); // runs with less than 100K exp are not successful
+	}
+	listboss[20].xp += addexp;
+	listboss[20].nbkill++;
+	listboss[20].lastxp = addexp;
+	var inifile="output/Dae_"+ me.name + "_Temp.ini";
+
+
+    lf=fileOpen(inifile,1);
+
+	lf.writeLine("[Character]");
+	for(i=1;i<nlog;i++)
+	{
+		lf.writeLine(logname[i] +"=" + log[logname[i]]);
+	}
+	lf.writeLine(" ");
+	for(i=0;i<nlistboss;i++)
+	{
+		lf.writeLine("[" + listboss[i].name + "]");
+		lf.writeLine("Kill=" + listboss[i].nbkill);
+		lf.writeLine("TimeKill="+listboss[i].timekill);
+		lf.writeLine("Escape="+listboss[i].nbescape);
+		lf.writeLine("NotFound="+listboss[i].nbnotfound);
+		lf.writeLine("Exp="+listboss[i].xp);
+		lf.writeLine("LastExp="+listboss[i].lastxp);
+		lf.writeLine("BestTime="+listboss[i].besttimekill);
+		lf.writeLine("WorstTime=" + listboss[i].worsttimekill);
+		lf.writeLine("LastTime=" + listboss[i].lasttimekill);
+		lf.writeLine(" ");
+	}
+	lf.close();
+
+}
+
+
+function LogLoad()
+{
+	var inifile="output/Dae_"+ me.name + "_Temp.ini";
+	lf=fileOpen(inifile,0);
+	if (lf)
+	{
+		lf.close();
+		//var bosslogname=new Array("Kill","TimeKill","Escape","Notfound","Xp","BestTime");
+		for(i=1;i<logname.length-1;i++)
+		{
+			log[logname[i]]=parseInt(Ele_ReadIniLine(inifile,"Character",logname[i]));
+			if (isNaN(log[logname[i]])) log[logname[i]] = 0;
+		}
+		log["GameName"]=Ele_ReadIniLine(inifile,"Character","GameName");
+
+		for(i=0;i<nlistboss;i++)
+		{
+			var _name=listboss[i].name;
+//			if ( _Ele_CheckSectionExist( _Ele_ReturnIniCon(inifile),_name,inifile ) ) {
+				listboss[i].nbkill=parseInt(Ele_ReadIniLine(inifile,_name,"Kill"));
+				listboss[i].timekill=parseInt(Ele_ReadIniLine(inifile,_name,"TimeKill"));
+				listboss[i].nbescape=parseInt(Ele_ReadIniLine(inifile,_name,"Escape"));
+				listboss[i].nbnotfound=parseInt(Ele_ReadIniLine(inifile,_name,"NotFound"));
+				listboss[i].xp=parseInt(Ele_ReadIniLine(inifile,_name,"Exp"));
+				listboss[i].lastxp=parseInt(Ele_ReadIniLine(inifile,_name,"LastExp"));
+				listboss[i].besttimekill=parseInt(Ele_ReadIniLine(inifile,_name,"BestTime"));
+				listboss[i].worsttimekill=parseInt(Ele_ReadIniLine(inifile,_name,"WorstTime"));
+				listboss[i].lasttimekill=parseInt(Ele_ReadIniLine(inifile,_name,"LastTime"));
+//			};
+
+        	if (isNaN(listboss[i].nbkill) || isNaN(listboss[i].timekill) || isNaN(listboss[i].nbescape)
+        		|| isNaN(listboss[i].nbnotfound) || isNaN(listboss[i].xp) || isNaN(listboss[i].besttimekill)
+        		|| isNaN(listboss[i].worsttimekill) || isNaN(listboss[i].lasttimekill) || isNaN(listboss[i].lastxp)){
+        			listboss[i].nbkill=0;
+        			listboss[i].timekill=0;
+        			listboss[i].nbescape=0;
+        			listboss[i].nbnotfound=0;
+        			listboss[i].xp=0;
+        			listboss[i].lastxp=0;
+        			listboss[i].besttimekill=0;
+        			listboss[i].worsttimekill=0;
+        			listboss[i].lasttimekill=0;
+        		}
+
+
+		}
+	}
+	else
+	{
+		lf=fileOpen(inifile,1);
+		lf.close();
+	}
+
+	function RemoveZero(number)
+	{
+		if (isNaN(number)) return 0;
+		else return number;
+	}
+}
+
+
+function main() {
+	beginexp = GetExperience ();
+    testhook=getScreenHook();
+    testhook.x=300;
+    testhook.y=40;
+    testhook.text="ÿc2Cow King life watch (c) Darien";
+
+
+    for ( var i = 0 ; i < nlistboss ; i++ ) {
+	  var tmpObject = new Object();
+	  listboss[i] = tmpObject;
+      listboss[i].nbkill = 0;
+      listboss[i].timekill = 0;
+      listboss[i].nbescape = 0;
+      listboss[i].nbnotfound = 0;
+      listboss[i].xp = 0;
+      listboss[i].lastxp=0;
+      listboss[i].besttimekill = 0;
+      listboss[i].worsttimekill = 0;
+      listboss[i].lasttimekill = 0;
+    };
+	
+	listboss[0].name = "PindleSkin";
+	listboss[1].name = "Eyeback";
+	listboss[2].name = "Sharptooth";
+	listboss[3].name = "Shenk";
+	listboss[4].name = "Dac Farren";
+	listboss[5].name = "Eldritch";
+	listboss[6].name = "Thresh";
+	listboss[7].name = "Snapchip";
+	listboss[8].name = "Bonesaw";
+	listboss[9].name = "Frozenstein";
+	listboss[10].name = "The Countess";
+	listboss[11].name = "Mephisto";
+	listboss[12].name = "Stormtree";
+	listboss[13].name = "Baal";
+	listboss[14].name = "Nihlathak";
+	listboss[15].name = "Hephasto";
+	listboss[16].name = "Griswold and his friends";
+	listboss[17].name = "Creeping";
+	listboss[18].name = "council";
+	listboss[19].name = "Izual";
+	listboss[20].name = "The Cow King";
+	listboss[21].name = "Unique boss";
+	
+
+	LogLoad();
+
+	King=getUnit(1,"The Cow King");
+	var distance = 0;
+	while(1) {
+		if (!King) King=getUnit(1,"The Cow King");
+		if (King) {
+			if (Math.round(King.hp / 1.28) < 80)  {
+				writeLog();
+				quit();
+			}
+		}
+		if ( Math.round ((me.hpmax) * 0.3) > me.hp) quit ();
+		delay(200);
+	}
+}

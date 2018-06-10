@@ -1,0 +1,59 @@
+include ("Dae_Console.d2l");
+var oCon = new oConsole();
+
+function main()
+{
+	//guys, we start here, now i'm replacing the original positions by my new positions
+	oCon.System.oPos["ConsoleN"] = [20,300,220,300];
+	oCon.System.oPos["ConsoleS"] = [20,400,220,400];
+	oCon.System.oPos["ConsoleTitle"] = [20,297];
+	
+	//we created a object and modified the positions, now let's show them, just show the message part!
+	oCon.System._CreateConsole = function()
+	{
+		//we are replacing the function which is used for creating the console, we remove the useless console part for us.
+		oCon.System.Painter.Put(oCon.System.oPos["ConsoleN"][0],oCon.System.oPos["ConsoleN"][1],oCon.System.oPos["ConsoleN"][2],oCon.System.oPos["ConsoleN"][3],21);
+		oCon.System.Painter.Put(oCon.System.oPos["ConsoleS"][0],oCon.System.oPos["ConsoleS"][1],oCon.System.oPos["ConsoleS"][2],oCon.System.oPos["ConsoleS"][3],21);
+				
+		for (var pN=0;pN<7;pN++)
+			oCon.System.pMsgPtr = oCon.System.Texter.Allocate(oCon.System.oPos["ConsoleN"][0] + 5, oCon.System.oPos["ConsoleN"][1] + 18 + pN*12, " ", COLORWHITE, FONT_PIXEL_9);
+		oCon.System.pMsgPtr -= 6;
+		
+		for(var pY = oCon.System.oPos["ConsoleN"][1]; pY<oCon.System.oPos["ConsoleS"][1]; pY+=2)
+			oCon.System.Painter.Put(oCon.System.oPos["ConsoleN"][0],pY,oCon.System.oPos["ConsoleN"][2],pY,2);
+
+		oCon.System.Texter.Put(oCon.System.oPos["ConsoleTitle"][0],oCon.System.oPos["ConsoleTitle"][1],"[ LifeWatcher ]",COLORCRAFT,FONT_PIXEL_11);
+		
+		//see? we've removed all the useless calls, now we just got a very simple message part called LifeWatcher.
+	}
+	
+	oCon.System.Initialize = function()
+	{
+		oCon.System._InitArray();
+		//this._InitLog(); //removed Item part
+		oCon.System._CreateConsole();
+		//this._ShowItem(); //removed item part
+	}
+	
+	//all works done, let's call the Console now!
+	oCon.System.Initialize();
+	
+	//let's add some message to test!
+	oCon.System.AddMessage("Lifewatcher!");
+	oCon.System.AddMessage("Huh? Today is a good day tho.");
+
+	//keep the screenhook there!
+	while(1)
+	{
+		delay(500);
+	}
+}
+
+//you need this for some error typing.... don't forget it :p
+function oMessanger()
+{
+	this.TypeError = function(pMsg)
+	{
+		print(COLORSTRING + COLORRED + "ERROR : " + COLORSTRING + COLORWHITE + pMsg);
+	}
+}

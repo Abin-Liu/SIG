@@ -1,0 +1,981 @@
+//////////////////////////////////////////////////////////////////////
+//
+// Xizeta's PindleXP script
+//
+// The script will use any char excepted Assassins (for now).
+//
+// It is suggested to keep a Tome of Identification in
+// inventory to make it work better.
+//
+// Version 1.06 BETA
+// Updated on 2004/07/26
+//
+// Original authors : LordOfMars, FruitBar and HPB_Forever
+// Collaboration : Ven0m, Muellsammler, Darien, Killkeeper, Damoon, HellNucleus,
+//                 DaBeerMan, Gill_105, Syadasti, Smoke, sicojola and others :)
+//
+// Legal stuff :
+// This program is free software; You can redistrubute freely as long as this
+// header and contents stays intact. Modifications for redistribution can only
+// be done by submitting to the core scripters team for approval. If you don't
+// want to submit the modifications and wanted to redistribute this script, you
+// must rename it by remplacing d2jsp with your own name to avoid conflicts.
+//
+// This program is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY
+// or FITNESS FOR A PARTICULAR PURPOSE.
+//
+//////////////////////////////////////////////////////////////////////
+var PXP_Version = "1.06";
+
+//////////////////////////////////////////////////////////////////////
+// Please edit PXP_Config.d2l in the libs folder for your needs.
+//////////////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////////////////////
+// Settings for multiple chars of the same class
+//////////////////////////////////////////////////////////////////////
+// Change the below file to point to different setting files if you need 2 setups for different chars
+// Within the same class.
+// To edit the settings for both chars, make a copy of the PXP_Config.d2l, and change the below
+// character selection to that character and file.
+//
+// This is only needed if you have 2 characters of the same type! If you are not sure, don't touch!!
+//--------------------------------------------------------------------
+
+// First char of the same class
+if (me.name=="Your Character name here") { PXP_CharConfigFile="PXP_Config.d2l"; }
+
+// Second char of the same class
+else if (me.name=="Your Other Character name here") { PXP_CharConfigFile="PXP_Config.d2l"; }
+
+// Default for all chars
+else { PXP_CharConfigFile="PXP_Config.d2l"; }
+
+
+
+
+
+
+
+
+
+//////////////////////////////////////////////////////////////////////
+// ***** NO EDITION BELOW THIS POINT *****
+// MESSING WITH THE CODE BELOW WILL MAKE THE SCRIPT
+// WORK DIFFERENTLY, WITH BAD RESULTS !!
+//////////////////////////////////////////////////////////////////////
+
+
+//////////////////////////////////////////////////////////////////////
+// Script public variables
+//////////////////////////////////////////////////////////////////////
+
+// General variables
+var PXP_SkipCredits=true;	// Show the credits at the start of runs
+var PXP_UseTaunts=true;		// Will Pindle taunt you :)
+var PXP_FormatHTML=true;	// Build a HTML log for PXP
+var PXP_UseOverheads=false;	// Use overheads to show actions
+var PXP_UseBeltManager=false;	// Set to true to use belt management
+var PXP_UseConsole = false;	// Set to true to display the upper console
+var PXP_ShowInnerExceptions=false; // Set to true to show the full exception log
+var PXP_UseVigor = false;	// If you are a pally and want to cast Vigor in town
+
+// Shopping and gambling
+var PXP_ShopIt=true;		// Enable or disable shopping at NPC
+var PXP_GambleIt=false;		// Enable or disable gambling at NPC
+var PXP_AlwaysGamble=false;	// Flag to always gamble each run
+var PXP_GambleMinGold=250000;	// Min gold amount to start gambling
+
+// NPC interactions
+var PXP_AlwaysMalah=false;	// Always visit Malah no matter what
+var PXP_AlwaysLarzuk=false;	// Always visit Larzuk no matter what
+var PXP_VisitAnya=false;	// Visit Anya before portal ?
+var PXP_RandomNPC=false;	// Randomly visit NPC each run
+
+// Run variables
+var PXP_StopFullInv=true;	// Stop the script if inventory is full
+var PXP_Automule=false;		// Use Sicojola's Automule script when inv is full
+var PXP_StartGameDelay=0;	// Delay to stall at the start of game
+var PXP_MaxGameLength=60;	// Length of the run before aborting, 0 to stay indefinitely
+
+
+//////////////////////////////////////////////////////////////////////
+// Script private variables
+//////////////////////////////////////////////////////////////////////
+
+var _PXP_RunLogPath="output\\" + me.name + "-PXP-RunLog.html";
+var _PXP_Position="start";
+var _PXP_KeyPressed = false;
+var PXP_OffsetY=0;
+var PXP_OffsetX=0;
+
+
+//////////////////////////////////////////////////////////////////////
+// PindleXP functions
+//////////////////////////////////////////////////////////////////////
+
+function PXP_ShowCredits() {
+
+	if (!PXP_SkipCredits) {
+
+		DC_Print("ÿc9******************** PindleXP version " + PXP_Version + " by Xizeta ********************");
+		DC_Print("ÿc7Extra thanks to : Mattlant, Muellsammler, Darien, TristanOfADown, ");
+		DC_Print("ÿc7..................DaBeerMan, killkeeper, sicojola and others...");
+		DC_Print("ÿc7Testers : eternaltorment2, DR_CHAOS, nlz242, RamasseTonDrum and others...");
+		DC_Print("ÿc1D2JSP.DLL core created and coded by nJaguar! Support him by donating :)");
+	}
+	var _successpercent=String((DL_Kills / (DL_Total-1)) * 100).substring(0,5);
+	if (DL_Kills === 0) { DC_Print("ÿc9*** PindleXP version " + PXP_Version + " by Xizeta ***"); }
+	else { DC_Print("ÿc9*** PindleXP version " + PXP_Version + " by Xizeta *** ÿc1Total runs:  " + (DL_Total-1) + "  Total kills:  " + DL_Kills + "  With a " + _successpercent +"% success rate!"); }
+}
+
+function PXP_PindleTaunt() {
+
+	switch (parseInt(Math.random() * 22)) {
+
+		case 0: DC_Print("ÿc4Pindleskin : ÿc@HELP!! I'm being humped by a MULE!!"); break;
+		case 1: DC_Print("ÿc4Pindleskin : ÿc@Damn, I cannot play cards without being disturbed"); break;
+		case 2: DC_Print("ÿc4Pindleskin : ÿc@Eat shit, NOOB"); break;
+		case 3: DC_Print("ÿc4Pindleskin : ÿc@Oh FFS, just take what you want and leave me the fuck alone"); break;
+		case 4: DC_Print("ÿc4Pindleskin : ÿc@You know if DClone spawns your fucked, right?"); break;
+		case 5: DC_Print("ÿc4Pindleskin : ÿc@Fuck me your Merc is lazy, what a slack fuck"); break;
+		case 6: DC_Print("ÿc4Pindleskin : ÿc@A little lag and i'll rape your sorry ass"); break;
+		case 7: DC_Print("ÿc4Pindleskin : ÿc@You call yourself " + me.name + " ? Where the hell did you find such a stupid name?"); break;
+		case 8: DC_Print("ÿc4Pindleskin : ÿc@Here comes the PAIN BABY"); break;
+		case 9: DC_Print("ÿc4Pindleskin : ÿc@Yo Mama was tighter than your SISTER!!"); break;
+		case 10: DC_Print("ÿc4Pindleskin : ÿc@You'll never get a Death Fathom out of me!!"); break;
+  		case 11: DC_Print("ÿc4Pindleskin : ÿc@Tyrael's Might ?  Ha!  The only might you'll feel is my foot in your ass!"); break;
+  		case 12: DC_Print("ÿc4Pindleskin : ÿc@Tell your mom I said hi!"); break;
+  		case 13: DC_Print("ÿc4Pindleskin : ÿc@PKPKPKPK COME COME POTAL!"); break;
+  		case 14: DC_Print("ÿc4Pindleskin : ÿc@Bring it beotch!"); break;
+  		case 15: DC_Print("ÿc4Pindleskin : ÿc@You want a Grandfather, go bother cain, you want a POS +1 light radius charm then we'll talk business"); break;
+  		case 16: DC_Print("ÿc4Pindleskin : ÿc@If I weren't already dead, I might care!"); break;
+  		case 17: DC_Print("ÿc4Pindleskin : ÿc@I'm gonna pwn your a$$!  If I don't though, please forward these gifts to Xizeta for me"); break;
+  		case 18: DC_Print("ÿc4Pindleskin : ÿc@Kiss my shriveled undead posterior!"); break;
+  		case 19: DC_Print("ÿc4Pindleskin : ÿc@Come on down and give uncle Pindle a big hug!"); break;
+		case 20: DC_Print("ÿc4Pindleskin : ÿc@Damn Xizeta, another update to PindleXP!"); break;
+		default: DC_Print("ÿc4Pindleskin : ÿc@I might as well set my ass on fire now"); break;
+	}
+}
+
+function PXP_FormatLog() {
+
+	if (PXP_FormatHTML) {
+
+		// Tell the user that formatting is running
+		DC_Print("Now formatting the HTML log...");
+
+		// Start the chrono
+		DC_ChronoMe();
+
+		// Open the new log file for formatting
+		file = fileOpen("output/"+me.name+"-PXP-Log.html", 1);		
+		if (file) {
+
+			// Start the html log
+			DHL_OpenLog(file);
+
+			// Add run log info
+			DHL_AddSection(file,_PXP_RunLogPath,"Run Log for " + me.name);
+
+			// Integrate error logging if there is a error log available
+			DHL_AddSection(file,DC_ErrorLogPath,"Error Log for " + me.name);
+
+			// Add the logged items section
+			DHL_AddItemLogSection(file);
+
+			// Close the log
+			DHL_CloseLog(file);
+			file.close();
+		}
+		else {
+			DC_Print("Unable to open " + me.name + "-PXP-Log.html for writing!");
+		}
+
+		// Stop the chrono and display the total time (add a suggestion if formatting take too much time)
+		var _formattime=DC_ChronoMe();
+		if (_formattime > 1000) {
+
+			DC_Print("Formatting done in " + _formattime + " ms!! To reduce the time, reset or trim the item log");
+		}
+		else {
+			DC_Print("Formatting done in " + _formattime + " ms");
+		}
+	}
+	else {
+		DC_Print("Ignoring HTML formatting");
+	}
+}
+
+function keypressHandler(key) { PXP_CheckKey(key); }
+
+function PXP_CheckKey(key) {
+
+	// Get the entered key in the global var
+	_PXP_KeyPressed = key;
+
+	// stopping main script (when i'm in town), started tools (eg. lifewatchXP) will continue
+	if (_PXP_KeyPressed == 88) { // "X" was pressed
+
+ 		if (DC_InTown(me)) {
+
+  			DC_Print("ÿc;Key 'X' is pressed, stopping the main script");
+  			delay(500);
+ 			stop(1);
+		}
+        }
+
+	// Toggling the console on and off
+	if (_PXP_KeyPressed == 85) { // "U" was pressed
+
+		if (PXP_UseConsole) {
+
+			DC_Print("ÿc;Key 'U' is pressed, toggling the console off");
+			DC_DoDel(50);
+			XP_DestroyConsole();
+			PXP_UseConsole = false;
+		}
+		else {
+
+			DC_Print("ÿc;Key 'U' is pressed, toggling the console on");
+			DC_DoDel(50);
+			XP_CreateConsole("PindleXP");
+			PXP_UseConsole = true;
+		}
+        }
+
+	// stopping all scripts (when i'm in town)
+	if (_PXP_KeyPressed == 191) { // "#" was pressed
+
+ 		if (DC_InTown(me)) {
+
+  			DC_Print("ÿc;Key '#' is pressed, stopping all scripts");
+  			delay(500);
+  			stop();
+        	}
+	}
+}
+
+function PXP_NPCinteract(npc) {
+
+	// If the npc object is not present, abort the game
+	if (!npc) {
+
+		DL_AddAbort();
+		DC_QuitMessage("No NPC available!");
+	}
+
+	// Interact with the npc
+	if (!DT_DoInteract(npc)) {
+
+		DL_AddAbort();
+		DC_QuitMessage("Unable to interact with " + npc.name + "!");
+	}
+
+	// Do stuff depending on which npc
+	switch (npc.classid) {
+
+		// Qual-Kehk
+		case 515:
+			if (!DT_ReviveMerc(npc)) {
+
+				DC_Print("Failed to revive the mercenary!");
+			}
+			break;
+
+		// Larzuk
+		case 511:
+			DT_DoTrade(npc);
+			DT_RepairItems(npc);
+			if (DT_CheckAmmo()) { DT_BuyAmmo(npc); }
+			break;
+
+		// Malah
+		case 513:
+			if (_XP_GetNumUnId > 0) { XP_DoCheckItems(npc); }
+			if (PXP_UseBeltManager && DT_CheckBelt()) { DT_DoTrade(npc); DT_FillBelt(npc); }
+			break;
+
+		// Anya
+		case 512:
+			if (PXP_GambleIt) {
+
+				if (DC_MyGold() > PXP_GambleMinGold) {
+
+					DT_DoTrade(npc,1);
+					DT_GambleIt(npc);
+					DT_MenuCancel(npc,1);
+					DT_DoInteract(npc);
+				}
+			}
+			break;
+
+		// Stash
+		case 267:
+			DT_ManageStash();
+			break;
+	}
+
+	// If shopping is enabled and it is not Qual-Kehk or stash, stop the npc
+	if (PXP_ShopIt && npc.classid!=515 && npc.classid!=267) {
+
+		if (!getUIFlag(0x0c)) {	DT_DoTrade(npc); }
+		DT_ShopIt(npc);
+	}
+
+	// Use the right cancel method depending if it is a npc or object
+	if (npc.classid==267) { DT_MenuCancel(npc,0); }
+	else { DT_MenuCancel(npc,1); }
+}
+
+function PXP_CheckAct() {
+
+	if (me.act < 5)	{
+
+		DC_Print("You are not in act 5!  Going from act #" + me.act + " to act #5.");
+		if (PXP_UseOverheads) { me.overhead("Walking to Waypoint"); }
+
+		switch (me.act)	{
+
+			case 1: PXP_RogueChange(); break;
+
+			case 2:	DM_WalkTo(5127, 5175);
+				DM_WalkTo(5120, 5133);
+				DM_WalkTo(5094, 5113);
+				DM_WalkTo(5069, 5086);
+				break;
+
+			case 3:	DM_WalkTo(5131, 5168);
+				DM_WalkTo(5133, 5151);
+				DM_WalkTo(5133, 5136);
+				DM_WalkTo(5133, 5122);
+				DM_WalkTo(5132, 5104);
+				DM_WalkTo(5133, 5092);
+				DM_WalkTo(5147, 5093);
+				DM_WalkTo(5149, 5079);
+				DM_WalkTo(5154, 5066);
+				DM_WalkTo(5160, 5054);
+				DM_WalkTo(5159, 5049);
+				break;
+
+			case 4: DM_WalkTo(5044, 5019);
+				break;
+		}
+		DM_UsePortal("Waypoint",109);
+		_PXP_Position = "waypoint";
+	}
+	else { return true; }
+
+	// If we didn't change of act, there is a problem so abort
+	if (me.act != 5) { DC_QuitMessage("You're not in act 5!"); }
+}
+
+function PXP_RogueChange() {
+
+	var waypoint=getUnit(2,"Waypoint");
+	var i=0;
+
+	while (!waypoint && i < 3) {
+
+		i+=1;
+		DC_DoDel(50+DC_LagDelay);
+		if (waypoint) { break; }
+		else { waypoint=getUnit(2,"Waypoint"); }
+	}
+
+	if(!waypoint) { DC_QuitMessage("Unable to find waypoint in Rogue Camp!"); }
+
+	if (waypoint.x - me.x == 26 && waypoint.y - me.y == -19) {
+
+		DM_WalkTo(me.x + 16, me.y + -1);
+		DM_WalkTo(me.x + 8, me.y + -15);
+	}
+	else if (waypoint.x - me.x == 21 && waypoint.y - me.y == -24) {
+
+		DM_WalkTo(me.x + 1, me.y + -16);
+		DM_WalkTo(me.x + 16, me.y + -5);
+	}
+	else if (waypoint.x - me.x == -19 && waypoint.y - me.y == -29) {
+
+		DM_WalkTo(me.x + -5, me.y + -12);
+		DM_WalkTo(me.x + -13, me.y + -16);
+	}
+	else if (waypoint.x - me.x == -14 && waypoint.y - me.y == -29) {
+
+		DM_WalkTo(me.x + -2, me.y + -14);
+		DM_WalkTo(me.x + -12, me.y + -15);
+	}
+	else { DC_QuitMessage("Got a problem leaving the Rogue Camp. I wonder what I did wrong?"); }
+}
+
+/* ææææææææææææææææææææææææææææ
+Paths
+ææææææææææææææææææææææææææææ */
+
+function PXP_PathToMalah() {
+
+	if (PXP_UseOverheads) { me.overhead("Walking to Malah"); }
+
+	switch(_PXP_Position) {
+
+		case "start":
+			DM_WalkTo(5082, 5032);
+			return;
+
+		case "waypoint":
+			DM_WalkTo(5110, 5060);
+			DM_WalkTo(5104, 5044);
+			DM_WalkTo(5098, 5023);
+			DM_WalkTo(5082, 5032);
+			return;
+	}
+}
+
+function PXP_PathToLarzuk() {
+
+	if (PXP_UseOverheads) { me.overhead("Walking to Larzuk"); }
+
+	switch(_PXP_Position) {
+
+		case "start":
+			DM_WalkTo(5105, 5044);
+			DM_WalkTo(5113, 5043);
+			DM_WalkTo(5119, 5039);
+			DM_WalkTo(5138, 5042);
+			return;
+		case "waypoint":
+			DM_WalkTo(5125, 5060);
+			DM_WalkTo(5134, 5044);
+			return;
+		case "malah":
+			DM_WalkTo(5090,5032);
+			DM_WalkTo(5090,5021);
+			DM_WalkTo(5101,5022);
+			DM_WalkTo(5105, 5044);
+			DM_WalkTo(5113, 5043);
+			DM_WalkTo(5119, 5039);
+			DM_WalkTo(5138, 5042);
+			return;
+	}
+}
+
+function PXP_StartToWP() {
+
+	if (PXP_UseOverheads) { me.overhead("Walking to Waypoint"); }
+	DM_WalkTo(5105, 5044);
+	DM_WalkTo(5110, 5060);
+	DM_WalkTo(5115, 5070);
+}
+
+function PXP_PathToStash() {
+
+	if (PXP_UseOverheads) { me.overhead("Walking to stash"); }
+	switch(_PXP_Position) {
+
+		case "waypoint":
+			DM_WalkTo(5130, 5060);
+			return;
+		case "malah":
+			DM_WalkTo(5082, 5032);
+			DM_WalkTo(5101, 5020);
+			DM_WalkTo(5105, 5044);
+			DM_WalkTo(5110, 5060);
+			DM_WalkTo(5125, 5060);
+			return;
+		case "larzuk":
+			DM_WalkTo(5145, 5057);
+			DM_WalkTo(5130, 5060);
+			return;
+	}
+}
+
+function PXP_PathToQual() {
+
+	if (PXP_UseOverheads) { me.overhead("Walking to Qual-Kehk"); }
+	if(_PXP_Position=="stash") { _PXP_Position="waypoint"; } //These paths are the same
+
+	switch(_PXP_Position) {
+
+		case "waypoint":
+			DM_WalkTo(5110, 5076);
+			DM_WalkTo(5100, 5074);
+			DM_WalkTo(5081, 5078);
+			return;
+		case "malah":
+			DM_WalkTo(5069, 5032);
+			DM_WalkTo(5072, 5042);
+			DM_WalkTo(5081, 5062);
+			DM_WalkTo(5081, 5078);
+			return;
+		case "larzuk":
+			DM_WalkTo(5145, 5057);
+			DM_WalkTo(5125, 5060);
+			DM_WalkTo(5110, 5076);
+			DM_WalkTo(5100, 5074);
+			DM_WalkTo(5081, 5078);
+			return;
+	}
+}
+
+function PXP_PathToPort() {
+
+	if (PXP_UseOverheads) { me.overhead("Walking to Red Portal"); }
+	switch(_PXP_Position) {
+
+		case "waypoint":
+			DM_WalkTo(5121, 5085);
+			DM_WalkTo(5131, 5108);
+			DM_WalkTo(5126, 5115);
+			return;
+		case "malah":
+			DM_WalkTo(5069, 5032);
+			DM_WalkTo(5072, 5042);
+			DM_WalkTo(5081, 5062);
+			DM_WalkTo(5083, 5082);
+			DM_WalkTo(5085, 5102);
+			DM_WalkTo(5087, 5117);
+			DM_WalkTo(5094, 5123);
+			DM_WalkTo(5110, 5119);
+			return;
+		case "stash":
+			DM_WalkTo(5131, 5066);
+			DM_WalkTo(5133, 5085);
+			DM_WalkTo(5131, 5108);
+			DM_WalkTo(5126, 5115);
+			return;
+		case "larzuk":
+			DM_WalkTo(5145, 5057);
+			DM_WalkTo(5134, 5060);
+			DM_WalkTo(5133, 5085);
+			DM_WalkTo(5131, 5108);
+			DM_WalkTo(5126, 5115);
+			return;
+		case "qualkehk":
+			DM_WalkTo(5081, 5078);
+			DM_WalkTo(5085, 5095);
+			DM_WalkTo(5088, 5110);
+			DM_WalkTo(5100, 5122);
+			DM_WalkTo(5118, 5122);
+			return;
+	}
+}
+
+function PXP_GoToPindle() {
+
+	// Display a overhead while moving
+	if(PXP_UseOverheads) { me.overhead("Going to Pindleskin's Temple"); }
+
+	// Moving from red portal until you are near the temple entry
+	if (!DM_CheckTeleport()) { DM_WalkTo(10060,13302); } //<-- Walk start position
+	DM_MoveTo(10063,13281); //<-- Both get in the same position
+	DM_MoveTo(10059,13256); //<-- Both get in the same position
+
+	// If it is a sorc, teleport to the end position
+	if (me.classid == 1) {
+
+		// If the user set a position outside the limits of the temple, do corrections
+		if (PXP_OffsetX > 3) { PXP_OffsetX=3; }
+		if (PXP_OffsetX < -5) { PXP_OffsetX=-5; }
+		if (PXP_OffsetY > 24) { PXP_OffsetY=24; }
+		if (PXP_OffsetY < -10) { PXP_OffsetY=-10; }
+
+		// Go to the final spot if you use teleport
+		if (DM_CheckTeleport()) {
+
+			DM_MoveTo(10061 + PXP_OffsetX, 13234 - PXP_OffsetY);
+		}
+
+		// If you don't use teleport, go to the doorway before getting in the end position
+		else {
+
+			DM_WalkTo(10057,13245); //<-- Doorway position
+			DM_WalkTo(10061 + PXP_OffsetX, 13234 - PXP_OffsetY);
+			_XP_EndPosition = new XP_Coord(10061 + PXP_OffsetX, 13234 - PXP_OffsetY);
+			DC_DPrint("Coord X : " + _XP_EndPosition.x + ", Coord Y : " + _XP_EndPosition.y);
+		}
+	}
+
+	// Generic movement function for other classes
+	else {
+
+		// Go at the doorway
+		DM_MoveTo(10057,13245); //<-- Doorway position
+
+		// Cast Decoy at the doorway if DecoyPosition is at 1 and you are a amazon
+		if (me.classid === 0 && CastDecoyOn && DecoyPosition==1) { DC_DoCast(28,0,me.x,me.y); }
+
+		// If the user set a position outside the limits of the temple, do corrections
+		if (PXP_OffsetX > 3) { PXP_OffsetX=3; }
+		if (PXP_OffsetX < -5) { PXP_OffsetX=-5; }
+		if (PXP_OffsetY > 24) { PXP_OffsetY=24; }
+		if (PXP_OffsetY < -10) { PXP_OffsetY=-10; }
+
+		// Go to the final spot using user offsets
+		DM_MoveTo(10061 + PXP_OffsetX, 13234 - PXP_OffsetY);
+		_XP_EndPosition = new XP_Coord(10061 + PXP_OffsetX, 13234 - PXP_OffsetY);
+	}
+}
+
+function PXP_AttackPindle() {
+
+	var _pindlex;
+	var _pindley;
+
+	PXP_GoToPindle();
+
+	// Wait until the char reach the doorway to the Temple
+	while (me.y > 13245) { DC_DoDel(50); }
+
+	// Detecting Pindleskin with 3 retries to be sure to get the target
+	for (var i = 0; i < 3; i+=1) {
+
+		var target = DC_FindMonster(440,0x01);
+		if (target) { break; }
+	}
+
+	// If pindle is detected, 
+	if (target) {
+
+		_pindlex=target.x;
+		_pindley=target.y;
+
+		var _pindlename = target.name;
+
+		// If the target has a enchantment i want to chicken, log and quit
+		if (DA_CheckImmunities(target)) { 
+
+			// Increase the chicken counter
+			DL_AddChicken();
+
+			// Leave the game
+			DC_Print("Now leaving the game due to a bad immunity/enchantment/aura!!! See the log for the exact data");
+			quit();
+		}
+
+		XP_Attack(target);
+
+		DC_Print("ÿc0" + _pindlename + " killed!");
+
+		if (PXP_UseTaunts) { 
+
+			DC_Print("ÿc4" + _pindlename + "ÿc@: AAAAaaaaaarrrgghh...!!!");
+			DC_Print("ÿc4" + me.name + "ÿc@: Pwned !!!");
+		}
+
+		target=false;
+	}
+
+	else {
+
+		DL_AddAbort();
+		DC_QuitMessage("Pindleskin not found!! Aborting the run...");
+	}
+}
+
+function PXP_TownManager() {
+
+	// If randomNPC is true, pick a npc number
+	if (PXP_RandomNPC) { NPCnum=parseInt(Math.random() * 11); }
+
+	// Else, set npc at 0
+	else { NPCnum=0; }
+
+	// Check if we need to go to Malah
+	_XP_GetNumUnId = DT_CheckUnids();
+	var _PXP_NeedPotions = false;
+	if (PXP_UseBeltManager) { _PXP_NeedPotions = DT_CheckBelt(); }
+	if (PXP_AlwaysMalah || DT_CheckHeal() || _XP_GetNumUnId > 0 || _PXP_NeedPotions || NPCnum>=rnd(2,9)) {
+
+		PXP_PathToMalah();
+		_PXP_Position="malah";
+		PXP_NPCinteract(DC_getNPC(513));
+	}
+
+	// Check if we need to go to Larzuk
+	if (PXP_AlwaysLarzuk || DT_CheckRepair(DT_RepairPercent) || DT_CheckAmmo() || NPCnum>=rnd(2,9)) {
+
+		PXP_PathToLarzuk();
+		_PXP_Position="larzuk";
+		PXP_NPCinteract(DC_getNPC(511));
+	}
+
+	// If i'm still at the starting point, go to the waypoint area
+	if (_PXP_Position == "start") {
+
+		PXP_StartToWP();
+		_PXP_Position = "waypoint";
+	}
+
+	// If we got items to stash, go to the stash
+	if (DT_CheckInventory()) {
+
+		PXP_PathToStash();
+		_PXP_Position="stash";
+		PXP_NPCinteract(DC_getObject(267));
+		DSN_CheckGround(); // Check the ground to see if any nice item is dropped by accident
+	}
+
+	// If we need to revive the merc, go to Qual-Kehk
+	if (DT_CheckMerc()) {
+
+		DC_Print("Need to go revive the mercenary :-/");
+		PXP_PathToQual();
+		_PXP_Position="qualkehk";
+		PXP_NPCinteract(DC_getNPC(515));
+	}
+
+	// Go to the portal Area
+	PXP_PathToPort();
+
+	// If we want to gamble or visit Anya, go to Anya
+	if ((PXP_AlwaysGamble && DC_MyGold() > PXP_GambleMinGold) || ((PXP_VisitAnya || NPCnum>=rnd(2,9)) && PXP_ShopIt)) { 
+
+		PXP_NPCinteract(DC_getNPC(512));
+	}
+
+	//At the end of in-town stuff, if the eth weapon refill is not finished, let it finish
+	if (DT_CheckRecharge()) {
+
+		DT_DoRecharge();
+		if (PXP_UseOverheads) { me.overhead("Recharing done!"); }
+	}
+
+	// Do precasts before goind into the portal
+	XP_Precasts();
+
+	// If it is a sorceress, switch to the right tab and set the sorceress skills
+	if (me.classid == 1) { XP_SorcSetSkills(); }
+
+	// If we switched weapons on kill, switch back to the attack tab
+	if (XP_SwitchOnKill) { DC_SelectTab(1); }
+
+	// Display taunts if set to true and show MF info
+	if (PXP_UseTaunts) { PXP_PindleTaunt(); }
+	DT_DisplayMF();
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// PindleeXP libs loading
+//////////////////////////////////////////////////////////////////////
+
+function PXP_LoadIncludes() {
+
+	// Load the needed lib files
+	DC_LoadInclude("common/d2jsp-attack.d2l");
+	DC_LoadInclude("common/d2jsp-town.d2l");
+	DC_LoadInclude("common/d2jsp-move.d2l");
+	DC_LoadInclude("common/d2jsp-htmllog.d2l");
+	DC_LoadInclude("common/d2jsp-logging.d2l");
+	DC_LoadInclude("common/d2jsp-snagit.d2l");
+	DC_LoadInclude("common/d2jsp-console.d2l");
+
+	DC_LoadInclude("XP_Include.d2l");
+
+	DC_LoadInclude(PXP_CharConfigFile);
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// PindleXP main section
+//////////////////////////////////////////////////////////////////////
+
+// Main function
+function PindleXP() {
+
+	// If the core is less than 0.41, stop the script
+	if (parseFloat(me.version)<0.41) {
+
+		DC_StopMessage("This is only for donators!  Please redownload and install d2jsp 0.41+!");
+	}
+
+	// Add a keypress handler
+	//registerEvent( EVENT_KEYUP, keypressHandler );
+
+	// Add the title to the screen
+	var _sh = getScreenHook(null,20,500,-1);
+	_sh.x = 230;
+	_sh.y = 30;
+	_sh.font = 8;
+	_sh.color = 4;
+	_sh.text = "===== PindleXP version " + PXP_Version + " running =====";
+
+	// Load the libs files
+	PXP_LoadIncludes();
+
+	// Initialise the XI_Include with user variables
+	XP_InitInclude();
+
+	// Set the maximum game delay before aborting with the user setting
+	me.gamelength=PXP_MaxGameLength*1000;
+
+	// Lets setup the Top console
+	if (PXP_UseConsole) {
+
+		XP_CreateConsole("PindleXP");
+		DC_Print("Thanks Killkeeper for the SUPER new console!");
+	}
+
+	// Configure the item log path
+	DL_ItemLogPath = "output/" + me.name + "PXP-ItemLog.html";
+
+	// Get the configured run log path
+	DL_RunLogPath = _PXP_RunLogPath;
+
+	// Init the run logging
+	DL_LoadRun();
+
+	// show the credits to the user
+	PXP_ShowCredits();
+
+	// If the user want to stall at the start until the game settle, wait a fixed amount of time
+	if (PXP_StartGameDelay > 0) {
+
+		DC_Print("Waiting " + (parseInt(PXP_StartGameDelay / 1000)) + " seconds for game initialization...");
+		DC_DoDel(PXP_StartGameDelay);
+	}
+
+	// Preload the snagit.ini file
+	DIM_getINI("settings/" + DSN_SnagItINIFile);
+
+	// Format the html log file
+	PXP_FormatLog();
+
+	// Check if we have a body then get it if yes
+	DT_getCorpses();
+	if (DT_HaveCorpse) { DL_AddDeath(); }
+
+	// Load the life watch script
+	load("tools/lifewatchXP.d2j");
+
+	// Clear the cursor of any item
+	DC_ClearCursor();
+
+	// If we use a pally and want to use Vigor for faster town movement, cast it
+	if (me.classid = 3 && PXP_UseVigor) { DC_PutSkill(115,0); }
+
+	// Check if we are in the right act, if not, change act
+	PXP_CheckAct();
+
+	// Do a cleaning of the inventory of any useless items
+	DT_CleanPotions();
+	DT_TossItem(100, "isc");
+	DT_TossItem(100, "tsc");
+	DT_TossItem(100, "aqv");
+	DT_TossItem(100, "cqv");
+
+	// Do town stuff
+	PXP_TownManager();
+
+	// If the inventory is full and we want to stop on full inv, stop the script
+	// ToDo : If inv is full, return to stash to retry to stash items in case last attempt failed
+	if (PXP_StopFullInv) {
+
+        	if ( DT_CountFreeSpaces() >= (DT_FreeSpace * 4)) {
+
+          		DC_Print("Got some space in my inventory, let's go :)");
+		}
+
+        	else {
+
+			var freespaces = DT_CountFreeSpaces();
+                	DC_Print("freespaces = " + freespaces);
+        		DC_Print("Don't take the red portal now, I can't clear my inventory :-/");
+
+			if (PXP_Automule) {
+
+				DC_Print("BUT WAIT! I HAVE SICOJOLA'S AUTOMULE! LET'S SEE IF I HAVE ANY FREE MULES...");
+				DC_LoadInclude("automule.d2l");
+
+			}
+			if (!PXP_Automule || !Automule()) {
+
+				DL_AddAbort();
+				DC_Print("To avoid stopping, set PXP_StopFullInv to false");
+				DC_StopMessage("Inventory is full and PXP_StopFullInv is set to true !");
+			}
+        	}
+	}
+
+	// If the merc is not found, PXP_AbortNoMerc is set to true and we use a merc, abort the game
+	if (DT_UseMerc && !DC_GetMerc() && PXP_AbortNoMerc) {
+
+		DL_AddAbort();
+		DC_QuitMessage("Mercenary not found and PXP_AbortNoMerc is set to true !");
+	}
+
+	// Enter the red portal
+	DM_UsePortal("Portal", 121);
+
+	// Do precasts after goind into the portal
+	XP_Precasts();
+
+	// Go attack Pindleskin
+	PXP_AttackPindle();
+
+	// Increase the kills counter then leave the game
+	DL_AddKill();
+
+	// If we want to attack the monsters around, do it now
+	if (XP_KillMinions) { XP_KillAll(me.x,me.y,440,15,false); }
+
+	// Pick the dropped items
+	DSN_PickItems();
+
+	// If we want to attack the courtyard zombies, go attack them
+	if (XP_AttackZombies) { XP_Zombies(); }
+
+	// Quit the game
+	quit();
+}
+
+// Error handling
+function main() {
+
+	// Include the base d2jsp lib
+	include("common/d2jsp-common.d2l");
+
+	// Set the maximum game delay before aborting
+	me.gamelength=PXP_MaxGameLength*1000;
+
+	// configure the debug and error log paths
+	DC_DebugLogPath = "output/" + me.name + "PXP-DebugLog.html";
+	DC_ErrorLogPath = "output/" + me.name + "PXP-ErrorLog.html";
+
+	// Call the main function to check for exceptions
+    	try { PindleXP(); }
+
+	// Then catch and log any exception throwed by the script before quitting
+	catch (PXP_Exception) {
+
+		if (PXP_ShowInnerExceptions && PXP_Exception.inner) {
+
+			DC_LogError("Inner Exceptions Attached - details below");
+			var einner = PXP_Exception.inner;
+			while (einner) {
+				DC_LogError("Name: " + einner.name);
+				DC_LogError("Error code: " + einner.number);
+				DC_LogError("Message: " + einner.message);
+				DC_LogError("lineNumber: " + einner.lineNumber);
+				DC_LogError("fileName: " + einner.fileName);
+				var einstack = einner.stack;
+				if(!(einstack instanceof Array)) {
+					einstack = einstack.split("\n");
+					einstack.pop();
+					einstack.pop();
+					einstack.reverse();
+				}
+					
+				for(var i = 0; i < einstack.length; i+=1) {
+					DC_LogError("Stack Trace -> function[" + (i+1) + "]: " + einstack[i]);
+				}
+				einner = einner.inner;
+			}
+
+		}
+
+		// Got a exception so quit the game after writing the error in the file
+		DC_QuitMessage("PXP_Exception : name = " + PXP_Exception.name + ", message = " + PXP_Exception.message);
+    	}
+}

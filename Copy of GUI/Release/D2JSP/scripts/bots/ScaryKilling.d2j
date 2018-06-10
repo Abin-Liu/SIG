@@ -1,0 +1,562 @@
+/* ----------------------------------------------------------
+
+   			--====================================--
+   			  ScaryKilling.d2j  v0.4  by Shrek_III
+   			--====================================--
+
+   If you use it without botting or want to stop it, simply
+   write "stop" (without the dot in front of it)
+
+   Thanks to:
+   killkeeper - thanks for casting functions :P
+
+   ----------------------------------------------------------
+
+   History:
+
+   v0.4 by Shrek_III (17.01.2004)
+		added:
+			-> drinking potions included
+			-> display of needed experience (just a gimmick - but nice)
+		removed:
+			-> autoparty (removed for now - coming back later)
+			-> manual snagit - caused to much trouble...
+
+   v0.3 by Shrek_III (11.09.2003)
+		added:
+			-> manual snagit function (I hate picking up stuff :P )
+		fixed:
+			-> v0.2 crashed if you manually accepted invitation without seeing partner
+			   and getting "saw" him afterwards (tried to invitate again...)
+
+   v0.2 by Shrek_III (10.09.2003)
+		added:
+      		-> autoparty function  (check settings sets["autoparty"])
+			-> chicken function of life below x% (check settings sets["chicken_hp"])
+			-> quit on hostile function (check settings sets["quit_on_hostile"])
+		fixed:
+			-> after casting preskills it will now switch back to initial spell
+		known bugs:
+			-> not really a bug, but party mode will only take place, if you "see" other players
+
+   v0.1 by Shrek_III (??.09.2003)
+		features:
+      		-> only sorc supported
+      		-> casting preskills depending on area
+
+*/
+
+/* ----------------------------------------------------------
+
+                Configure Scary Killing here!
+
+   ----------------------------------------------------------
+*/
+
+var sets = new Object();
+//autoparty wont work for now...
+sets["autoparty"]       	= true;		// true = invites everyone  || false = no invitations made
+sets["chicken_hp"]      	= 20;		// if life drops below % of max health chicken
+sets["drink_heal_pot"]		= 80;		// drinks heal potion, if health below % of max
+sets["drink_rev_pot"]		= 50;		// drinks rev potion, if health below % of max
+sets["heal_drink_timer"]	= 400;		// not! ms - it's something like x * 20 ms between heal potion drinking
+sets["rev_drink_timer"]		= 30;		// not! ms - it's something like x * 20 ms between rev potion drinking
+sets["heal_me_msg"]			= 80;		// if life drops below % of max health message will be displayed
+
+sets["quit_on_hostile"] 	= true;		// true = quit if hostiled || false = stay in game even if hostiled
+
+sets["show_exp"] 			= true;		// true makes another screenhook displaying your exp
+
+/* ----------------------------------------------------------
+
+                Do NOT change anything below!
+
+   ----------------------------------------------------------
+*/
+
+var NextLevel = [
+	0,			// 0
+	500,		// 1
+	1500,
+	3750,
+	7875,
+	14175,
+	22680,
+	32886,
+	44396,
+	57715,
+	72144,		// 10
+	90180,
+	112725,
+	140906,
+	176132,
+	220165,
+	275207,
+	344008,
+	430010,
+	537513,
+	671891,		// 20
+	839864,
+	1049830,
+	1312287,
+	1640359,
+	2050449,
+	2563061,
+	3203826,
+	3902260,
+	4663553,
+	5493363,	// 30
+	6397855,
+	7383752,
+	8458379,
+	9629723,
+	10906488,
+	12298162,
+	13815086,
+	15468534,
+	17270791,
+	19235252,	// 40
+	21376515,
+	23710491,
+	26254525,
+	29027522,
+	32050088,
+	35344686,
+	38935798,
+	42850109,
+	47116709,
+	51767302,	// 50
+	56836449,
+	62361819,
+	68384473,
+	74949165,
+	82104680,
+	89904191,
+	98405658,
+	107672256,
+	117772849,
+	128782495,	// 60
+	140783010,
+	153863570,
+	168121381,
+	183662396,
+	200602101,
+	219066380,
+	239192444,
+	261129853,
+	285041630,
+	311105466,	// 70
+	339515048,
+	370481492,
+	404234916,
+	441026148,
+	481128591,
+	524840254,
+	572485967,
+	624419793,
+	681027665,
+	742730244,	// 80
+	809986056,
+	883294891,
+	963201521,
+	1050299747,
+	1145236814,
+	1248718217,
+	1361512946,
+	1484459201,
+	1618470619,
+	1764543065,	// 90
+	1923762030,
+	2097310703,
+	2286478756,
+	2492671933,
+	2717422497,
+	2962400612,
+	3229426756,
+	3520485254,
+	3837739017	// 99
+];
+
+var selectedSkills = new Array();
+var exitPreSkiller = 0;
+var invitedlist    = new Array();
+var version		   = "v0.4";
+var msToNextPotion = 0;
+
+function LoadSettings()
+{
+    var f = fileOpen("libs/Perso/SK_PreSkill_set_"+me.name+".d2l",0);
+    if (f && !included) {
+        f.close(); //permit editing the file while the bot is running
+        f = null;
+        print("ÿc3:: ...loading libs/Perso/PreSkill_set_"+me.name+".d2l");
+        include("libs/Perso/SK_PreSkill_set_"+me.name+".d2l");
+        included=true;
+    } else {
+        print("ÿc3:: no libs/Perso/PreSkill_set_"+me.name+".d2l detected (this is not an error)");
+        include("SK_PreSkill_set.d2l");
+    };
+}
+
+function gamemsgHandler()
+{
+    var WholeMessage = arguments[0];
+    MessageParts = WholeMessage.split(":");
+    myString = new String(MessageParts[0]);
+    msgSender = myString.slice(3,-3);     //removes color codes
+    msg = new String(MessageParts[1]);
+    if (msg == " stop")
+    {
+      exitPreSkiller = 1;
+    }
+}
+
+function DoCasting(which,usehand,x,y)
+{
+    for (qw = 0; qw < 100; qw++)
+    {
+        if(!me.itemoncursor) break;
+        delay(20);
+    }
+    if(me.itemoncursor) dropitemonhand;
+
+    while(me.mode == 10) delay(20); //xx
+
+    if ( Sc_SetSkill(which,usehand) )
+    {
+        switch(arguments.length)
+        {
+            case 0: break;
+            case 2: me.useSkill(usehand); break;
+            case 3: x.useSkill(usehand);break;
+            case 4: me.useSkillAt(x,y,usehand); break;
+        }
+        delay(50);
+        while (me.mode==10) delay(20);
+        return true;
+    } else return false;
+}
+
+function Sc_SetSkill(skill, hand)
+{
+    if ( !me.getSkill( skill ) )
+        return false;
+
+    me.setSkill(skill, hand);
+
+    timer = 2000;
+    while(me.getSkill(hand).toLowerCase() != skill.toLowerCase() && timer >= 0) {
+        delay(20);
+        timer -= 20;
+    }
+    if (timer < 0)
+        return false;
+
+    return true;
+}
+
+
+function CastSkill (Skillname)
+{
+    if (me.getSkill(Skillname))
+    {
+        DoCasting(Skillname,0);
+        delay(10);
+    }
+}
+
+function CheckPreSkills ()
+{
+    var i = 0;
+    do
+    {
+        var skill = selectedSkills[i];
+        switch (PreSkiller_skill[skill]) {
+            case "Frozen Armor"   : {if (me.getState( 10) == 0) CastSkill ("Frozen Armor"); break;}
+            case "Shiver Armor"   : {if (me.getState( 88) == 0) CastSkill ("Shiver Armor"); break;}
+            case "Chilling Armor" : {if (me.getState( 20) == 0) CastSkill ("Chilling Armor"); break;}
+            case "Energy Shield"  : {if (me.getState( 30) == 0) CastSkill ("Energy Shield"); break;}
+            case "Thunder Storm"  : {if (me.getState( 38) == 0) CastSkill ("Thunder Storm"); break;}
+            default: {break;}
+        }
+        i++;
+    } while (i < selectedSkills.length);
+
+    return true;
+}
+
+function checkArea ()
+{
+    switch (me.area) {
+        case   1 : { selectedSkills = PreSkiller_sets["Rogue_Encampment"]; break; }
+        case   2 : { selectedSkills = PreSkiller_sets["Blood_Moor"]; break; }
+        case   3 : { selectedSkills = PreSkiller_sets["Cold_Plains"]; break; }
+        case   4 : { selectedSkills = PreSkiller_sets["Stony_Field"]; break; }
+        case   5 : { selectedSkills = PreSkiller_sets["Dark_Wood"]; break; }
+        case   6 : { selectedSkills = PreSkiller_sets["Black_Marsh"]; break; }
+        case   7 : { selectedSkills = PreSkiller_sets["Tamoe_Highland"]; break; }
+        case   8 : { selectedSkills = PreSkiller_sets["Den_Of_Evil"]; break; }
+        case   9 : { selectedSkills = PreSkiller_sets["Cave_Level_1"]; break; }
+        case  10 : { selectedSkills = PreSkiller_sets["Underground_Passage_Level_1"]; break; }
+        case  11 : { selectedSkills = PreSkiller_sets["Hole_Level_1"]; break; }
+        case  12 : { selectedSkills = PreSkiller_sets["Pit_Level_1"]; break; }
+        case  13 : { selectedSkills = PreSkiller_sets["Cave_Level_2"]; break; }
+        case  14 : { selectedSkills = PreSkiller_sets["Underground_Passage_Level_2"]; break; }
+        case  15 : { selectedSkills = PreSkiller_sets["Hole_Level_2"]; break; }
+        case  16 : { selectedSkills = PreSkiller_sets["Pit_Level_2"]; break; }
+        case  17 : { selectedSkills = PreSkiller_sets["Burial_Grounds"]; break; }
+        case  18 : { selectedSkills = PreSkiller_sets["Crypt"]; break; }
+        case  19 : { selectedSkills = PreSkiller_sets["Mausoleum"]; break; }
+        case  20 : { selectedSkills = PreSkiller_sets["Forgotten_Tower"]; break; }
+        case  21 : { selectedSkills = PreSkiller_sets["Tower_Cellat_Level_1"]; break; }
+        case  22 : { selectedSkills = PreSkiller_sets["Tower_Cellat_Level_2"]; break; }
+        case  23 : { selectedSkills = PreSkiller_sets["Tower_Cellat_Level_3"]; break; }
+        case  24 : { selectedSkills = PreSkiller_sets["Tower_Cellat_Level_4"]; break; }
+        case  25 : { selectedSkills = PreSkiller_sets["Tower_Cellat_Level_5"]; break; }
+        case  26 : { selectedSkills = PreSkiller_sets["Monastery_Gate"]; break; }
+        case  27 : { selectedSkills = PreSkiller_sets["Outer_Cloister"]; break; }
+        case  28 : { selectedSkills = PreSkiller_sets["Barracks"]; break; }
+        case  29 : { selectedSkills = PreSkiller_sets["Jail_Level_1"]; break; }
+        case  30 : { selectedSkills = PreSkiller_sets["Jail_Level_2"]; break; }
+        case  31 : { selectedSkills = PreSkiller_sets["Jail_Level_3"]; break; }
+        case  32 : { selectedSkills = PreSkiller_sets["Inner_Cloister"]; break; }
+        case  33 : { selectedSkills = PreSkiller_sets["Cathedral"]; break; }
+        case  34 : { selectedSkills = PreSkiller_sets["Catacombs_Level_1"]; break; }
+        case  35 : { selectedSkills = PreSkiller_sets["Catacombs_Level_2"]; break; }
+        case  36 : { selectedSkills = PreSkiller_sets["Catacombs_Level_3"]; break; }
+        case  37 : { selectedSkills = PreSkiller_sets["Catacombs_Level_4"]; break; }
+        case  38 : { selectedSkills = PreSkiller_sets["Tristram"]; break; }
+        case  39 : { selectedSkills = PreSkiller_sets["Moo_Moo_Farm"]; break; }
+        case  40 : { selectedSkills = PreSkiller_sets["Lut_Gholein"]; break; }
+        case  41 : { selectedSkills = PreSkiller_sets["Rocky_Waste"]; break; }
+        case  42 : { selectedSkills = PreSkiller_sets["Dry_Hills"]; break; }
+        case  43 : { selectedSkills = PreSkiller_sets["Far_Oasis"]; break; }
+        case  44 : { selectedSkills = PreSkiller_sets["Lost_City"]; break; }
+        case  45 : { selectedSkills = PreSkiller_sets["Valley_Of_Snakes"]; break; }
+        case  46 : { selectedSkills = PreSkiller_sets["Canyon_Of_The_Magi"]; break; }
+        case  47 : { selectedSkills = PreSkiller_sets["The_Sewers_Level_1"]; break; }
+        case  48 : { selectedSkills = PreSkiller_sets["The_Sewers_Level_2"]; break; }
+        case  49 : { selectedSkills = PreSkiller_sets["The_Sewers_Level_3"]; break; }
+        case  50 : { selectedSkills = PreSkiller_sets["Harem_Level_1"]; break; }
+        case  51 : { selectedSkills = PreSkiller_sets["Harem_Level_2"]; break; }
+        case  52 : { selectedSkills = PreSkiller_sets["Palace_Cellar_Level_1"]; break; }
+        case  53 : { selectedSkills = PreSkiller_sets["Palace_Cellar_Level_2"]; break; }
+        case  54 : { selectedSkills = PreSkiller_sets["Palace_Cellar_Level_3"]; break; }
+        case  55 : { selectedSkills = PreSkiller_sets["Stony_Tomb_Level_1"]; break; }
+        case  56 : { selectedSkills = PreSkiller_sets["Halls_Of_The_Dead_Level_1"]; break; }
+        case  57 : { selectedSkills = PreSkiller_sets["Halls_Of_The_Dead_Level_2"]; break; }
+        case  58 : { selectedSkills = PreSkiller_sets["Claw_Viper_Temple_Level_1"]; break; }
+        case  59 : { selectedSkills = PreSkiller_sets["Stony_Tomb_Level_2"]; break; }
+        case  60 : { selectedSkills = PreSkiller_sets["Halls_Of_The_Dead_Level_3"]; break; }
+        case  61 : { selectedSkills = PreSkiller_sets["Claw_Viper_Temple_Level_2"]; break; }
+        case  62 : { selectedSkills = PreSkiller_sets["Maggot_Lair_Level_1"]; break; }
+        case  63 : { selectedSkills = PreSkiller_sets["Maggot_Lair_Level_2"]; break; }
+        case  64 : { selectedSkills = PreSkiller_sets["Maggot_Lair_Level_3"]; break; }
+        case  65 : { selectedSkills = PreSkiller_sets["Ancient_Tunnels"]; break; }
+        case  66 : { selectedSkills = PreSkiller_sets["Tal_Rashas_Tomb_1"]; break; }
+        case  67 : { selectedSkills = PreSkiller_sets["Tal_Rashas_Tomb_2"]; break; }
+        case  68 : { selectedSkills = PreSkiller_sets["Tal_Rashas_Tomb_3"]; break; }
+        case  69 : { selectedSkills = PreSkiller_sets["Tal_Rashas_Tomb_4"]; break; }
+        case  70 : { selectedSkills = PreSkiller_sets["Tal_Rashas_Tomb_5"]; break; }
+        case  71 : { selectedSkills = PreSkiller_sets["Tal_Rashas_Tomb_6"]; break; }
+        case  72 : { selectedSkills = PreSkiller_sets["Tal_Rashas_Tomb_7"]; break; }
+        case  73 : { selectedSkills = PreSkiller_sets["Duriels_Lair"]; break; }
+        case  74 : { selectedSkills = PreSkiller_sets["Arcane_Sanctuary"]; break; }
+        case  75 : { selectedSkills = PreSkiller_sets["Kurast_Docktown"]; break; }
+        case  76 : { selectedSkills = PreSkiller_sets["Spider_Forest"]; break; }
+        case  77 : { selectedSkills = PreSkiller_sets["Great_Marsh"]; break; }
+        case  78 : { selectedSkills = PreSkiller_sets["Flayer_Jungle"]; break; }
+        case  79 : { selectedSkills = PreSkiller_sets["Lower_Kurast"]; break; }
+        case  80 : { selectedSkills = PreSkiller_sets["Kurast_Bazaar"]; break; }
+        case  81 : { selectedSkills = PreSkiller_sets["Upper_Kurast"]; break; }
+        case  82 : { selectedSkills = PreSkiller_sets["Kurast_Causeway"]; break; }
+        case  83 : { selectedSkills = PreSkiller_sets["Travincal"]; break; }
+        case  84 : { selectedSkills = PreSkiller_sets["Spider_Cave"]; break; }
+        case  85 : { selectedSkills = PreSkiller_sets["Spider_Cavern"]; break; }
+        case  86 : { selectedSkills = PreSkiller_sets["Swampy_Pit_Level_1"]; break; }
+        case  87 : { selectedSkills = PreSkiller_sets["Swampy_Pit_Level_2"]; break; }
+        case  88 : { selectedSkills = PreSkiller_sets["Flayer_Dungeon_Level_1"]; break; }
+        case  89 : { selectedSkills = PreSkiller_sets["Flayer_Dungeon_Level_2"]; break; }
+        case  90 : { selectedSkills = PreSkiller_sets["Swampy_Pit_Level_3"]; break; }
+        case  91 : { selectedSkills = PreSkiller_sets["Flayer_Dungeon_Level_3"]; break; }
+        case  92 : { selectedSkills = PreSkiller_sets["Sewers_Level_1"]; break; }
+        case  93 : { selectedSkills = PreSkiller_sets["Sewers_Level_2"]; break; }
+        case  94 : { selectedSkills = PreSkiller_sets["Ruined_Temple"]; break; }
+        case  95 : { selectedSkills = PreSkiller_sets["Disused_Fane"]; break; }
+        case  96 : { selectedSkills = PreSkiller_sets["Forgotten_Reliquary"]; break; }
+        case  97 : { selectedSkills = PreSkiller_sets["Forgotten_Temple"]; break; }
+        case  98 : { selectedSkills = PreSkiller_sets["Ruined_Fane"]; break; }
+        case  99 : { selectedSkills = PreSkiller_sets["Disused_Reliquary"]; break; }
+        case 100 : { selectedSkills = PreSkiller_sets["Durance_Of_Hate_1"]; break; }
+        case 101 : { selectedSkills = PreSkiller_sets["Durance_Of_Hate_2"]; break; }
+        case 102 : { selectedSkills = PreSkiller_sets["Durance_Of_Hate_3"]; break; }
+        case 103 : { selectedSkills = PreSkiller_sets["The_Pandemonium_Fortress"]; break; }
+        case 104 : { selectedSkills = PreSkiller_sets["Outer_Steppes"]; break; }
+        case 105 : { selectedSkills = PreSkiller_sets["Plains_Of_Despair"]; break; }
+        case 106 : { selectedSkills = PreSkiller_sets["City_Of_The_Damned"]; break; }
+        case 107 : { selectedSkills = PreSkiller_sets["River_Of_Flame"]; break; }
+        case 108 : { selectedSkills = PreSkiller_sets["Chaos_Sanctum"]; break; }
+        case 109 : { selectedSkills = PreSkiller_sets["Harrogath"]; break; }
+        case 110 : { selectedSkills = PreSkiller_sets["Bloody_Foothills"]; break; }
+        case 111 : { selectedSkills = PreSkiller_sets["Frigid_Highlands"]; break; }
+        case 112 : { selectedSkills = PreSkiller_sets["Arreat_Plateau"]; break; }
+        case 113 : { selectedSkills = PreSkiller_sets["Crystalized_Cavern_Level_1"]; break; }
+        case 114 : { selectedSkills = PreSkiller_sets["Cellar_Of_Pity"]; break; }
+        case 115 : { selectedSkills = PreSkiller_sets["Crystalized_Cavern_Level_2"]; break; }
+        case 116 : { selectedSkills = PreSkiller_sets["Echo_Chamber"]; break; }
+        case 117 : { selectedSkills = PreSkiller_sets["Tundra_Wastelands"]; break; }
+        case 118 : { selectedSkills = PreSkiller_sets["Glacial_Caves_Level_1"]; break; }
+        case 119 : { selectedSkills = PreSkiller_sets["Glacial_Caves_Level_2"]; break; }
+        case 120 : { selectedSkills = PreSkiller_sets["Rocky_Summit"]; break; }
+        case 121 : { selectedSkills = PreSkiller_sets["Nihlathaks_Temple"]; break; }
+        case 122 : { selectedSkills = PreSkiller_sets["Halls_Of_Anguish"]; break; }
+        case 123 : { selectedSkills = PreSkiller_sets["Halls_Of_Deaths_Calling"]; break; }
+        case 124 : { selectedSkills = PreSkiller_sets["Halls_Of_Vaught"]; break; }
+        case 125 : { selectedSkills = PreSkiller_sets["Hell_1"]; break; }
+        case 126 : { selectedSkills = PreSkiller_sets["Hell_2"]; break; }
+        case 127 : { selectedSkills = PreSkiller_sets["Hell_3"]; break; }
+        case 128 : { selectedSkills = PreSkiller_sets["The_Worldstone_Keep_Level_1"]; break; }
+        case 129 : { selectedSkills = PreSkiller_sets["The_Worldstone_Keep_Level_2"]; break; }
+        case 130 : { selectedSkills = PreSkiller_sets["The_Worldstone_Keep_Level_3"]; break; }
+        case 131 : { selectedSkills = PreSkiller_sets["Throne_Of_Destruction"]; break; }
+        case 132 : { selectedSkills = PreSkiller_sets["The_Worldstone_Chamber"]; break; }
+        default  : { selectedSkills = []; break;}
+    }
+    return me.area;
+}
+
+
+function hostilemsgHandler()
+{
+    if (sets["quit_on_hostile"]) quit();
+}
+
+function keypressHandler(key)
+{
+	if (key == sets["snagIt_key"])
+	{
+		print ("snagging... - " + sets["snagIt_ini"]);
+		var curSkill = me.getSkill(0);
+		snagrad = sets["snagIt_radius"];
+		mingoldpickup = sets["snagIt_mingold"];
+
+		SnagIt(sets["snagIt_ini"]);
+
+        me.setSkill (curSkill, 0);
+        Skilltimer = 500;
+        while(me.getSkill(0).toLowerCase() != curSkill.toLowerCase() && timer >= 0) {
+            delay(1);
+            Skilltimer-- ;
+        }
+	}
+}
+
+function autoParty()
+{
+}
+
+function inTown()
+{
+    if ((me.area == 1) || (me.area == 40) || (me.area == 75) || (me.area == 103) || (me.area == 109)) return true
+	else return false;
+}
+
+function DrinkPot (potType)
+{
+	if (inTown() == true) return false;
+    if ((msToNextPotion == 0) || ((potType == "rvs") || (potType == "rvl")))
+	{
+		pot = getUnit (4, potType, 2);
+		if (!pot) return false;
+		clickItem(1,pot);
+		if ((potType == "rvs") || (potType == "rvl")) msToNextPotion = sets["rev_drink_timer"]
+		else msToNextPotion = sets["heal_drink_timer"];
+		return true;
+	}
+}
+
+function GetExperienceToGo()
+{
+	var e = me.getStat(13);  // e = actual experience
+	if (e < 0) e = e + 0x0000000080000000;
+	e = NextLevel[me.getStat(12)] - e;  // e = experience need for next lvl
+	diff = new String (e);
+
+	var output = "";
+  	for (var i=0; i<diff.length; i++) {
+       if (i>0 && i%3 == 0)
+       output += ".";
+       output += diff.charAt(i);
+    }
+
+    return output;
+}
+
+function main ()
+{
+    LoadSettings();
+
+    var lastarea = -1
+
+	exphook=getScreenHook();
+	exphook.text = "";
+    exphook.x=610;
+    exphook.y=24;
+
+    testhook=getScreenHook();
+    testhook.x=303;
+    testhook.y=44;
+    testhook.text="ÿc4Scary killing " + version + " (c) ÿc2Shrek_III";
+
+	me.autoparty = true;
+
+    var timer = 0;
+
+    while(exitPreSkiller == 0) {
+		timer++;
+		if (msToNextPotion > 0) msToNextPotion--;
+
+        if ( ((me.hp / me.hpmax) < (sets["chicken_hp"] / 100)) && ( (me.area != 0) && (me.area != 1) && (me.area != 40) && (me.area != 75) && (me.area != 103) && (me.area != 109) ) )
+        {
+             quit ();
+             // chicken!!!
+        }
+		else if (((me.hp / me.hpmax) * 100) < sets["drink_rev_pot"])
+		{
+			if (!DrinkPot ("rvs")) DrinkPot ("rvl");
+		}
+		if (((me.hp / me.hpmax) * 100) < sets["drink_heal_pot"])
+		{
+			DrinkPot ("hp5");
+			DrinkPot ("hp4");
+			DrinkPot ("hp3");
+			DrinkPot ("hp2");
+			DrinkPot ("hp1");
+		}
+        if (((me.hp / me.hpmax) * 100) < sets["heal_me_msg"])
+        {
+             me.overhead ("Heal me!!!");
+        }
+
+        if (timer == 200)
+        {
+			if (sets["show_exp"] == true) exphook.text="ÿc8Needed exp: ÿc0" + GetExperienceToGo();
+
+			if (sets["autoparty"] == true) autoParty();
+
+        	if (me.area != lastarea) lastarea = checkArea();
+
+			var curSkill = me.getSkill(0);
+            CheckPreSkills();
+            me.setSkill (curSkill, 0);
+            Skilltimer = 500;
+            while(me.getSkill(0).toLowerCase() != curSkill.toLowerCase() && timer >= 0) {
+                delay(1);
+                Skilltimer-- ;
+            }
+			timer = 0;
+        }
+        delay (1);
+    }
+	me.overhead ("Thanks, Shrek_III");
+}

@@ -1,0 +1,752 @@
+/* v0.27 New files (coord, tile, room come from the original snapchip script from Dave
+-=History=-
+  0.36b
+  => add mana recharge now
+  0.31b
+  => can open a locked chest now.
+  0.29
+  => greatly improved
+*/                
+
+//================================================
+function DoBoss( GotoBoss, elistboss )
+{
+    var success = true;
+    var savtimelost = timelost;
+    var savxponunique = xponunique;
+    var beginkill = (new Date()).getTime();
+    var beginxp = GetExperience();
+
+	if(GotoBoss())
+	{
+	    var res;
+		if ( elistboss.killfunc )
+            res = elistboss.killfunc();
+		else
+		    res = Killlistboss( elistboss );
+
+        if ( res )
+        {
+            var timetokill = ( (new Date()).getTime() - beginkill - (timelost-savtimelost) );
+            elistboss.timekill += timetokill;
+            elistboss.nbkill++;
+            if ( ( timetokill < elistboss.besttimekill ) || ( elistboss.besttimekill == 0 ) )
+                elistboss.besttimekill = timetokill;
+             if ( ( timetokill > elistboss.worsttimekill ) || ( elistboss.worsttimekill ==0))
+             	elistboss.worsttimekill = timetokill;
+
+             	elistboss.lasttimekill = timetokill;
+            SHook2(elistboss.q,elistboss.name+" - Completed");
+        }
+		else
+		{
+            elistboss.nbescape++;
+            success=false;
+			SHook2(elistboss.q,elistboss.name+" - Failed");
+        };
+        SwitchBack();
+        //mana recharge
+    }
+    else
+	{
+        elistboss.nbnotfound++;
+        success=false;
+        SHook2(elistboss.q,elistboss.name+" - Failed");
+    }
+
+	if ( CheckIfReturnInTown( false ) )
+		BackToTown();
+
+    DoManaRecharge();
+    var addexp = ( GetExperience() - beginxp - ( xponunique - savxponunique ) );
+    if ( addexp > 0 ) // do not take the death penalty
+      elistboss.xp += addexp;
+      elistboss.lastxp = addexp;
+
+	LogSave(0);
+
+    return success;
+}
+
+//================================================
+function Killlistboss( elistboss ) {
+    bprint("Starting Kill "+ elistboss.name );
+
+	target=getUnit(1, elistboss.lodname );
+	if (target)
+	{
+		disenchant(target);
+		var inter = checkenchant2(target,elistboss.esc);
+		if (inter==2)
+		{
+			escape(target);
+			return false;
+		}
+		else if(inter==1)
+		{
+			bprint("Warning!The boss is dangerous!");
+		}
+        if (  KillBoss( target, elistboss.maxattacks, elistboss.pathbeforeattack, elistboss.skill, true, elistboss.mindist,elistboss.freepositioncheck ) ) {
+			DebugWrite( "KillBoss end successfull" );
+            KillMinions( target, elistboss );
+			DebugWrite( "KillMions end" );
+
+			if ( elistboss.bFindItem && ( me.classid == 4 ) ) {
+    		    MoveTo(target.x,target.y,true); //Move to target's corpse
+				PostFindItem( target );
+			};
+
+            if ( elistboss.checkchest ) { // to escape double switch
+    		    MoveTo(target.x,target.y,true); //Move to target's corpse
+    		    Pick();
+				if ( elistboss == bossmeph )
+					MoveTo(17522, 8064,true);
+				CheckObjects( false, null, true ); //v0.41
+/*                if ( checkchest() )
+       		        Pick();*/
+	    	    SwitchBack();
+			}
+			else {
+    	        SwitchBack();
+    		    MoveTo(target.x,target.y,true); //Move to target's corpse
+    		    Pick();
+			};
+
+            if ( elistboss.kill_nearboss )
+				if ( me.classid == 1 )
+                	KillAllNearUniqueBoss(); // happily javascript is recursive ;)
+				else
+                	KillAllNearUniqueBoss(20); // happily javascript is recursive ;)
+
+ 			return true;
+        }
+		else
+		{
+			DebugWrite( "KillBoss failure" );
+    	    SwitchBack();
+			return false;
+		};
+   }
+   return false;
+}
+
+
+// function used to kill champions near the stairs
+function KillMonster( target, MaxAttacks )
+{
+    var newMaxAttacks = new Array(MaxAttacks,1);
+    return KillBoss( target, newMaxAttacks, false, null, false, sets["min_dist"] );
+}
+
+function KillMinions( target, elistboss )
+{
+    if ( !elistboss.kill_minions || !elistboss.classid )
+        return false;
+
+    bprint("Kill minions now");
+
+    var somethingkilled = false;
+    var newMaxAttacks = new Array(5,1); // no SF for minion
+
+    for( var i = 0 ; i < 10 ; i++ ) {
+        var monster = FindEnemyNearByclassid( target, 10, elistboss.classid );
+	    if (!monster) continue;
+	    if ( monster && monster.hp > 0 ) {
+    	    if ( KillBoss( monster, newMaxAttacks, somethingkilled, false, false, 1 ) )
+                somethingkilled = true;
+        };
+    };
+    if ( somethingkilled )
+      bprint("Minions killed");
+    else
+      bprint("No minions to kill");
+
+    return somethingkilled;
+}
+
+function KillNearMonsters( target, elistboss )
+{
+    if ( !elistboss.kill_nearmonsters )
+        return false;
+
+    var somethingkilled = false;
+    var newMaxAttacks = new Array(10,0); // no SF for minion
+
+    for ( var i = 0 ; i < 10 ; i++ ) {
+        var monster = FindEnemyNear( target, 10 );
+	    if (!monster) continue;
+	    if ( monster && monster.hp > 0 )
+    	    if ( KillBoss( monster, newMaxAttacks, false, elistboss.skill, false, 0 ) )
+                somethingkilled = true;
+    };
+
+    return somethingkilled;
+}
+
+function FindEnemyNearByclassid(target, radius, classid)
+{
+	if (!target) return null;
+	var pos = new coord(target);
+	var e = getUnit(1, classid);
+	do {
+		if ( CheckMonster( e ) > 0 ) {
+			if (pos.dist(e) <= radius)
+				return e;
+		}
+	}while(e && e.getNext(classid));
+
+	return null;
+}
+
+// again take from scavenger
+function FindEnemyNear(target, radius)
+{
+	var pos = new coord(target);
+	var e = getUnit(1);
+	do {
+		if ( CheckMonster( e ) > 0 ) {
+				if (pos.dist(e) <= radius)
+					return e;
+		}
+	}while(e && e.getNext());
+
+	return null;
+}
+
+// again take from scavenger
+/*function ValidEnemy(enemy)
+{
+	if (!enemy) {
+		DebugWrite("*WARNING ValidEnemy() : no enemy");
+		return false;
+	}
+	if (!enemy.name.length) {
+		return false;
+	}
+
+	if (enemy.area == 1 || enemy.area == 40 || enemy.area == 75 || enemy.area == 103 || enemy.area == 109) { return false; }
+
+	switch(enemy.name) {
+		case "Combatant":	// a5 bloodyhills barb
+		case "an evil force":
+		case "Dummy":
+		case "Hadriel":		// a4 near river of flame
+		case "Flavie":		// a1 nead cold plains
+		case "Catapult":	// a5 invisible catapults?
+		case "Hydra":
+			return false;
+	}
+
+	return true;
+}*/
+
+// code from scavenger multi MF bot
+function FindThroneEnemy()
+{
+	var closest_dist = 500000;
+	var monster_id = 0;
+	var monster_classid;
+	var c = new coord(me);
+	var e = getUnit(1);
+	do {
+		if ( e.x > 15070 && e.x < 15120 && e.y < 5090 && CheckMonster( e ) > 0 && e.name!="Baal" ) {
+			var dist = c.dist2(e);
+			if (dist < closest_dist) {
+				closest_dist = dist;
+				monster_id = e.gid
+				monster_classid = e.classid;
+			}
+		}
+	}while(e && e.getNext());
+
+	if ( !monster_id )
+		return null;
+
+	e = getUnit(1,monster_classid);
+	if ( e ) do {
+		if (e.gid == monster_id)
+			return e;
+	}while(e && e.getNext(monster_classid));
+
+	return null;
+}
+
+function checkenchant2(target,esc) {
+  var res = checkenchant( target, esc_global );
+  if ( res != 2 && esc ) {
+    var res2 = checkenchant( target, esc );
+    if ( res2 > res )
+      res = res2;
+  };
+  return res;
+};
+
+function disenchant(target)
+{
+	strenchant=target.name + " is enchanted with: ÿc1";
+	straura=target.name + " has the auras: ÿc4";
+	strimm=target.name + " is:  ÿc2";
+
+	var countimm=0;
+	var countenc=0;
+	var countaura=0;
+
+	for(k=1;k<7;k++)
+	{
+		if (target.getStat(imm[k][0])>99)
+		{
+			strimm+=(imm[k][1]+"; ");
+			countimm++;
+		}
+	}
+
+	for(k=1;k<13;k++)
+	{
+		if (target.getEnchant(enc[k][0]))
+		{
+			strenchant+=(enc[k][1]+"; ");
+			countenc++;
+		}
+	}
+
+	for(k=1;k<8;k++)
+	{
+		if (target.getState(aura[k][0]))
+		{
+			straura+=(aura[k][1]+"; ");
+			countaura++;
+		}
+	}
+
+	if (countimm>0) bprint(strimm);
+	if (countenc>0) bprint(strenchant);
+	if (countaura>0) bprint(straura);
+}
+
+function checkenchant(target,esc)
+{
+  if (esc.length>0)
+  {
+	for(var i=0;i<esc.length;i++)
+	{
+  		if (!esc[i]) continue;
+  		var s=true;
+	   	for(k=0;k<esc[i].length-1;k++)
+  	   	{
+	    	if (esc[i][k]<0){
+		 		if (target.getStat(Math.abs(esc[i][k]))<99) s=false; }
+			else if(esc[i][k]>100 && esc[i][k]<150){
+				if (!target.getState(esc[i][k]-100)) s=false; }
+			else if (esc[i][k]>200){
+				if (!CheckEvents(esc[i][k])) s=false; }
+		 	else {
+		  		if (!target.getEnchant(esc[i][k])) s=false; }
+ 		}
+        if (s)
+        {
+             //now need to check you classid
+             var mask=Math.pow(2,me.classid);
+             var intV=esc[i][esc[i].length-1];
+             if (isNaN(intV))
+             {
+                bprint("You escape setting is wrong,now escape!");
+                return 2;
+             }
+             if (intV==-1) return 2;
+             else if (intV==-2) return 1;
+             else{
+                if (intV & mask)
+                    return 2;
+                else
+                    return 1;
+             }
+        }
+	}
+  }
+  return 0;
+}
+
+
+function CheckEvents(num)
+{
+	if (!num) return false;
+	num-=200;
+
+	switch (num)
+	{
+		case 0:
+			return !CheckMerc();
+			break;
+		case 1:
+			return me.getState(2);
+			break;
+		case 2:
+			return me.getState(11);
+			break;
+		case 3:
+			return me.getState(9);
+			break;
+		case 4:
+			return me.getState(114);
+			break;
+		case 5:
+			return (potioncount()<=0);
+			break;
+		case 6:
+			return me.getState(19);
+			break;
+		case 7:
+			return me.getState(61);
+			break;
+		case 8:
+			return me.getState(60);
+			break;
+		case 9:
+			return me.getState(55);
+			break;
+		case 10:
+			return me.getState(29);
+			break;
+		case 11:
+			return (me.pingtimer>500);
+			break;
+		case 12:
+			return (me.pingtimer>1000);
+			break;
+		default:
+			return false;
+	}
+}
+
+function SwitchBack()
+{
+	if (wea_switch)
+	{
+		wea_switch=!doWeaponSwitch();
+		DoDel(10);
+		bprint("Switch item back");
+	}
+}
+
+function escape(target)
+{
+	if (target) bprint("Chicken from "+ target.name);
+	//need add something?
+}
+
+function checklife( target , MaxAttacks )
+{
+	if (!MaxAttacks) return;
+	var switch_hp=MaxAttacks[3];
+	if (target.getEnchant(5)) switch_hp/=2;
+
+	var timer=5000;
+	while(me.classid!=1 && me.mode == 18 && timer>0)
+	{
+		delay(100);
+		timer-=300;
+	}
+
+	if (!wea_switch && sets["weapon_switch"])
+	{
+		if ( (target.hp/128*100 <= switch_hp ) && ( target.hp > 0 ) )
+		{
+			wea_switch=doWeaponSwitch();
+			bprint("Target's life is " + target.hp/128*100 + " %,switch weapon");
+			DoDel(10);
+		}
+	}
+}
+
+function GetCastDelay(spell)
+{
+	switch(spell)
+	{
+		case "Frozen Orb" :
+			return 1400;
+		case "Blizzard" :
+			return 1800;
+		case "Fire Wall" :
+			return 1400;
+		case "Meteor" :
+			return 1200;
+		case "Hydra" :
+			return 2000;
+		default :
+			return ( cast_rate*40 );
+	}
+}
+
+function IsTimerSpell(spell)
+{
+	if (!isNaN(spell))
+		return ( getBaseStat(3,spell,191) > 0 ? 1 : 0)
+	else
+		return 1;
+		
+	return 1;
+}
+
+function IsLeftSpell(spell)
+{
+	if (!isNaN(spell)){
+			
+		if (spell==36 || spell==41 || spell==47 || spell==38 || spell==49 || spell==53 || spell==39 || spell==45 || spell==55 || spell==64)
+			return 1;
+		else 
+			return 0;
+	}
+	
+	return 0;
+}
+
+function checkchest() {
+    var opened = false;
+    var key = GetKeys();
+
+	var chest=getUnit(2,"chest");
+	do {
+        if (chest) {
+            if ( ( chest.classid == 397 ) || ( chest.classid == 455 ) )
+            {
+                bprint( "Try to open a chest" );
+
+				if ( me.classid == 1 ) {
+                	if ( myDist( chest.x, chest.y ) > 20 ) Teleport( chest.x, chest.y, 15, 1 );
+				}
+				else
+					MoveTo( chest.x, chest.y );
+
+                if (chest.mode==2) //opened
+                {
+                    bprint("That chest has been opened!");
+                    continue;
+                }
+
+                if (chest.status==2) // locked
+                  if ( !key || ( key.getStat(70) < 1) ) { // no keys
+                     bprint("This chest is locked and i have no key !");
+                     continue;
+                  };
+
+                var retry = 0;
+                while ( ( chest.mode != 2 ) && ( retry++ < 5 ) ) {
+					if ( me.classid == 1 )
+                    	DoCast( "Telekinesis",0, chest );
+					else {
+						ClickMap(chest.x,chest.y);
+						delay(250);
+						ClickMap(chest);
+					};
+                    DoDel( 100 );
+                };
+                if ( retry < 5 )
+                    opened = true;
+            };
+		}
+	} while (chest && chest.getNext("chest"));
+    return opened;
+}
+
+function UsableSkill(skill, target)
+{
+	var light_immune = (target.getStat(41) > 99);
+	var fire_immune = (target.getStat(39) > 99);
+	var cold_immune = (target.getStat(43) > 99);
+
+	switch (skill)
+	{
+		case "Fire Bolt" :
+		case "Inferno" :
+		case "Blaze" :
+		case "Fire Ball" :
+		case "Fire Wall" :
+		case "Enchant" :
+		case "Hydra" :
+		case "Meteor" :
+			return !fire_immune;
+
+		case "Chain Lightning" :
+		case "Lightning" :
+		case "Thunder Storm" :
+		case "Nova" :
+		case "Telekinesis" :
+		case "Static Field" :
+		case "Charged Bolt" :
+			return !light_immune;
+
+		case "Frozen Orb" :
+		case "Blizzard" :
+		case "Frost Nova" :
+		case "Ice Blast" :
+		case "Glacial Spike" :
+		case "Ice Bolt" :
+		case "Chilling Armor" :
+		case "Shiver Armor" :
+		case "Frozen Armor" :
+			return !cold_immune;
+
+		default:
+			if (skill==36 || skill==37 || skill==47 || skill==51 || skill==56 || skill==41 || skill==52 || skill==61 || skill==62 || skill==46)
+				return !fire_immune;
+			if (skill==38 || skill==42 || skill==43 || skill==48 || skill==49 || skill==53 || skill==54 || skill==57 || skill==58 || skill==63)
+				return !light_immune;
+			if (skill==39 || skill==40 || skill==44 || skill==45 || skill==50 || skill==55 || skill==59 || skill==60 || skill==64 || skill==65)
+				return !cold_immune;
+			
+			print("Skill:" + skill + " unknown!!")
+	}
+}
+
+
+function FindClosestEnemyNearPos(x,y)
+{
+	var pos = new coord(x,y);
+	var closest_dist = 500000;
+	var monster_id = 0;
+	var monster = null;
+	var e = getUnit(1);
+	do {
+		if ( CheckMonster( e ) > 0 ) {
+			var dist = pos.dist2(e);
+			if (dist < closest_dist) {
+				closest_dist = dist;
+				monster_id = e.gid;
+				monster = e;
+			}
+		}
+	}while(e && e.getNext());
+
+	e = getUnit(1);
+	do {
+		if ( CheckMonster( e ) > 0 ) {
+			if (e.gid == monster_id) {
+				return e;
+			}
+		}
+	}while(e && e.getNext());
+
+	return null;
+}
+
+function FindClosestEnemyNear(target)
+{
+	var pos = new coord(target);
+	var closest_dist = 500000;
+	var monster_id = 0;
+	var e = getUnit(1);
+	do {
+		if ( CheckMonster( e ) > 0 ) {
+			var dist = pos.dist2(e);
+			if (dist < closest_dist) {
+				closest_dist = dist;
+				monster_id = e.gid;
+			}
+		}
+	}while(e && e.getNext());
+
+	e = getUnit();
+	do {
+		if ( CheckMonster(e) > 0 ) {
+			if (e.gid == monster_id) {
+				return e;
+			}
+		}
+	}while(e && e.getNext());
+
+	return null;
+}
+
+// need to kill first minions before
+function KillShenk() {
+
+	var target=getUnit(1, bossshenk.lodname );
+	if (target) {
+		var inter = checkenchant2(target,bossshenk.esc);
+		if ( inter == 2 )
+            return false;
+	};
+
+    var newMaxAttacks = new Array(10,0); // no SF for minion
+
+	for ( var i = 0 ; i < 5 ; i++ )
+	{
+        	var monster = FindClosestEnemyNearPos( me.x, me.y );
+		if (!monster) continue;
+		if ( !monster || ( monster.name == bossshenk.lodname ) || ( Dist2( monster.x, monster.y, me.x, me.y ) > 25 ) )
+            		break;
+	    	if ( monster.hp > 0 )
+    	    		KillBoss( monster, newMaxAttacks, false, null, false, 0 );
+	};
+
+	if (me.classid==4){ //classes need walk
+		var databack = new Array();
+		databack["bossname"] = bossshenk.lodname;
+		databack["bossdist"]=5;
+		GotoToDest( target.x,target.y,databack );
+	}
+	if (me.classid==0)
+		walkto(3882,5114);
+
+	return Killlistboss( bossshenk );
+};
+
+//zz
+function DoManaRecharge()
+{
+	var extra_mana = me.getStat(77);
+	var max_mp = Math.floor(((100 + extra_mana) / 100) * me.mpmax);
+
+	if (me.classid==1 && sets["mana_recharge"] && ((me.mp*100) / max_mp) < sets["mana_recharge_percent"])
+	{
+		bprint("Do mana recharge now");
+		var waittime=1000*sets["mana_recharge_maxtime"];
+		while((me.mp*100) < (max_mp * sets["mana_recharge_max"]))
+		{
+			CheckSafety();
+			var Pot = null;
+			for (var i=5;i>1 && !Pot;i--) {
+				var Pot1=getUnit(4,"mp"+i,3);
+				if ( Pot1 ) do {
+					if ( Dist2( me.x, me.y, Pot1.x, Pot1.y ) <= 20*20 ) {
+						Pot = Pot1;
+						break;
+					}
+				} while ( Pot1 && Pot1.getNext( "mp"+i,3 ));
+			};
+
+			if(Pot && Pot.itemloc!=0)
+			{
+				if ( PickUpItem(Pot) ) {
+					clickItem(1,Pot);
+				};
+			};
+
+			ShowState("Waiting till mana is recharged");
+			delay(100);
+			waittime-=100;
+			if (waittime<=0) break;
+		}
+		bprint("Mana recharge done");
+	}
+	return;
+}
+
+function CheckSafety()
+{
+	var monster = FindClosestEnemyNearPos( me.x, me.y );
+	if (monster)
+	{
+		if (sets["mana_recharge_attack"])
+		{
+			if (myDist(monster.x,monster.y)<sets["min_dist"])
+			//found an enemy in a dangerous distance.
+			KillMonster(monster,sets["attack_safety"]);
+		}
+		else
+		{
+			datapos = initgoodpos(Math.min(sets["min_dist"],8),10);
+			checkgoodposex( datapos, monster,1 );
+		}
+	}
+}

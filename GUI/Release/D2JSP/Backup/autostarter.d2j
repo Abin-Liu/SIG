@@ -1,0 +1,279 @@
+/*
+	starter.d2j
+	Author:		njaguar
+	Date Created:	June 22nd, 2004
+	Last Update:	June 30nd, 2004
+	Version:	1.0
+	Description:	Out of game controller, requires autod2jsp to function
+	Notes:		Compatable with core 0.41.01+ only! w/ autod2jsp.exe
+*/
+
+var unableToConnectRetry	= 5;		// time in minutes to retry connecting on connection fail (real value is +/- 1 min)
+var realmDownRetry		= 5;		// time in minutes to retry connecting on a realm down
+var disconnectedRetry		= 5;		// time in minutes to retry on a disconnection (usually ip ban related)
+var cdkeyInUseRetry		= 5;		// time in minutes to retry on a cdkey in use error message (set to 0 to stop)
+var characterScreenTimeout	= 10000;	// time in milliseconds to wait for character screen to appear
+var pleaseWaitTimeout		= 10000;	// time in milliseconds to wait for a please wait popup
+var createGameThreshold		= 10000;	// time in milliseconds to wait between making games
+var waitInLineTimeout		= 30000;	// time in milliseconds to wait in lines for a create game
+var characterSelectDelay	= 1000;		// time in milliseconds to wait before selecting a character on the char screen
+var loginDelay			= 1000;		// time in milliseconds to wait before submitting login information
+var clickDelay			= 250;		// wait X milliseconds before next action after a click event
+var textDelay			= 100;		// wait X milliseconds before next action after inserting text into a textbox
+
+
+
+/********************************************************************
+***************DONT EDIT ANYTHING BELOW THIS*************************
+********************************************************************/
+
+
+
+// system vars, dont touch em
+var lastGameMade = getTickCount();
+var lastGameStatus = 0;
+
+include( "starterGameInfo.d2l" );
+include( "controlInfo.d2l" );
+include( "autod2jsp.d2l" );
+
+var controlData = new controlInfo();
+var gameData = new gameInfo();
+
+function main() {
+	// change this to if autod2jsp is NOT running to use the old starter.d2j instead of stopping
+	if(!sendDDE(1, "autod2jsp", "command", "", "")) stop();
+
+	controlData.clickDelay = clickDelay;
+	controlData.textDelay = textDelay;
+
+	while( gameData.isRunning ) {	
+		if( gameData.needsData ) {
+			gameData.requestSettings( );
+		} else {
+			if(me.ingame) {
+				gameData.setLocation( "In Game" );
+				lastGameStatus = 2; // in game successful
+				delay(500);
+			} else {
+				location = controlData.getLocation();
+
+				if(location) {
+					gameData.setLocation( location.name );
+				} else {
+					gameData.setLocation( "Unknown Location" );
+				}
+
+				locationAction( location );
+			}
+		}
+		
+		delay( 100 );
+		while( gameData.isPaused ) {
+			gameData.location = "Paused";
+			gameData.updateStatus(); // manually do it, so we don't ping out
+			delay(500);
+		}
+	}
+}
+
+function locationAction( location ) {
+	switch( location.id ) {
+	case 1:	// Lobby
+		if(getTickCount() - lastGameMade > createGameThreshold) {
+			switch(lastGameStatus) {
+			case 0:
+				controlData.click( controlData.controls.lobby.button.create );
+				break;
+			case 1:
+				gameData.failedGames++;
+			case 2:
+				lastGameStatus=0;
+				lastGameMade = getTickCount();
+				break;
+			}
+		}
+		break;
+	case 2: // Waiting In Line
+		if(getTickCount() - lastGameMade > waitInLineTimeout) {
+			// click cancel, and let lobby catch tally a failed game
+			controlData.click( controlData.controls.lobby.inLine.button.cancel );
+		}
+		break;
+	case 3: // Lobby Chat
+		// we'll assume lobby chat is a manual 'pause'
+		break;
+	case 4: // Create Game
+		name = (!gameData.gameName || gameData.useRandomGameName ? TDW_BASIC_GetRandomString(rnd(4,15)) : gameData.gameName + gameData.totalGames);
+		pass = (!gameData.gamePass || gameData.useRandomGameName ? TDW_BASIC_GetRandomString(rnd(4,15)) : gameData.gamePass);
+		
+		if( controlData.setText( controlData.controls.lobby.create.editBox.gameName, name ) &&
+			controlData.setText( controlData.controls.lobby.create.editBox.password, pass ) &&
+			controlData.click( controlData.gameDifficulties[ gameData.gameDifficulty ] ) ) {
+
+			lastGameMade = getTickCount();
+			lastGameStatus = 1; // pending creation
+			gameData.totalGames++;
+			controlData.click( controlData.controls.lobby.create.button.createGame );
+		}
+		break;
+	case 5: // Join Game
+		break;
+	case 6: // Ladder
+		break;
+	case 7: // Channel List
+		break;
+	case 8: // Main Menu
+		controlData.click( controlData.gameTypes[ gameData.gameType ] );
+		break;
+	case 9: // Login
+		controlData.setText( controlData.controls.login.editBox.accountName, gameData.accountName );
+		controlData.setText( controlData.controls.login.editBox.password, gameData.accountPass );
+		delay( loginDelay );
+		controlData.click( controlData.controls.login.button.logIn );
+		break;
+	case 10: // Login Error (this is a fatal error, so stop)
+		stop();
+		break;
+	case 11: // Unable To Connect
+		timeoutDelay( unableToConnectRetry, location.name, true );
+		controlData.click( controlData.controls.login.unableToConnect.button.ok );
+		break;
+	case 12: // Character Select
+		time = characterScreenTimeout;
+		while( time>0 ) {
+			control = controlData.get( controlData.controls.characterSelect.textBox.characterInfo[ gameData.charLocation ] );
+			if( control && control.getText() != undefined ) break;
+			gameData.setLocation( location.name + " (" + (time/1000) + "s)");
+			time-=50;
+			delay(50);
+		}
+		if( time<=0 ) {
+			if( !(control = controlData.get( controlData.controls.characterSelect.textBox.characterInfo[ gameData.charLocation ] )) || control.getText() == undefined ) {
+				// selected an invalid character location or char screen timed out, fatal error
+				stop();
+			}
+		}
+
+		delay( characterSelectDelay );
+		// click both, just in case (sometimes doesnt work, very odd)
+		controlData.click( controlData.controls.characterSelect.textBox.characters[ gameData.charLocation ] );
+		controlData.click( controlData.controls.characterSelect.textBox.characterInfo[ gameData.charLocation ] );
+
+		// reset last game made, so it doesnt make a game immediately
+		lastGameMade = getTickCount();
+
+		break;
+	case 13: // Realm Down
+		timeoutDelay( realmDownRetry*60*1000, location.name );
+		controlData.click( controlData.controls.characterSelect.button.exit );
+		break;
+	case 14: // Character Select - Disconnected
+		timeoutDelay( disconnectedRetry*60*1000, location.name );
+		controlData.click( controlData.controls.characterSelect.disconnected.button.ok );
+		break;
+	case 15: // New Character
+		break;	
+	case 16: // Character Select - Please Wait popup
+		if( !locationTimeout( pleaseWaitTimeout, 16 ) ) {
+			controlData.click( controlData.controls.pleaseWait.button.cancel );
+		}
+		break;
+	case 17: // Lobby - Please Wait and Lost Connection
+		if( !locationTimeout( pleaseWaitTimeout, 17 ) ) {
+			controlData.click( controlData.controls.lobby.lostConnection.button.ok );
+		}
+		break;
+	case 18: // D2 Splash - clicking the controls seems to not cause it to disappear..
+//		controlData.click( controlData.controls.d2Splash.textBox.copyright );
+		break;
+	case 19: // Login - Cdkey In Use
+		if(cdkeyInUseRetry==0) stop(); // fatal error, stop
+		timeoutDelay( cdkeyInUseRetry*60*1000, location.name );
+		controlData.click( controlData.controls.login.cdkeyInUse.button.ok );
+		break;
+	case 20: // Single Player - Select Difficulty
+		controlData.click( controlData.singlePlayerDifficulties[ gameData.gameDifficulty ] );
+		break;
+	}
+}
+
+function locationTimeout( time, locationId ) {
+		while( controlData.getLocation().id == locationId && time>0 ) {
+			gameData.setLocation( location.name );
+			time-=50;
+			delay(50);
+		}
+		return (time<=0 ? false : true);
+}
+
+function timeoutDelay( time, location, noRandom ) {
+	if(!noRandom) time += rnd( -60, 60 ) * 1000;
+	while(time>0) {
+		gameData.setLocation( location + " (" + (time/1000) + "s)" );
+		time-=1000;
+		delay(1000);
+	}
+}
+
+
+// this needs to be rewritten, only pause is used at the moment
+function scriptmsgHandler( msg ) {
+	if(msg.search(/^starter:/)!=-1) {
+		command = msg.substring(8,msg.length);
+		vals = command.split("=");
+		switch(vals[0]) {
+			case "pause":
+				gameData.isPaused = !gameData.isPaused;
+				gameData.setGameSettings();
+				break;
+			case "accountName":
+				gameData.accountName = vals[1];
+				break;
+			case "accountPass":
+				gameData.accountPass = vals[1];
+				break;
+
+			case "botscript":
+				gameData.botScript = vals[1];
+				break;
+		}
+	}
+}
+
+
+// RANDOM NAME GENERATOR BY TheDesertWind (thanks!)
+// ////////////////////////////////////////////////////////////////////////////
+function TDW_BASIC_GetRandomString(out_length, char_set_string)
+{
+     if (out_length < 1)
+          return("");
+
+     char_set_string = (TDW_BASIC_GEN_TypeOfStringNotEmpty(char_set_string)) ?
+          char_set_string :
+          "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+
+     var out_string = "";
+
+     for ( ; out_length; out_length--)
+          out_string += char_set_string.charAt(rnd(0, char_set_string.length - 1));
+
+     return(out_string);
+}
+// ////////////////////////////////////////////////////////////////////////////
+
+// ////////////////////////////////////////////////////////////////////////////
+function TDW_BASIC_GEN_TypeOfStringNotEmpty(in_data)
+{
+	return((TDW_BASIC_GEN_TypeOfString(in_data) && (in_data != "")) ?
+		true : false);
+}
+// ////////////////////////////////////////////////////////////////////////////
+
+// ////////////////////////////////////////////////////////////////////////////
+function TDW_BASIC_GEN_TypeOfString(in_data)
+{
+	return(((in_data instanceof String) || (typeof(in_data) == "string")) ?
+		true : false);
+}
+// ////////////////////////////////////////////////////////////////////////////

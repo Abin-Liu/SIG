@@ -1,0 +1,229 @@
+//
+// ShrineLib.d2l - Version 0.6a
+//
+// version 0.6a 08/25/2003 by SteveH6479
+// fixed error casting telekinesis on same shrine twice
+//
+// Shrine Support library by Pachelbel
+// Version 0.6 05/05/2003 IchLiebeDich
+//    Support check function of our library + individual check
+//    Rewrite to check shrine and not in loop
+//	  Can use telekenesis on shrine
+//
+// Version 0.5c 26/03/2003 IchLiebeDich
+//    Now working, i hope
+//
+// Version 0.5 March 13, 2003
+//    Added optional logging of shrines (default to true).
+//    Added maximum distance setting (default is 90).  Thanks Darien.
+//    Added allowing of stacking of armor shrines.  This doesn't seem to work with 
+//       other shrine types, however, it is configurable. Thanks also to Darien.
+//
+// Version 0.4 March 12, 2003
+//    Fixed another bug where it was taking less desirable shrines.
+//
+// Version 0.3 March 11, 2003
+//    Fixed problem where if two shrines where very near each other,
+//       it might take a less desireable one over another.
+//
+// Version 0.2 March 11, 2003
+//    ShrineLib_CheckForShrines() now allowes you to pass your move function.
+//
+// Version 0.1 March 11, 2003
+//    Initial release.
+//
+// Todo:
+//    Add internal walk/move function to use if one not passed.
+//
+// Usage:
+//
+// include("ShrineLib.d2l");
+// 
+// // set your shrine prefs (not necessary if you want default order)
+// ShrineLib["a_shrinePrefs"] = new Array(c_ShrineType_Stamina,  
+//                                        c_ShrineType_ResistFire,
+//                                        c_ShrineType_ResistCold,
+//                                        c_ShrineType_ResistPoison,
+//                                        c_ShrineType_ResistLightning,
+//                                        c_ShrineType_ManaRecharge,
+//                                        c_ShrineType_Armor,
+//                                        c_ShrineType_Combat,
+//                                        c_ShrineType_Skill,   
+//                                        c_ShrineType_Experience);
+// 
+// // from any safe point, call the following 
+// ShrineLib_CheckForShrines(YourMoveFunc);
+//
+
+// using some constants from Sydasti's lib
+if ( typeof( c_Sy_Constants_Version ) == "undefined" )
+    include("Sy_Constants.d2l");
+
+var ShrineLib = new Object(); // setup object for storing our globals
+
+// setup list of shrines we want.  
+// array should be in order from least desireable to most.
+// we will not take a less desireable shrine if we already have a more desireable one.
+// if shrine not in list, we don't take.
+// if we already have specified shrine type, we don't take.
+ShrineLib["a_shrinePrefs"] = new Array(c_ShrineType_Stamina,  
+                                       c_ShrineType_ResistFire,
+                                       c_ShrineType_ResistCold,
+                                       c_ShrineType_ResistPoison,
+                                       c_ShrineType_ResistLightning,
+                                       c_ShrineType_ManaRecharge,
+                                       c_ShrineType_Armor,
+                                       c_ShrineType_Combat,
+                                       c_ShrineType_Skill,   
+                                       c_ShrineType_Experience);
+
+// max distance away we will go for a shrine
+ShrineLib["shrineMaxDistance"] = 90;
+
+// true to keep a log of found shrines
+ShrineLib["shrineLogEnabled"] = true;
+
+// where to log taken shrines too
+ShrineLib["shrineLogFilename"] = "output\\"+me.name+"_ShrineLib.log";
+
+// a list of the shrines we have visited so we don't visit twice.
+// note that this doesn't account for shrines that reset after a certain time.
+ShrineLib["a_visitedShrines"] = new Array();
+
+// maps player states to shrine types
+// also includes whether shrine stacks with itself
+ShrineLib["a_shrineStateMap"] = new Array(c_UnitState_ShrineArmor,           c_ShrineType_Armor,           true,  // verified
+                                          c_UnitState_ShrineCombat,          c_ShrineType_Combat,          false,
+                                          c_UnitState_ShrineResistFire,      c_ShrineType_ResistFire,      false,
+                                          c_UnitState_ShrineResistCold,      c_ShrineType_ResistCold,      false,
+                                          c_UnitState_ShrineResistLightning, c_ShrineType_ResistLightning, false,
+                                          c_UnitState_ShrineResistPoison,    c_ShrineType_ResistPoison,    false,
+                                          c_UnitState_ShrineSkill,           c_ShrineType_Skill,           false, // verified
+                                          c_UnitState_ShrineManaRegen,       c_ShrineType_ManaRecharge,    false,
+                                          c_UnitState_ShrineStamina,         c_ShrineType_Stamina,         false,
+                                          c_UnitState_ShrineExperience,      c_ShrineType_Experience,      false);
+
+// returns distance between two objects
+function ShrineLib_GetRange(obj1, obj2) {
+   return (parseInt (Math.sqrt (Math.pow (obj1.x-obj2.x, 2) 
+                              + Math.pow (obj1.y-obj2.y, 2))));
+}
+
+// appends a log line to shrine log file
+function ShrineLib_WriteLog(logString) {
+	// 0 = Read, 1 = ReWrite, 2 = Append
+   var file = fileOpen(ShrineLib["shrineLogFilename"], 2); 
+	if (!file) {
+		print("WARNING:  Couldn't open the ShrineLib log file (" + ShrineLib["shrineLogFilename"] + ").");
+	} else {
+		var curDate = new Date();
+      file.writeLine("[" + curDate.getFullYear() + "/" + (curDate.getMonth()+1) + "/" + curDate.getDate() + " " +
+	                  curDate.getHours() + ":" + curDate.getMinutes() + ":" + curDate.getSeconds() + "] " +
+                     logString);
+		file.close();
+	}
+}
+
+// returns true if at least one shrine found and taken
+function ShrineLib_CheckForShrines(MoveFunc) {
+   var bFound = false;     // assume we didn't find any good shrines
+
+   // do we see any shrines?
+   var shrine = getUnit(2);
+   // if at least one shrine visible...
+   if (shrine) {
+      // loop over all the shrines we can "see" (we know at least one from above)
+      do {
+	     if ( !IsShrine( shrine.classid ) )
+            continue;
+
+		 bFound = bFound || ShrineLib_CheckForShrine( shrine, MoveFunc );
+      } while (shrine && shrine.getNext());
+   }
+
+   return bFound;
+}
+
+
+// returns true if at least one shrine found and taken
+function ShrineLib_CheckForShrine(shrine,MoveFunc) {
+   if (!shrine)
+   	   return false; 
+
+
+   // is shrine in range -- if not, skip it
+   if (ShrineLib_GetRange(me, shrine) > ShrineLib["shrineMaxDistance"])
+   	   return false;
+
+   // have we visited this shrine before?  if so, skip it
+   if ( shrine.mode )
+   	   return false;
+/*   for(var i in ShrineLib["a_visitedShrines"]) 
+       if (shrine.id == ShrineLib["a_visitedShrines"][i]) 
+           return false;*/
+
+   // find out which shrine flag we currently have (if any)
+   var shrineStart = 0;    // default to start of a_shrinePrefs list
+   for(var i=0; i<ShrineLib["a_shrineStateMap"].length; i+=3) {
+       // if we have this shrine flag...
+       if (me.getState(ShrineLib["a_shrineStateMap"][i])) {
+           // adjust start point of a_shrinePrefs we will take based on this
+           for(var j=0; j<ShrineLib["a_shrinePrefs"].length; j++) {
+               if (ShrineLib["a_shrinePrefs"][j] == ShrineLib["a_shrineStateMap"][i+1]) {
+                   // skip less desireable shrines (except stacking)
+               	   shrineStart = j+(ShrineLib["a_shrineStateMap"][i+2]?0:1);  
+               	   break; // from for j
+               }
+           } // end for
+           break; // from for i
+       }
+   } // end for
+
+   // is the shrine in our (adjusted) a_shrinePrefs list?
+   for(var i=shrineStart; i<ShrineLib["a_shrinePrefs"].length; i++) {
+       if (ShrineLib["a_shrinePrefs"][i] == shrine.subarea) {
+       	   // take this shrine 
+           print("Found shrine of type " + c_ShrineNames[shrine.subarea] + " that we want!");
+           // save start location
+           var startX = me.x;
+           var startY = me.Y;
+           // move to shrine
+		   var bMove = false;
+
+		   if ( me.classid == 1 ) {
+           	   if ( ShrineLib_GetRange( shrine, me ) > 20 ) { 
+			   	   MoveFunc(shrine.x, shrine.y);
+				   bMove = true;
+			   };
+		   }
+		   else {
+		   	   MoveFunc( shrine.x, shrine.y );
+			   bMove = true;
+		   };
+
+           var retry = 0;
+           while ( ( shrine.mode != 2 ) && ( retry++ < 5 ) ) {
+		       if ( me.classid == 1 ) 
+               	   DoCast( "Telekinesis",0, shrine );
+				else {
+				   walkto(shrine.x,shrine.y);
+				   ClickMap(shrine);
+				};
+           	   var wait = 0;
+        	   while ( ( shrine.mode != 2 ) && ( wait++ < 20 ) ) DoDel(10);
+           };
+
+           // add it to the list of visited shrines
+           ShrineLib["a_visitedShrines"][ShrineLib["a_visitedShrines"].length++] = shrine.id;
+           // move back to start point
+           if (bMove) MoveFunc(startX, startY);
+           // if logging enabled, log it
+           if (ShrineLib["shrineLogEnabled"]) ShrineLib_WriteLog(c_ShrineNames[shrine.subarea]);
+
+		   return (retry < 5);
+        }
+    } // end for
+
+   return false;
+}
+

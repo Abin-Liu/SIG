@@ -1,0 +1,36 @@
+// new file in 0.25
+// corrected in 0.27 now, multithread is working in d2jsp core 0.31
+
+var stop_flag=false;
+
+include("Dae_Multi_Set.d2l");
+include("Dae_lifewatch.d2l");
+
+function main() {
+	print("Potion script has been loaded!  To start checking hp, use a waypoint or town portal!");
+    Init_Daelw();
+
+	PwnPots["myMercChickenLife"] = parseInt((128 * PwnPots["mercChickenLife"]) / 100);
+	while (!stop_flag)
+	{
+        	Loop_Daelw()
+		delay(PwnPots["LoopDelay"]);
+	}
+}
+
+function hostilemsgHandler()
+{
+	if(PwnPots["QuitOnHostile"])
+		quit();
+}
+
+
+function gamemsgHandler(msg)
+{
+	if (msg=="lifewatch stop")
+	{
+		print("ÿc3::ÿc@Stop command received.Now stop");
+		stop_flag=true;
+	}
+}
+		

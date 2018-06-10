@@ -1,0 +1,56 @@
+/* v0.27 rewritten
+*/
+
+var loglist=new Array(nlogDisplayed+nlistboss+1);
+
+function InitLogScreen()
+{
+  if ( !sets["use_screenhook"] )
+      return;
+
+  for(var i=0;i<nlogDisplayed+nlistboss+1;i++)
+  {
+	loglist[i]=getScreenHook();
+	SHook(loglist[i],560,300+(i+1)*15,LogList(i),4,0);
+  }
+}
+
+function UpdateLogScreen()
+{
+    if ( !sets["use_screenhook"] )
+        return;
+
+    for(var i=0;i<nlogDisplayed+nlistboss+1;i++)
+	{
+		SHook2(loglist[i],LogList(i));
+	}
+}
+
+function LogList(i)
+{
+    if ( i >= nlogDisplayed+nlistboss )
+      return ("Success Rate - "+parseInt(log[2]/log[1]*100)+" %");
+
+    if ( i >= nlogDisplayed ) 
+      return listboss[i-nlogDisplayed].name+" Killed - "+listboss[i-nlogDisplayed].nbkill;
+
+	switch (i)
+	{
+		case 0:
+			return "Total - "+log["Total"];
+			break;
+		case 1:
+			return "Success - "+log["Success"];
+			break;
+		case 2:
+			return "Died - " +log["Died"];
+			break;
+		case 3:
+			return "Chicken - "+(log["Total"]-log["Finish"]);
+			break;
+		case 4:
+			return "Merc Chicken - "+log["Merc_Chicken"];
+			break;
+	}
+}
+

@@ -1,0 +1,400 @@
+/*******************************************************************************
+*                                                                              *
+*                                The Multi MF                                  *
+*                                   v1.25a                                     *
+*                                                                              *
+* ---------------------------------------------------------------------------- *
+* Copyright (C) 2003 Jan Onno Tuinenga (Scavenger) - tha_scavenger@hotmail.com *
+* ---------------------------------------------------------------------------- *
+*                                                                              *
+* This program is free software; you can redistribute it and/or modify         *
+* it under the terms of the GNU General Public License as published by         *
+* the Free Software Foundation; either version 2 of the License, or            *
+* (at your option) any later version.                                          *
+*                                                                              *
+* This program is distributed in the hope that it will be useful,              *
+* but WITHOUT ANY WARRANTY; without even the implied warranty of               *
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                *
+* GNU General Public License for more details.                                 *
+*                                                                              *
+********************************************************************************/
+
+/////////////////////////////////////////////////////////////////////
+//                                                                 //
+//                           WARNING!                              //
+//                                                                 //
+//      ONLY CHANGE THIS FILE IF YOU KNOW WHAT YOU ARE DOING       //
+//                                                                 //
+/////////////////////////////////////////////////////////////////////
+
+include("vec_coord.d2l");
+
+var character = new Object;
+character["protect_skills"] = null;
+character["protect_timer"] = 0;
+character["primary_skill"] = "";
+character["primary_skill_time"] = 0
+character["secondary_skill"] = "";
+character["backup_skill"] = "";
+character["merc"] = null;
+
+var AllStates= new Array();
+
+function CharAttack(e, bSwitch,MaxAttacks )
+{
+	ChooseSkills(e);
+
+	if ( me.area == 131 ) {
+		for (var x=0; x<=170; x++) {
+			AllStates[x]= e.getState(x);
+		}
+	};
+	
+	if (!e) {
+		DebugWrite("Warning: No enemy in CharAttack");
+		return;
+	}
+	var nattack = 0;
+	var nmissed = 0;
+
+	while(e.hp > 0 && e.mode != 12 && nmissed < 5 && nattack < 30 && e.getState( 105 ) ) {
+		if ( !Attack(e,bSwitch,MaxAttacks) )
+			nmissed++;
+		nattack++;
+		CheckSelf();
+		if ( bSwitch )
+			checklife(e,MaxAttacks);
+	}
+	SwitchBack();
+
+	if ( e.hp > 0 && me.area == 131 ) {
+		var s = "";
+		for (var x=0; x<=170; x++) {
+			if ( AllStates[x] != e.getState(x) ) {
+				s = s+" "+x+" "+AllStates[x]+"=>"+e.getState(x)+",";
+			};
+		};
+
+		if ( s.length ) {
+			s = s+" stat ";
+			for (var x=172; x<=172; x++) 
+				s = s+" "+x+" "+e.getStat(x);
+			print("ahaha");
+			s = "hp "+e.hp+" gid "+e.gid+" classid "+e.classid+s;
+			var f = fileOpen("output/baalrate.txt", 2);
+			f.writeLine( s );
+			f.close();
+		};
+	};
+
+	return ( e.hp <= 0 || !e.getState( 105 ) );
+}
+
+function ChooseSkills(e)
+{
+	if (!e) {
+		DebugWrite("Warning: No enemy in ChooseSkills");
+		return false;
+	}
+	
+	return true;
+}
+
+function Attack(e, bSwitch,MaxAttacks)
+{
+	if (!e || e.hp <= 0 || !e.getState( 105 ) )
+		return false;
+
+	DebugWrite("Attacking " + e.name);
+	
+	pos = new coord(me);
+	if (e.getStat(36) > 99) { // phys immune. use backup skill
+		while(pos.dist(e) > 5) {
+			pos.set(me);
+			if (!MoveToMonster(e, 5))
+				return false;
+		}
+		return MeleeAttack(character["backup_skill"], e, false,MaxAttacks);
+	}
+	else {	
+		if (character["primary_skill"] == "Whirlwind" && me.mp > Math.ceil(24 + (0.5 * me.getSkill("Whirlwind"))) && IsGroupOkay(e)) {
+			while(pos.dist(e) > 20) {
+				pos.set(me);
+				DebugWrite("Moving closer for ww attack to " + e.name + " dist: " + pos.dist(e));
+				if (!MoveToMonster(e, 15))
+					return false;
+			}
+			return WWAttack(character["primary_skill"], e, bSwitch,MaxAttacks);
+		}
+		else if(character["primary_skill"] == "Leap Attack") {
+			while(pos.dist(e) > 25) {
+				pos.set(me);
+				DebugWrite("Moving closer for melee attack to " + e.name + " dist: " + pos.dist(e));
+				if (!MoveToMonster(e, 20))
+					return false;
+			}
+			return LeapAttack(character["primary_skill"], character["secondary_skill"], character["backup_skill"], e, bSwitch,MaxAttacks);
+		}
+		else {
+			while(pos.dist(e) > 5) {
+				pos.set(me);
+				DebugWrite("Moving closer for secondary melee attack to " + e.name + " dist: " + pos.dist(e));
+				if (!MoveToMonster(e, 5))
+					return false;
+			}
+			return MeleeAttack(character["secondary_skill"], e, bSwitch,MaxAttacks);
+		}
+	}
+	
+	DebugWrite("Attack failed");
+	
+	return false;	
+}
+
+function IsGroupOkay(e)
+{
+	if (!e) return false;
+	if ( CheckIsSuper(e) ) return true;
+	if ( CheckMonster( e ) == 2 ) {
+		if ( !BossIsWrongClassID( e ) && !CheckIsKilled( e ) ) return true;
+	}
+	else
+	{
+		var WWRange=CreateRange(me.x,me.y,e.x,e.y);
+		if (GetEnemyCountInRange(WWRange,3) >=sets["ww_min_group"]) return true;
+		else return false;
+	}
+	
+	return false;
+}
+
+function CreateRange(Ax,Ay,Bx,By)
+{
+	var _range=new Array();
+	var pos=new coord(Ax,Ay);
+	_range.push(pos);
+	
+	var dir=pos.dir(Bx,By);
+	var dist=pos.dist(Bx,By);
+	
+	if (dir.x==0 && dir.y==0) dir.x=1;
+	
+	for(var i=0;i<=dist+6;i++)
+	{
+		pos.move(dir,1);
+		_range[i]=new Array();
+		_range[i][0]=pos.x;
+		_range[i][1]=pos.y;
+	}
+	
+	return _range;
+}
+
+function GetEnemyCountInRange(_range,radius)
+{
+	if (!_range || !_range.length) return 0;
+
+	var count=0;
+	var npc=getUnit(1);
+
+	if (!npc) return 0;
+	do{
+		if (npc && npc.mode != 12 && ValidEnemy(npc) && npc.hp > 0)
+		{
+			var pos=new coord(npc);
+			var p=npc.getParent();
+			if (!p || p.name != me.name)
+			{
+				for(var i=0;i<_range.length;i++)
+				{
+						if (pos.dist(_range[i][0],_range[i][1])<=radius)
+							count++;
+				}
+			}
+		}
+	}while (npc && npc.getNext());
+	runGC();
+	
+	return count;
+}
+
+function LeapAttack(skill, skillnormal, skillpi, e, bSwitch,MaxAttacks)
+{
+	if (!e || e.hp <= 0 || e.mode == 12 )
+		return false;
+	
+	DebugWrite("Leap attack");
+	
+	last_hp = e.hp;
+	miss_counter = 0;
+	pos = new coord();
+	while(e.hp > 0 && e.mode != 12 && e.getState( 105 ) ) {
+/*		if ( bSwitch )
+			checklife(e);*/
+		pos.set(me);
+
+		last_hp = e.hp;
+
+		if (pos.dist(e) > 4)
+			DoAttackSequence( skill, right_hand, e );
+		else if ( e.getStat(36) > 99 )
+			DoAttackSequence( skillpi, left_hand, e );
+		else 
+			DoAttackSequence( skillnormal, left_hand, e ); 
+		
+		if (e.hp >= last_hp) {
+			miss_counter++;
+			if (miss_counter > 3) {
+				return false;
+			}
+		}
+		else
+			miss_counter = 0;
+			
+		CheckSelf();
+	}
+	
+	return true;
+}
+
+function MeleeAttack(skill, e, bSwitch,MaxAttacks)
+{
+	if (!e || e.hp <= 0 || e.mode == 12 )
+		return false;
+	
+	DebugWrite("Melee attack");
+	
+	pos = new coord(me);
+	if(pos.dist(e) > 3) {
+		MoveToMonster(e,3);
+	}
+	
+	Sc_SetSkill(skill, left_hand);
+		
+	last_hp = e.hp;
+	miss_counter = 0;
+	pos = new coord();
+	while(e.hp > 0 && e.mode != 12 && e.getState( 105 ) ) {
+		if ( bSwitch )
+			checklife(e,MaxAttacks);
+		pos.set(me);
+		if (pos.dist(e) > 4)
+			MoveToMonster(e, 3);
+			
+		last_hp = e.hp;
+		e.useSkill(left_hand);
+		delay(50);
+		while(me.mode == 7 || me.mode == 8) {
+			delay(50);
+		}
+		if (e.hp >= last_hp) {
+			miss_counter++;
+			if (miss_counter > 3) {
+				return false;
+			}
+		}
+		else
+			miss_counter = 0;
+			
+		CheckSelf();
+	}
+	
+	return true;
+}
+
+function WWAttack(skill, e, bSwitch,MaxAttacks)
+{	
+	if (!e || e.hp <= 0 || e.mode == 12 )
+		return false;
+	
+	DebugWrite("WW Attack");
+	
+	Sc_SetSkill(skill, left_hand);
+		
+	pos = new coord(me);
+	
+	last_hp = e.hp;
+	miss_counter = 0;
+	
+	while(e.hp > 0 && e.mode != 12 && e.getState( 105 ) ) {
+		if (me.mp < Math.ceil(24 + (0.5 * me.getSkill("Whirlwind"))))
+			return MeleeAttack(character["secondary_skill"], e, bSwitch,MaxAttacks);
+
+		if ( bSwitch )			
+			checklife(e,MaxAttacks);	
+		pos.set(me);
+		dir = pos.dir(e);
+		
+		// prevent 0,0 vector
+		if (dir.x == 0 && dir.y == 0)
+			dir.x = 1;
+		
+		dist = pos.dist(e);
+		pos.move(dir, dist + 6);
+
+		last_hp = e.hp;
+
+		me.useSkillAt(pos.x, pos.y, left_hand);
+		delay(100);
+		while(me.mode == 18) {
+			delay(100);
+		}
+		
+		if (e.hp >= last_hp) {
+			miss_counter++;
+			if (miss_counter > 3) {
+				return false;
+			}
+		}
+		else
+			miss_counter = 0;
+			
+		CheckSelf();
+
+	}
+	
+	return true;
+}
+
+// again take from scavenger
+function FindEnemyNearNotPI(target, radius, exclude, bExcludePI)
+{
+	var pos = new coord(target);
+	var e = getUnit(1);
+	do {
+		if ( ( !bExcludePI || e.getStat(36) < 100 ) && CheckMonster( e ) > 0  ) {
+			if ( !exclude || exclude.gid != e.gid )
+				if (pos.dist(e) <= radius)
+					return e;
+		}
+	}while(e && e.getNext());
+
+	return null;
+}
+
+function BarbCleanUp(exclude, bExcludePI )
+{
+	while(1)
+	{
+		//whirlwind to kill minions
+		var e1=FindEnemyNearNotPI(exclude,10,exclude,bExcludePI);
+		if (!e1) break;
+		
+		CharAttack( e1 );
+	}
+}
+
+function GetEnemyCountNear(target, radius)
+{
+	var count = 0;
+	var pos = new coord(target);
+	var e = getUnit(1);
+	do {
+		if ( CheckMonster( e ) > 0 ) {
+			if (pos.dist(e) <= radius)
+				count++;
+		}
+	}while(e && e.getNext());
+	
+	return count;
+}

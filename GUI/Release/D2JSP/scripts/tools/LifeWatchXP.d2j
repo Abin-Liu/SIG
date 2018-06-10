@@ -1,0 +1,477 @@
+
+// pwnlifewatch.d2j Life management tool 2.02
+// Original scripter(s): Syadasti / Swedish Power / HPB_Forever
+// Currently maintained by: Aeternus and Xizeta
+
+// v0.1 original release by Syadasti
+// v0.2 severe bugfixes by Swedish Power
+// v0.3 added Mana drinking
+// v0.4 added Rejuvenation logic
+// v0.5 improved the logic
+// v0.6 bugfix
+// v1.5 maintained by HPB_forever for pwnage pindle
+// v1.6 Added by Aeternus: Bailing on running out of potions. Added several comments too (for easier maintenance)
+//      Also changed getting potions to finding them by classID. This is faster.
+// v1.61 Fixed a small oops in the merc-feeding code (wouldn't register a success).
+// v2.0 Now maintained by Aeternus (for Pwnage Pindle / Ice Countess 2)
+//	Changes:
+//	- Script starts checking rightaway, no need for an area change. Chickening/potiondrinking is disabled while in town
+//	- Total script overhaul. Should be less CPU-intensive now.
+//	- Quit on another player hostiling should work now (haven't been able to test. Someone confirm please)
+//	- Will restart the potionloop for mercs if it dies and you revive it. Disables mercchecks when it's dead.
+//	- Added feature: Chicken if you can't drink a potion when you should because your action is preventing it. 
+//	  For barbs getting hit while jumping for instance. HC stuff I guess, Xizeta wanted it ;)
+//	- Changed settings. Should be easier to set up.
+// v2.1 Added a screenhook so we can check if it is still running, needed by Darien
+// v2.2 Added Killkeepers Console to remove the prints to screen(DaBeerMan)	
+
+
+var PwnPots=new Object();	//Ignore this line
+
+// Chicken and Potion settings
+//====================================================================
+// If you use a number over 99 for the chicken totals, it will use a static number instead of a percent!
+
+// My settings
+PwnPots["ChickenLife"] = 20;		// This is your chicken life percentage.  If you go below this life total, the game will exit. Value > 100 is interpreted as the actual amount of life.
+PwnPots["ChickenMana"] = 0;		// This is your chicken mana percentage.  If you go below this mana total, the game will exit. Value > 100 is interpreted as the actual amount of life.
+PwnPots["LifeThresh"] = 40;		// Drink a normal potion if under this % life
+PwnPots["ManaThresh"] = 10;		// Drink a normal potion if under this % mana
+PwnPots["LifeRejuvThresh"] = 40;	// Drink a rejuv potion if under this % life
+PwnPots["ManaRejuvThresh"] = 0;		// Drink a rejuv potion if under this % mana
+PwnPots["QuitOnNoDrink"] = 50;		// Quits when you cannot drink a potion because your character action (barb jump for instance) is preventing it AND life is lower then the set value. 0 to disable.
+// Potion shortage (Note, when running heal/mana pots, a rejuv potion is tried first, before quitting)
+PwnPots["ChickenOnOutOfManaPots"] = false;	// If set to true, will bail when running out of mana potions in belt.
+PwnPots["ChickenOnOutOfHealPots"] = false;	// If set to true, will bail when running out of health potions in belt.
+PwnPots["ChickenOnOutOfRejuvPots"] = false;	// If set to true, will bail when running out of rejuvination potions in belt.
+// Merc settings
+PwnPots["MercFavorsJuves"] = true;	// Set this to true to use rejuvs on your merc before other potions
+PwnPots["MyMercPotionLife"]= 30;	// This is the threshold to use a potion on your merc
+PwnPots["DrinkTimer"] = 2;		// But dont drink more than one potion for this number of seconds
+PwnPots["MercChickenLife"] = 10;	// This is your mercs chicken life percentage.  If he goes below this life total, the game will exit.
+PwnPots["DeadMercChicken"] = true;	// If true, chicken if your merc dies
+// Misc settings
+PwnPots["LoopDelay"] = 150;		// This is the time your script will pause in between each life check
+PwnPots["IgnorePosition"] = false;	// Set this to true, and you will drink any potion in your belt, not just those readily clickable
+PwnPots["QuitOnHostile"] = false;	// If this is true, you will quit when someone goes hostile with you.
+PwnPots["MaxPing"] = 3000;		// Set in MS to leave the game on high ping. Should NEVER be under 500!
+
+/*
+Notes:
+
+Setting the LoopDelay very low consumes a lot of CPU power. If Diablo seems sluggish raise this value. 200 should
+be fine for most systems, though HC players on a fast system might want to do 100.
+IgnorePosition is intended for cautious players who are paranoid about detection. It will allow only the drinking of
+the lowest 4 belt positions (IE the ones you would normally drink from). Otherwise the bot can drink from the entire
+belt.
+*/
+include ("common/d2jsp-console.d2l");
+var oCon = new oConsole();
+function PLW_DoSwitchCharSets(){
+//If you have a character and need different settings for them, you can change them here.
+	switch(me.name)
+	{
+		case "YourCharacter":
+			PwnPots["ChickenLife"] = 60;
+			PwnPots["ChickenMana"] = 20;
+			break;
+		case "YourOtherCharacter":
+			PwnPots["LifeRejuvThresh"] = 60;
+			PwnPots["ManaRejuvThresh"] = 30;
+			break;
+	}
+}
+
+
+//DO NOT touch below this line!
+function oMessanger()
+{
+	this.TypeError = function(pMsg)
+	{
+		print(COLORSTRING + COLORRED + "ERROR : " + COLORSTRING + COLORWHITE + pMsg);
+	}
+}
+
+
+// There is no need to edit below, unless you know what you are doing
+var hp=getScreenHook();
+var mp=getScreenHook();
+var PL1=getScreenHook();
+const PLW_MANAPOT=0;
+const PLW_HEALPOT=1;
+const PLW_REJPOT=2;
+const POT_NAMEARRAY= new Array("mana","healing","rejuvination");
+PwnPots["MyArea"] = me.area;
+PwnPots["MyMerc"] = null;
+
+//Just a few ScreenHooks for solo play
+hp.x=55; hp.y=540; hp.font=1; hp.color=9; hp.text=String(me.hp);
+mp.x=720; mp.y=540; mp.font=1; mp.color=9; mp.text=String(me.mp);
+PL1.x=700; PL1.y=580; PL1.font=1;
+
+function updatePL1(txt) { PL1.text="ÿc2*Ping: "+txt; }
+
+function main() {
+
+	// Main function of this script. :]
+	// Initialisation: Checks if you have a merc, sets the base values.
+	CreateConsole();
+	PLprint("ÿc4 Thanks Killkeeper for the SEXY new console!");	
+	PLprint("ÿc2 Potion/chicken script has been loaded!");
+	PLW_DoSwitchCharSets();
+
+
+	PwnPots["_tMyLastDrink"] = 0;
+	PwnPots["_tMercLastDrink"] = 0;
+	PwnPots["FailedDrinks"] = 0;
+	PwnPots["myArea"] = me.area;
+	if(PwnPots["QuitOnHostile"])
+		me.quitonhostile = 1; 
+	else
+		me.quitonhostile=0;
+	PwnPots["MercPotionLife"] = parseInt((128 * PwnPots["MercPotionLife"]) / 100);
+	PwnPots["MercChickenLife"] = parseInt((128 * PwnPots["MercChickenLife"]) / 100);
+	// Convert actual life values to their percentages. Inaccurate if you need to take things such as BO into account.
+	if(PwnPots["ChickenLife"] > 100) PwnPots["ChickenLife"] = parseInt((PwnPots["ChickenLife"] / me.hpmax)*100);
+	if(PwnPots["ChickenMana"] > 100) PwnPots["ChickenMana"] = parseInt((PwnPots["ChickenMana"] / me.mpmax)*100);
+	PLW_GetMerc();
+	PwnPots["HPpct"] = Math.floor(me.hp * 100 / me.hpmax);
+	PwnPots["MPpct"] = Math.floor(me.mp * 100 / me.mpmax);
+
+	// Main loop
+	PLprint("ÿc2 Starting main potionloop for "+me.name);
+	while (1){ 					
+		if(me.area != PwnPots["MyArea"]){ 		// Scan for merc once per area change. 
+			PLW_GetMerc();
+			PwnPots["MyArea"] = me.area;
+		}
+		if (!(me.area == 1 || me.area == 40 || me.area == 75 || me.area == 103 || me.area == 109)){ 				
+								// Town = safe. No checks there.
+			PLW_Checker(); 				// Check yourself
+			if(PwnPots["MyMerc"]) PLW_CheckMerc();	// Check merc if we have one
+		}
+		hp.text=String(me.hp);
+		mp.text=String(me.mp);
+		updatePL1(""+me.ping);
+		if(me.ping > PwnPots["MaxPing"]) quit();
+		delay(PwnPots["LoopDelay"]);
+	}
+}
+
+
+function PLW_Checker(){
+	// Checks health and mana of player and feeds player potions. Chickens at set values.
+	if(PwnPots["ChickenLife"] > parseInt((me.hp / me.hpmax)*100) || me.hp <1 ) quit(); // Run away!
+	if(PwnPots["ChickenMana"] > parseInt((me.mp / me.mpmax)*100)) quit();
+	// don't drink more than you can handle
+	var tNow = new Date();
+	var potion=-1;
+	if (PwnPots["_tMyLastDrink"] && ((tNow - PwnPots["_tMyLastDrink"]) < (PwnPots["DrinkTimer"] * 1000))) return;
+	PwnPots["HPpct"] = Math.floor(me.hp * 100 / me.hpmax);
+	PwnPots["MPpct"] = Math.floor(me.mp * 100 / me.mpmax);
+	if (PwnPots["HPpct"] <= PwnPots["LifeRejuvThresh"] || PwnPots["MPpct"] <= PwnPots["ManaRejuvThresh"] || (PwnPots["HPpct"] <= PwnPots["LifeThresh"] && PwnPots["MPpct"] <= PwnPots["ManaThresh"])) 
+		potion = PLW_REJPOT;
+	else if (PwnPots["HPpct"] <= PwnPots["LifeThresh"])
+		potion = PLW_HEALPOT;
+	else if (PwnPots["MPpct"] <= PwnPots["ManaThresh"])
+		potion = PLW_MANAPOT;
+	if(potion < 0) return; // No potiondrinking needed. We're done.
+	if(PwnPots["FailedDrinks"]<3) PLprint("ÿc1 Attemting to drink a " + PLW_GetPotionName(potion) + " potion...");
+	
+	var result = PLW_DrinkPot(potion,false);
+	
+	switch(result){
+		case 1:{
+			PLprint("ÿc1 Drinking a "+PLW_GetPotionName(potion)+" potion was a Success!");
+			PwnPots["FailedDrinks"] = 0;
+			PwnPots["_tMyLastDrink"] = new Date();
+			break;
+		}
+		case 0:{
+			PLprint("ÿc1 Drink attempt FAILED! Out of "+PLW_GetPotionName(potion)+"potions!");
+			var reDrink=0;
+			if(!(potion == PLW_REJPOT)) reDrink=retryDrink(potion); // Don't retry on rejuvs for self. Bail at once.
+			if(reDrink==0 ) switch(potion){
+				case PLW_HEALPOT: {
+					if(reDrink==0 && PwnPots["ChickenOnOutOfHealPots"]){
+						PLprint("ÿc1 Out of health potions! I'm outta here!");
+						quit();
+					}
+					break;
+				}
+				case PLW_REJPOT:{
+					if(PwnPots["ChickenOnOutOfRejuvPots"]){
+						PLprint("ÿc1 Out of rejuvination potions! I'm outta here!");
+						quit();
+					}
+					break;
+				}
+				case PLW_MANAPOT:{
+					if(PwnPots["ChickenOnOutOfManaPots"]){
+						PLprint("ÿc1 Out of mana potions! I'm outta here!");
+						quit();
+					}
+					break;
+				}
+			}else if(reDrink == -1) PLW_SafetyQuit();
+			else if(reDrink == 1) PwnPots["_tMyLastDrink"] = new Date();
+			break;
+		}
+		case -1:{
+			// Couldn't drink potion. Probably bad mode. Should we quit?
+			PLW_SafetyQuit();
+			break;
+		}
+	}
+}
+
+
+function PLW_CheckMerc(){
+// Checks merc health and feeds potions to merc. Chickens on merc death and low health if needed. If a merc is present.
+	if(!PwnPots["MyMerc"]){ // No PwnPots["MyMerc"].
+		return;
+	}
+
+	if (PwnPots["MyMerc"].hp < 1){ // Well now, he's dead...  No use in giving him potions. Stop checking.
+		if(PwnPots["DeadMercChicken"]) quit();
+		PwnPots["MyMerc"] = null;
+		return;
+	}
+
+	if (PwnPots["MyMerc"].hp < PwnPots["MercChickenLife"]){
+		PLprint("ÿc1 My mercenary is about to die.  I'm outta here!");
+		quit();
+	}
+	var tNow = new Date();
+	// don't drink more than you can handle
+	if (PwnPots["_tMercLastDrink"] && ((tNow - PwnPots["_tMercLastDrink"]) < (PwnPots["DrinkTimer"] * 1000)))
+		return false;
+
+	if (PwnPots["MyMerc"].hp <= PwnPots["MyMercPotionLife"]){ // Check hp level
+		PLprint(PwnPots["MyMerc"].hp);
+		if (PwnPots["MercFavorsJuves"])
+			potion = PLW_REJPOT;
+		else
+			potion = PLW_HEALPOT;
+		if (PwnPots["MyMerc"].hp <= 0 || me.mode == 0 || me.mode == 17 || me.mode == 18)
+			return;
+
+		if(PwnPots["FailedDrinks"]<3)
+			PLprint("ÿc9 Attemting to give mercenary a "+ PLW_GetPotionName(potion) +" potion...");
+		var result = PLW_DrinkPot(potion,true);
+		if (result == 1)
+		{
+			PLprint("ÿc2 Feeding mercenary a "+ PLW_GetPotionName(potion) +" potion was a Success!");
+			PwnPots["FailedDrinks"] = 0;
+			delay(100);
+		}
+		else
+		{
+			if (result == -1)
+				PLprint("ÿc1 Feeding mercernary a potion FAILED!");
+			else
+				PLprint("ÿc1 Out of "+ PLW_GetPotionName(potion) +" potions!");
+
+			if (potion==PLW_HEALPOT)
+				potion = PLW_REJPOT;
+			else
+				potion = PLW_HEALPOT;
+			if(PwnPots["FailedDrinks"]<3)
+				PLprint("ÿc1 Attemting to give merc a "+ PLW_GetPotionName(potion) +" potion instead...");
+			result = PLW_DrinkPot(potion,true);
+			if (result == 1){
+				PLprint("ÿc2 Feeding mercenary a "+ PLW_GetPotionName(potion) +" potion was a Success!");
+				PwnPots["FailedDrinks"] = 0;
+				delay(100);
+			}
+			else if(result == -1) PLprint("ÿc1 Feeding mercernary a potion FAILED!");
+			else if(result == 0) PLprint("ÿc1 Out of "+ PLW_GetPotionName(potion) +" potions too!");
+		}
+		PwnPots["_tMercLastDrink"] = new Date();
+	}
+}
+
+
+function PLW_SafetyQuit(){
+	// Quits if you cannot drink a potion when you -should- drink one and you have less then the set life
+	// If we don't quit we'll probably try and drink again in the next potion loop.
+	if(PwnPots["QuitOnNoDrink"]<100 ){
+		if(Math.floor(me.hp * 100 / me.hpmax) < PwnPots["QuitOnNoDrink"]) quit();
+	}else{
+		if(me.hp < PwnPots["QuitOnNoDrink"]) quit();
+	}
+}
+
+
+function PLW_GetMerc(){
+	// Scans for your merc and saves it to the MyMerc var. If dead/none found it will set MyMerc to null.
+	merc = getUnit(1);
+	if (merc) do{
+		if(merc.classid!=271 && merc.classid!=338 && merc.classid!=359 && merc.classid!=561)
+			continue;
+		var parent = merc.getParent();
+		if (parent && parent.name == me.name){
+			if( !PwnPots["MyMerc"] || merc && PwnPots["MyMerc"] && !(PwnPots["MyMerc"].name==merc.name)) PLprint("ÿc2 Starting potionloop for your mercenary "+merc.name);
+			PwnPots["MyMerc"] = merc;
+			return;
+		}
+		
+	}while(merc.getNext());
+	PwnPots["MyMerc"] = null;
+}
+
+
+function retryDrink(potion){
+	// If we're out of potions of one type, try a compatible type.
+	if (potion == PLW_REJPOT){
+		if(PwnPots["HPpct"] <= PwnPots["LifeThresh"])
+			potion = PLW_HEALPOT;
+		else
+			potion = PLW_MANAPOT;
+	}else if (potion == PLW_MANAPOT || potion == PLW_HEALPOT)
+		potion = PLW_REJPOT;
+	if(PwnPots["FailedDrinks"]<3)
+		PLprint("ÿc1 Attemting to drink a "+ PLW_GetPotionName(potion) +" potion instead...");
+	result = PLW_DrinkPot(potion,false);
+	if (result == 1){
+		PLprint("ÿc2 Drinking a "+ PLW_GetPotionName(potion) +" potion was a Success!");
+		PwnPots["FailedDrinks"] = 0;
+		return 1;
+	}else if (result == -1){
+		PLprint("ÿc1 Drink attempt FAILED!");
+		return -1;
+	}else{
+		PLprint("ÿc1 Out of "+ PLW_GetPotionName(potion) +" potions too!");
+		return 0;
+	}
+}
+
+
+function PLW_DrinkPot(type,toMerc){
+// Tries to drink a potion of the designated type. 
+/* ClassID list for conversion:
+	515 rvs 	591 hp5 
+	516 rvl 	592 mp1 
+	587 hp1 	593 mp2 
+	588 hp2 	594 mp3 
+	589 hp3 	595 mp4 
+	590 hp4 	596 mp5 
+*/
+// Returns: 1 = success, 0 = failure, out of potions, -1 = failure, can't drink
+	var pot = null;
+	switch (type){
+		case PLW_REJPOT:{
+			pot=PLW_GetPotByClassID(516);
+			if(!pot)
+				pot=PLW_GetPotByClassID(515);
+			break;
+		}
+		case PLW_HEALPOT: {
+			for (i = 591; i > 586; i--){
+				// Gets the biggest health potion.
+				pot=PLW_GetPotByClassID(i);
+				if(pot) break;
+			}
+			break;
+		}
+		case PLW_MANAPOT:{
+			for (i = 596; i > 591; i--){
+				// Gets the biggest mana potion.
+				pot=PLW_GetPotByClassID(i);
+				if(pot) break;
+			}
+			break;
+		}
+		default: pot=null;			
+	}
+
+	if (pot){
+		// Drinks the specified potion.
+		// Filter out illegal modes to drink potions
+		if(!( me.mode == 0  || me.mode == 17 || me.mode == 18 )){ // Don't drink while dead or in "sequence"
+			if(toMerc){
+				clickItem(3,pot);
+				return 1;
+			}else{
+				clickItem(1,pot);
+				return 1;
+			}
+			
+		}else return -1;
+	}else 
+		return 0; // No potion... :(
+}
+
+
+function PLW_GetPotByClassID(classid){
+	// New function: Getting stuff by classid is faster.
+	if(!classid) return null; // Err... Yea. Sanity check.
+	Pot=getUnit(4,classid,2);
+	if(Pot) do{
+		if(Pot.getParent() && Pot.getParent().name == me.name){
+			if(PwnPots["IgnorePosition"] || Pot.x<4)
+				return Pot;
+		}
+	} while(Pot && Pot.getNext(classid,2));
+	return null;
+
+}
+
+
+function PLW_GetPotionName(potion){
+// Gets the potion name for screen printing.
+	return POT_NAMEARRAY[potion];
+}
+
+
+function PLW_EPrint(string){ 
+	PwnPots["FailedDrinks"]++;
+	if (PwnPots["FailedDrinks"]<3) // Stop spamming
+		PLprint(string);
+	if (PwnPots["FailedDrinks"]==3)
+		PLprint("ÿc1 Failed to drink any potions!  Verbose mode turned off!");
+}
+
+function CreateConsole()
+{
+	oCon.System.oPos["ConsoleN"] = [20,400,320,400];
+	oCon.System.oPos["ConsoleS"] = [20,500,320,500];
+	oCon.System.oPos["ConsoleTitle"] = [20,397];
+	
+	
+	oCon.System._CreateConsole = function()
+	{
+		oCon.System.Painter.Put(oCon.System.oPos["ConsoleN"][0],oCon.System.oPos["ConsoleN"][1],oCon.System.oPos["ConsoleN"][2],oCon.System.oPos["ConsoleN"][3],21);
+		oCon.System.Painter.Put(oCon.System.oPos["ConsoleS"][0],oCon.System.oPos["ConsoleS"][1],oCon.System.oPos["ConsoleS"][2],oCon.System.oPos["ConsoleS"][3],21);
+				
+		for (var pN=0;pN<7;pN++)
+			oCon.System.pMsgPtr = oCon.System.Texter.Allocate(oCon.System.oPos["ConsoleN"][0] + 5, oCon.System.oPos["ConsoleN"][1] + 18 + pN*12, " ", COLORWHITE, FONT_PIXEL_9);
+		oCon.System.pMsgPtr -= 6;
+		
+		oCon.System.Shape = getScreenHook();
+		oCon.System.Shape.x = 20;
+		oCon.System.Shape.y = 400;
+		oCon.System.Shape.x2 = 320;
+		oCon.System.Shape.y2 = 500;
+		oCon.System.Shape.text = "";
+		oCon.System.Shape.color = 2;
+		oCon.System.Shape.opacity = 1;
+		oCon.System.Shape.type = 1;
+
+		oCon.System.Texter.Put(oCon.System.oPos["ConsoleTitle"][0],oCon.System.oPos["ConsoleTitle"][1]," LifeWatchXP Running... ",COLORCRAFT,FONT_PIXEL_11);
+		
+	}
+	
+	oCon.System.Initialize = function()
+	{
+		oCon.System._InitArray();
+		oCon.System._CreateConsole();
+	}
+	
+	oCon.System.Initialize();
+}
+
+function PLprint(what)
+{
+	oCon.System.AddMessage(what);
+}

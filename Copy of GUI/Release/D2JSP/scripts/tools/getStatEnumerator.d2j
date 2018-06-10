@@ -1,0 +1,24 @@
+// getStatEnumerator.d2j example script, by njaguar
+
+function main() {
+	
+	unit = getUnit(100);
+	
+	if(unit) {
+		print("Outputting stats for: " + unit.name);
+		statList = unit.getStat(-2);
+		if(statList) {
+			for( stat in statList ) {
+				for( substat in statList[stat] ) {
+					print( "Stat: ["
+						  + stat
+						  + ":"
+						  + substat
+						  + "] - Value: "
+						  + statList[stat][substat] );
+				}
+			}
+		}
+	}
+}
+

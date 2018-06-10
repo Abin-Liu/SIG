@@ -1,0 +1,1231 @@
+//////////////////////////////////////////////////////////////////////
+// XP projects include file
+//
+// Author : Xizeta
+// Last update : 2004/07/26
+//
+// Version : 1.08
+//////////////////////////////////////////////////////////////////////
+
+
+//////////////////////////////////////////////////////////////////////
+// Public Variables
+//////////////////////////////////////////////////////////////////////
+
+// Town variables
+var XP_SellBackItems=true;	// Sell items back to the NPC
+
+// Zombies variables
+var XP_AttackZombies=false;	// Attack the zombies in the courtyard
+var XP_ZombieSkill="temp";
+var XP_ZombieStand=false;
+
+// Precasting variables
+var XP_ColdArmor = 0;		// cast a cold armor (0 = disable, 1 = frozen, 2 = shiver and 3 = chilling)
+var XP_EnergyShield = false;	// Cast Energy Shield
+var XP_ThunderStorm = false;	// Cast Thunderstorm
+var XP_EnchantMerc=false;	// Enchant the merc
+var XP_SummonBefore=false;	// Summon a golem in town
+var XP_BoneArmor=true;		// Cast Bone Armor or not
+var XP_DruidShift=223;		// Druid Shift skill
+
+// Attack variables
+var XP_KillMinions=false;
+var XP_MaxAttacks=30;
+var XP_MephDodge = false;
+var XP_CouncilAbort=true;
+var XP_CouncilDist=10;
+var BowAmount=45;
+var JavAmount=31;
+var BowFirst=false;
+
+// Movement variables
+var XP_UseTeleport=true;
+var XP_UseTeleSorc=true;
+
+// Near death variables
+var XP_SwitchOnKill=true;
+var XP_SwitchHP=40;
+var XP_StallKill=false;
+var XP_StallHP=40;
+var XP_StallSkipPhys=true;
+
+
+//////////////////////////////////////////////////////////////////////
+// Private Variables
+//////////////////////////////////////////////////////////////////////
+var _XP_AttackCompleted=0;
+var _XP_EndPosition;
+var _XP_GetNumUnId = 0;
+var _XP_Quadrant = 1;
+var commConsole = false;
+
+
+//////////////////////////////////////////////////////////////////////
+// Character specific variables
+//////////////////////////////////////////////////////////////////////
+
+if(me.classid==6) {
+
+	var XP_AssassinSkill=0;
+}
+
+if(me.classid==5) {
+
+    	var DruidSummon=247;	// "Summon Grizzly"
+    	var SummonNumber=0;
+    	var CastonPindle=true;
+    	var Barbs=false;
+    	var Heart=false;
+    	var OakSage=true;
+    	var DruidSkill=248;	// "Fury"
+}
+
+if(me.classid==4) {
+
+	var shout=false;
+	var BCommand=false;
+	var Border=true;
+	var FindItem=true;
+	var ChangeWeaponPre=false;
+	var ChangeWeaponHork=false;
+	var UseBerserk=true;
+	var wwdistance=5;
+}
+
+if(me.classid==3) {
+
+    	var XP_FOHatStart=0;
+    	var XP_FOHAura=123; 	// "Conviction"
+	var XP_Caster=false;
+    	var XP_PallyAttack=106; // "Zeal"
+    	var XP_PallyAura=122; 	// "Fanaticism"
+	var XP_PhysAttPercent=75;
+    	var XP_PhysAttack=106;
+    	var XP_PhysAura=122;
+	var XP_ZombieAura=122; // "Fanaticism"
+}
+
+if(me.classid==2) {
+
+	var CorpsePopping=false;
+    	var BodySkill=74; 	// "Corpse Explosion"
+    	var NecroSkill=93; 	// "Bone Spirit"
+    	var BoneBehind=true;
+    	var XP_BoneBoss=true;
+    	var BoneNumber=1;
+    	var NecroCurse=91; 	// "Lower Resist"
+    	var XP_NecroSummon=94; // "FireGolem"
+    	
+    	// var CastonPindle=true;
+}
+
+if(me.classid==1) {
+
+	var spelllist=new Array();
+	var timedfirst=false;
+	var statictimes=1;
+	var untimedrepeat=2;
+	var XP_ZombieUseStatic=true;
+	var XP_ZombieStaticTimes=2;
+	var timedspell = new Array();
+	var untimedspell = new Array();
+}
+
+if(me.classid===0) {
+
+	var PrecastValk=true;
+	var CastValkOn=false;
+	var CastDecoyOn=true;
+	var DecoyPosition=0;
+	// var BowFirst=true;
+	var JavFirst=false;
+	// var SwitchPhys=false;
+	var PhysAmount=50;
+	var SwitchLit=false;
+	var LitAmount=50;
+	var StartIt=0;
+	var PickupShield=false;
+	var UseJavelins=false;
+	var JavRechargeAmount=45;
+	var BowAttack=new Array();
+	var JavAttack=new Array();
+	var BowNumber=new Array();
+	var JavNumber=new Array();
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// General Functions
+//////////////////////////////////////////////////////////////////////
+
+function XP_Coord(x,y) {
+
+	this.x = x;
+	this.y = y;
+}
+
+//you need this for some error typing.... don't forget it :p
+function oMessanger() {
+
+	this.TypeError = function(pMsg)	{
+
+		DC_Print(COLORSTRING + COLORRED + "ERROR : " + COLORSTRING + COLORWHITE + pMsg,commConsole);
+	};
+}
+
+function XP_CreateConsole(scriptname) {
+
+	// Initialize the new classes
+	commConsole = new oConsole();
+
+	// Pass the new initialized console to the d2jsp-common one so all prints point to the right console
+	DC_Console = commConsole;
+
+	commConsole.System.oPos["ConsoleN"] = [50,60,680,60];
+	commConsole.System.oPos["ConsoleS"] = [50,154,680,154];
+	commConsole.System.oPos["ConsoleTitle"] = [50,57];
+
+	commConsole.System._CreateConsole = function() {
+
+		commConsole.System.Painter.Put(commConsole.System.oPos["ConsoleN"][0],commConsole.System.oPos["ConsoleN"][1],commConsole.System.oPos["ConsoleN"][2],commConsole.System.oPos["ConsoleN"][3],21);
+		commConsole.System.Painter.Put(commConsole.System.oPos["ConsoleS"][0],commConsole.System.oPos["ConsoleS"][1],commConsole.System.oPos["ConsoleS"][2],commConsole.System.oPos["ConsoleS"][3],21);
+				
+		for (var pN=0;pN<7;pN+=1) {
+
+			commConsole.System.pMsgPtr = commConsole.System.Texter.Allocate(commConsole.System.oPos["ConsoleN"][0] + 5, commConsole.System.oPos["ConsoleN"][1] + 18 + pN*12, " ", COLORWHITE, FONT_PIXEL_9);
+		}
+		commConsole.System.pMsgPtr -= 6;
+
+		commConsole.System.Shape = getScreenHook();
+		commConsole.System.Shape.x = 50;
+		commConsole.System.Shape.y = 60;
+		commConsole.System.Shape.x2 = 680;
+		commConsole.System.Shape.y2 = 154;
+		commConsole.System.Shape.text = "";
+		commConsole.System.Shape.color = 2;
+		commConsole.System.Shape.opacity = 1;
+		commConsole.System.Shape.type = 1;
+
+		commConsole.System.Texter.Put(commConsole.System.oPos["ConsoleTitle"][0],commConsole.System.oPos["ConsoleTitle"][1],"           " + scriptname + " from Xizeta                  *************                    Console from Killkeeper ",COLORCRAFT,FONT_PIXEL_11);
+		
+	};
+
+	commConsole.System.Initialize = function() {
+
+		commConsole.System._InitArray();
+		commConsole.System._CreateConsole();
+	};
+	
+	commConsole.System.Initialize();
+}
+
+function XP_DestroyConsole() {
+
+	// Release all the data for the console
+	commConsole.System.Texter.ReleaseAll();
+	commConsole.System.Painter.ReleaseAll();
+	commConsole.System.Shape.text = "";
+	commConsole.System.Shape.x = -1;
+	commConsole.System.Shape.y = -1;
+	commConsole.System.Shape.x2 = -1;
+	commConsole.System.Shape.y2 = -1;
+
+	// Make them null to stop using the class
+	commConsole = null;
+	DC_Console = null;
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// Town Functions
+//////////////////////////////////////////////////////////////////////
+
+// ToDo : Think if it is better to move it in XI_TownLib...
+function XP_DoCheckItems(npc) {
+
+	var _uniditem = false;
+	var _baditems = new Array();
+
+	if (_XP_GetNumUnId > 0) {
+
+		DC_DPrint("XP_DoCheckItems() : Num of UnId to identifty : " + _XP_GetNumUnId);
+
+		// Get in trade with the npc
+		DT_DoTrade(npc);
+
+		var _idtome = DT_GetTome();
+
+		// If we have a tome of id, use it
+		if (_idtome) {
+
+			// If we don't have enough scrolls in the tome, fill it
+			if (_idtome.getStat(70) < _XP_GetNumUnId) {
+
+				// Fill the book at the npc
+				DT_FillTome(npc);
+
+				// If the book is still not filled, abort
+				if (_idtome.getStat(70) < _XP_GetNumUnId) { return false; }
+			}
+
+			// Get the first unid item
+			_uniditem = DT_GetUnidItem();
+
+			// Loop until all unid items is checked
+			while (_uniditem) {
+
+				// Id the item
+				DT_IdItem(_idtome,_uniditem);
+
+				// Check the item against bmitems.ini and add to the array if it is a bad item
+				if (!DT_NiceItem(_uniditem)) {
+
+					_baditems.push(_uniditem.gid);
+				}
+
+				// Get the next unid item
+				_uniditem = DT_GetUnidItem();
+			}
+		}
+
+		// Use scrolls to id items
+		else {
+
+			// Get the first unid item
+			_uniditem = DT_GetUnidItem();
+
+			// Loop until all unid items is checked
+			while (_uniditem) {
+
+				var _idscroll = DT_GetScroll();
+
+				// If we don't have any scroll in inventory, buy a few
+				if (!_idscroll) {
+
+					// If we cannot get at least a scroll, abort
+					if (!DT_BuyScrolls(npc,0,_XP_GetNumUnId)) { return false; }
+
+					// If we bought the scrolls, get one for use
+					_idscroll = DT_GetScroll();
+
+					// Abort if we cannot find the bought scroll (weird problem)
+					if (!_idscroll) { return false; }
+				}
+
+				// Id the item
+				DT_IdItem(_idscroll,_uniditem);
+
+				// Check if the item is a keeper and put in the bad items array if it is not
+				if (!DT_NiceItem(_uniditem)) {
+
+					_baditems.push(_uniditem.gid);
+				}
+
+				// If it is a keeper, log it
+				else {
+
+					if (DL_LogMode < 2) {
+
+						DL_LogItem(DL_GetItemName(_uniditem),_uniditem.quality,"[Kept]");
+					}
+					else {
+
+						DL_LogItem(DL_GetItemName(_uniditem),_uniditem.quality,"[Kept]","[Full stats soon]");
+					}
+				}
+
+				// Get the next unid item
+				_uniditem = DT_GetUnidItem();
+			}
+		}
+
+		// If we got crap items, sell it or drop it
+		if (_baditems.length > 0) {
+
+			var _baditem = false;
+
+			if (XP_SellBackItems && (DC_MyGold() < DC_MaxGold())) {
+
+				// Loop until all items is sold to the npc or my pockets is full
+				do {
+					// Get the item
+					_baditem = getUnit(4,null,null,_baditems.pop());
+
+					if (_baditem) {
+
+						if (DL_LogMode > 0) { DL_LogItem(DL_GetItemName(_baditem),_baditem.quality,"[Sold]"); }
+						DT_BuyItem(_baditem,npc,1);
+					}
+
+				} while (_baditems.length > 0 && (DC_MyGold() < DC_MaxGold()));
+			}
+
+			// if there is still items available, drop them
+			if (_baditems.length > 0) {
+
+				// Cancel the menu
+				DT_MenuCancel(npc,1);
+
+				// Loop until all items is dropped on ground
+				do {
+					// Get the item
+					_baditem = getUnit(4,null,null,_baditems.pop());
+
+					if (_baditem) {
+
+						if (DL_LogMode > 0) { DL_LogItem(DL_GetItemName(_baditem),_baditem.quality,"[Dropped]"); }
+						DT_DropItem(_baditem);
+					}
+
+				} while (_baditems.length !== 0);
+
+				// After the loop, reinteract with the npc for doing other stuff
+				DT_DoInteract(npc);
+			}
+		}
+	}
+}
+
+function XP_InitInclude() {
+
+	if(me.classid==6) {
+
+		print("Assasins are not supported.  Sorry for the inconvenience");
+		stop();
+	}
+	if(me.classid==5) {
+
+    		druidvariables();
+	}
+	if(me.classid==4) {
+
+		Barbvariables();
+	}
+	if(me.classid==3) {
+
+    		paladinvariables();
+	}
+	if(me.classid==2) {
+
+    		necrovariables();
+	}
+	if(me.classid==1) {
+
+		Sorcvariables();
+	}
+	if(me.classid===0) {
+
+		amazonvariables();
+	}
+
+}
+
+//////////////////////////////////////////////////////////////////////
+// Attack Functions
+//////////////////////////////////////////////////////////////////////
+
+function XP_Precasts() {
+
+	if (DA_AutoPrecasts) {
+
+		DA_DoPrecasts();
+	}
+	else {
+
+		switch (me.classid) {
+
+			case 5: DA_DoPrecasts(); break;
+			case 4: DA_DoPrecasts(); break;
+			case 3: XP_PaladinPrecast(); break;
+			case 2: DA_DoPrecasts(); break;
+			case 1: XP_SorcPrecast(); break;
+			case 0: DA_DoPrecasts(); break;
+		}
+	}
+
+	if(DA_UseCTA) DA_UseCTASkills();
+}
+
+function XP_Attack(target) {
+
+	switch (me.classid) {
+
+		case 5: druidatt(target); break;
+		case 4: barbatt(target); break;
+		case 3: XP_PaladinAttack(target); break;
+		case 2: necatt(target); break;
+		case 1: XP_SorcAttack(target); break;
+		case 0: zonatt(target); break;
+	}
+}
+
+// Put into a attack lib if it is needed
+function XP_CheckAttacks() {
+
+	_XP_AttackCompleted+=1;
+	if (_XP_AttackCompleted >= XP_MaxAttacks) {
+
+		DSN_PickItems();
+		DL_AddAbort();
+		DC_QuitMessage("Maximum number of attacks reached!");
+	}
+}
+
+function XP_CheckUtil(target) {
+
+	// If the target died, no need to check further
+	if (target.hp <= 0) { return true; }
+
+	// If we want to use the Meph dodge function, check if we need to dodge
+	if (XP_MephDodge) {
+
+		if (DM_Dist(me.x,me.y,target.x,target.y) < 7 || DM_Dist(me.x,me.y,target.x,target.y) < 13 || target.mode == 5) {
+
+			XP_DodgeMeph(target.x,target.y);
+
+			// If we move to dodge the cold ball, stall 250 ms in the new pos before continuing
+			if (target.mode == 5) { DC_DoDel(250); }
+		}
+	}
+
+	// If we want to abort when a council is too close, check it
+	if (XP_CouncilAbort) { XP_CheckCouncil(); }
+
+	// If we want to switch weapons for the final blow, do it
+	if (XP_SwitchOnKill && target.hp <= XP_SwitchHP) { DC_SelectTab(0); }
+
+	// if we want to let the merc land the final blow, stall
+	if (XP_StallKill) {
+
+		_merc = DC_GetMerc();
+
+		if (_merc && target.hp <= XP_StallHP && !(target.getStat(36) > 99 && XP_StallSkipPhys)) {
+
+			XP_StallKill=false;
+			DC_Print("Stalling for your merc to kill " + target.name);
+			for (ty = 0; ty < 100; ty+=1) {
+
+				DC_DoDel(20);
+				DM_CheckPosition(_XP_EndPosition.x, _XP_EndPosition.y);
+				if (target.hp <= 0) { return true; }
+			}
+		}
+	}
+
+	// Correct the position if we are not using the Meph dodge function
+	if (!XP_MephDodge) { DM_CheckPosition(_XP_EndPosition.x, _XP_EndPosition.y); }
+}
+
+function XP_CheckCouncil() {
+
+	// Loop 3 times to find a council member
+	var _retry = 0;
+	do {
+
+		var _council = DC_FindMonster(255);
+		_retry+=1;
+
+	} while (!_council && _retry <3);
+
+	// Found a council member
+	if (_council) {
+
+		// Check if it is a boss
+		if (_council.spectype & 0x01) {
+
+			// Check the distance
+			if (DM_Dist(me.x,me.y,_council.x,_council.y) < XP_CouncilDist) {
+
+				DL_AddAbort();
+				DC_DoDel(50);
+				quit();
+			}
+		}
+	}
+
+	else { return false; }
+}
+
+function XP_DodgeMeph(x,y) {
+
+	var _newcoord = null;
+
+	if (x < 8070) {
+
+		if (y < 17555) {
+
+			if (_XP_Quadrant != 1) {
+
+				DM_MoveTo(17565,8080);
+				_XP_Quadrant = 1;
+			}
+			else {
+
+				DM_MoveTo(17565,8060);
+				_XP_Quadrant = 3;
+			}
+
+		}
+		else {
+
+			if (_XP_Quadrant != 2) {
+
+				DM_MoveTo(17545,8080);
+				_XP_Quadrant = 2;
+			}
+			else {
+
+				DM_MoveTo(17545,8060);
+				_XP_Quadrant = 4;
+			}
+		}
+	}
+	else {
+
+		if (y < 17555 ) {
+
+			if (_XP_Quadrant != 3) {
+
+				DM_MoveTo(17565,8060);
+				_XP_Quadrant = 3;
+			}
+			else {
+
+				DM_MoveTo(17565,8080);
+				_XP_Quadrant = 1;
+			}
+		}
+		else {
+
+			if (_XP_Quadrant != 4) {
+
+				DM_MoveTo(17545,8060);
+				_XP_Quadrant = 4;
+			}
+			else {
+
+				DM_MoveTo(17545,8080);
+				_XP_Quadrant = 2;
+			}
+		}
+	}
+}
+
+//////////////////////////////////////////////////////////////////////
+// Assassin Functions
+//////////////////////////////////////////////////////////////////////
+
+function XP_AssassinAttack(target) {
+
+	_XP_EndPosition = new XP_Coord(me.x,me.y);
+
+	while (target.hp > 0) {
+
+		DC_DoCast(XP_AssassinSkill,0,target);
+		XP_CheckAttacks();
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// Druid Functions
+//////////////////////////////////////////////////////////////////////
+
+function druidatt(target) {
+
+	_XP_EndPosition = new XP_Coord(me.x,me.y);
+
+	if (CastonPindle) {
+
+		DC_DoCast(DruidSummon,0,target);
+	}
+	while (target.hp > 0) {
+
+		DC_DoCast(DruidSkill,0,target);
+		XP_CheckAttacks();
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// Necro Functions
+//////////////////////////////////////////////////////////////////////
+
+function necatt(target) {
+
+	_XP_EndPosition = new XP_Coord(me.x,me.y);
+
+	if (CastonPindle) {
+
+		DC_DoCast(XP_NecroSummon,0,target);
+	}
+
+	if(XP_BoneBoss) {
+
+		for (q = 1; q <= BoneNumber; q+=1) {
+
+			DC_DoCast(88,0,target);	// "Bone Prison"
+		}
+	}
+
+	DC_DoCast(NecroCurse,0,target);
+
+	if (BoneBehind) {
+
+		DC_DoCast(78,0,10058,13242); 	// "Bone Wall"
+	}
+
+	if (CorpsePopping) { NecroPopAttack(); }
+
+	while (target.hp > 0) {
+
+		DC_DoCast(NecroSkill,0,target);
+		XP_CheckAttacks();
+	}
+}
+
+function NecroPopAttack() {
+
+	npc = getUnit(1);
+	DC_DoDel(DC_LagDelay);
+	if (npc) { do {
+
+		owner = npc.getParent();
+		if (npc.name != "Dummy" && npc.name != "an evil force" && 
+		npc.name != DC_GetMercName() && npc.name != target.name && npc.y <= me.y && !owner) {
+
+			print("Attacking a " + npc.name);
+			while(npc.hp > 0) {
+
+				DC_DoCast(NecroSkill,0,npc);
+			}
+			print("Popping the " +npc.name +"'s corpse!");
+			DC_DoCast(BodySkill,0,npc);
+		}
+	} while (npc.getNext()); }
+}
+
+/*
+function XP_GetMonsterCorpse() {
+
+}
+*/
+
+//////////////////////////////////////////////////////////////////////
+// Pally Functions
+//////////////////////////////////////////////////////////////////////
+
+function XP_PaladinPrecast() {
+
+		// Holy Shield
+		if(XP_HolyShield && me.mp > 30 && DC_CheckSkill(117) >= 1) {
+
+			DC_DoCast(117,0);
+		}
+}
+
+function XP_PaladinAttack(target) {
+
+	_XP_EndPosition = new XP_Coord(me.x,me.y);
+
+	print("Pally script as completed by Darien!");
+	if (XP_FOHatStart) {
+
+		DC_PutSkill(parseInt(XP_FOHAura), 0);
+		for (var ps = 0; ps < XP_FOHatStart; ps+=1) {
+
+			DC_DoCast(121,0,target);	// "Fist of the Heavens"
+			if (XP_CheckUtil(target)) { return; }
+		}
+	}
+
+	// If the target has some physical resistance or immunity, use a alternate attack
+	if (target.getStat(36) > XP_PhysAttPercent) {
+
+		if (XP_PhysAttack) {
+
+			XP_PallyAttack=XP_PhysAttack;
+			XP_PallyAura=XP_PhysAura;
+		}
+	}
+
+	// If the pally is not a caster, move to get close to the target
+	if (!XP_Caster) { DM_MoveTo(target.x,target.y); }
+
+	// Set the aura on the right hand
+	DC_PutSkill(XP_PallyAura,0);
+
+	while (target.hp > 0) {
+
+		if (XP_Caster) { DC_DoCast(XP_PallyAttack,2,target); }
+		else { DC_DoCast(XP_PallyAttack,1,target); }
+
+		XP_CheckAttacks();
+
+		if (XP_CheckUtil(target)) { return; }
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// zon Functions
+//////////////////////////////////////////////////////////////////////
+
+function zonatt(target) {
+
+	_XP_EndPosition = new XP_Coord(me.x,me.y);
+
+	print("Zon script as completed by Swedish Power!");
+
+	if ((target.getStat(36) > PhysAmount && SwitchPhys) || (target.getStat(41) > LitAmount && SwitchLit)) {
+
+		DC_DoWeaponSwitch();
+		StartIt=0;
+	}
+
+	// Cast Decoy on pindle if DecoyPosition is at 0
+	if (CastDecoyOn && DecoyPosition===0) { DC_DoCast(28,0,target); } // "Dopplezon"
+
+	// Cast Valkyrie if it is set to true
+	if (CastValkOn) { DC_DoCast(32,0,target); } // "Valkyrie"
+
+	while (target.hp > 0) {
+
+		check = getUnit(4);
+		DC_DoDel(DC_LagDelay);
+		if (check) { do {
+
+			if((check.itemloc == 4 || check.itemloc == 5) && check.mode == 1) {
+
+				//Jav attacks
+				if (check.itemtype == 87 || check.itemtype == 44 || check.itemtype == 43 || check.itemtype == 42) {
+
+					for (x = 0; x < JavAttack.length; x+=1) {
+
+						for (r = 1; r <= JavNumber[x]; r+=1) {
+
+							DC_DoCast(JavAttack[x],0,target);
+						}
+					}
+					XP_CheckAttacks();
+				}
+				//Bow attacks
+				if (check.itemtype == 85 || check.itemtype == 27 || check.itemtype == 35) {
+
+					for (y = 0; y < BowAttack.length; y+=1) {
+
+						for (x = 1; x <= BowNumber[y]; x+=1) {
+
+							DC_DoCast(BowAttack[y],0,target);
+						}
+					}
+					XP_CheckAttacks();
+				}
+			}
+			
+
+		} while (check.getNext()); }
+
+		if (_XP_AttackCompleted == StartIt && StartIt > 0) {
+
+			print("Switch attacks!");
+			DC_DoWeaponSwitch();
+		}
+	}
+
+	if (PickupShield) {
+
+		check = getUnit(4);
+		DC_DoDel(DC_LagDelay);
+		if (check) { do {
+
+			if((check.itemloc == 4 || check.itemloc == 5) && check.mode==1) {
+
+				if(check.itemtype == 2) {
+
+					PickupShield=false;
+					break;
+				}
+			}
+		} while (check.getNext()); }
+	}
+
+	if(PickupShield) {
+
+		print("Switching to your shield!");
+		DC_DoWeaponSwitch();
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// Barb Functions
+//////////////////////////////////////////////////////////////////////
+
+function barbatt(target) {
+
+	_XP_EndPosition = new XP_Coord(me.x,me.y);
+
+	while (target.hp > 0) {
+
+		if(target.getStat(36) > 99 && UseBerserk) { WWandBerz(target); }
+		else { WWAtt(target); }
+	}
+
+	if (FindItem) { UseFindItem(target); }
+}
+
+function WWAtt(enemy) {
+
+	while(enemy.hp > 0) {
+
+		DC_DoCast(151,0,enemy.x,enemy.y + wwdistance);
+		if(enemy.hp <= 0) { break; }
+
+		DC_DoCast(151,0,enemy.x,enemy.y - wwdistance);
+	}
+}
+
+function WWandBerz(target) {
+
+	var monster;
+	while (monster == XP_GetClosestMonster(me.x,me.y,20)) { WWAtt(monster); }
+
+	DM_MoveTo(target.x,target.y);
+	for (s = 0; s < 6; s+=1)	{
+
+		DC_DoCast(152,0,target);
+		if (target.hp <= 0) { return; }
+	}
+}
+
+function UseFindItem(target) {
+
+	DC_DoDel(500);
+	print("ÿc8Using Find Item skill on Pindle");
+	if(ChangeWeaponHork) { DC_SelectTab(0); }
+	DC_DoCast(142,0,target);
+	if(ChangeWeaponHork) { DC_SelectTab(1); }
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// Sorc Functions
+//////////////////////////////////////////////////////////////////////
+
+function XP_SorcPrecast() {
+
+	if (XP_ColdArmor > 0) {
+
+		// Frozen Armor
+		if (XP_ColdArmor == 1) {
+
+			DC_DoCast(40,0);
+		}
+
+		// Shiver Armor
+		else if (XP_ColdArmor == 2) {
+
+			DC_DoCast(50,0);
+		} 
+
+		// Chilling Armor
+		else {
+
+			DC_DoCast(60,0);
+		}
+
+	}
+
+	if (XP_EnergyShield) {
+
+		// Energy Shield
+		if (DC_CheckSkill(58) >= 1) {
+
+			DC_DoCast(58,0);
+		}
+	}
+
+	if (XP_ThunderStorm) {
+
+		// Thunderstorm
+		if (!DC_InTown(me) && DC_CheckSkill(57) >= 1) {
+
+			DC_DoCast(57,0);
+		}
+	}
+}
+
+function XP_SorcEnchant() {
+
+	var _merc = DC_GetMerc();
+
+	if (_merc && DC_CheckSkill(52) > 0) {
+
+		// Loop until the merc get within range before casting Enchant
+            	for (var x=0; x < 10; x+=1) {
+
+			// If the merc is in range, break the loop
+                	if (DA_GetRange(_merc) <= 20) { break; }
+
+			// If we are in the wild, cast Teleport on place to bring back the merc
+                	if (!DC_InTown(me) && DC_CheckSkill(54) > 0) { DC_DoCast(54, 0, me.x, me.y); }
+
+			// Wait 1/10 of a second
+                	DC_DoDel(100);
+            	}
+
+		// If the merc is in range, cast it
+            	if (DA_GetRange(_merc) <= 20) { DC_DoCast(52,0,_merc); }
+    	}
+}
+
+var currenttimed=0;
+var currentuntimed=0;
+
+function XP_SorcAttack(target) {
+
+	_XP_EndPosition = new XP_Coord(me.x,me.y);
+
+	if (statictimes > 0) { sorccaststatic(target); }
+
+	if (untimedrepeat === 0) { untimedrepeat=1; }
+
+	while (target.hp > 0) {
+
+		if (timedspell.length > 0) {
+
+			DC_DPrint("Casting Timed #" + timedspell[currenttimed] + " on index " + currenttimed);
+			DC_DoCast(timedspell[currenttimed],0,target);
+			if (XP_CheckUtil(target)) { return; }
+
+			currenttimed+=1;
+			if (currenttimed == timedspell.length) { currenttimed = 0; }
+
+			if (untimedspell.length > 0) {
+
+				//while (me.getState(121)) {
+
+					for (var r = 0; r < untimedrepeat; r+=1) {
+
+						DC_DPrint("Casting Untimed #" + untimedspell[currentuntimed] + " on index " + currentuntimed);
+
+						if (DC_IsLeftSkill(untimedspell[currentuntimed])) {
+
+							DC_DoCast(untimedspell[currentuntimed],2,target);
+						}
+						else {
+
+							DC_DoCast(untimedspell[currentuntimed],0,target);
+						}
+
+						if (XP_CheckUtil(target)) { return; }
+					}
+				//}
+				currentuntimed+=1;
+				if (currentuntimed == untimedspell.length) { currentuntimed = 0; }
+			}
+			else {
+
+				while (me.getState(121)) {
+
+					if (target.hp <= 0) { return; }
+					delay(10);
+				}
+			}
+		}
+		else {
+
+			for (var n = 0; n < untimedspell.length; n+=1) {
+
+				for (r = 0; r < untimedrepeat; r+=1) {
+
+					DC_DPrint("Casting " + untimedspell[n] + " on index " + n);
+					if (DC_IsLeftSkill(untimedspell[n])) {
+						DC_DoCast(untimedspell[n],2,target.x,target.y);
+					}
+					else {
+						DC_DoCast(untimedspell[n],0,target.x,target.y);
+					}
+					if(XP_CheckUtil(target)) { return; }
+				}
+			}
+		}
+		XP_CheckAttacks();
+	}
+}
+
+function DropABomb(target) {
+
+	if (DT_UseMerc) { 
+
+		_merc=DC_GetMerc();
+
+		if (_merc && _merc.hp > 0) {
+
+			DC_DoCast(timedspell[currenttimed],0,_merc.x,_merc.y);
+		}
+	}
+	else {
+
+		DC_DoCast(timedspell[currenttimed],0,me.x,me.y);
+	}
+}
+
+function sorccaststatic(target) {
+
+	if (statictimes > 0 && statictimes < 1) { statictimes = 1; }
+
+	if ((timedfirst) && (timedspell.length > 0)) {
+
+		DC_DPrint("Casting " + timedspell[currenttimed]);
+
+		if (timedspell[currenttimed]==56) { DropABomb(target); } // "Meteor"
+		else { DC_DoCast(timedspell[currenttimed],0,target.x,target.y); }
+
+		currenttimed+=1;
+		if (currenttimed == timedspell.length) { currenttimed = 0; }
+
+		if (XP_CheckUtil(target)) { return; }
+
+		for (n = 1; n <= statictimes; n+=1) {
+
+			DC_DPrint("Casting Static Field #" + n);
+			DC_DoCast(42,0,target);	// "Static Field" 
+
+			if(XP_CheckUtil(target)) { return; }
+		}
+		while (me.getState(121)) { delay(10); }
+	}
+	else {
+
+		for (n = 1; n <= statictimes; n+=1) {
+
+			DC_DPrint("Casting Static Field #" + n);
+			DC_DoCast(42,0,target);	// "Static Field" 
+
+			if(XP_CheckUtil(target)) { return; }
+		}
+	}
+}
+
+// Function by Xizeta
+// Function to set skills in two categories
+function XP_SorcSetSkills() {
+
+	// If no skills is in the arrays, stop the script with a error msg
+	if (spelllist.length < 1) { DC_StopMessage("Your skill list is empty, please check your configuration."); }
+
+	// Read the list and separate timed and untimed skills
+	for (var s = 0; s < spelllist.length; s+=1) {
+
+		if (DC_GetCastDelay(spelllist[s])) { timedspell.push(spelllist[s]); }
+		else { untimedspell.push(spelllist[s]); }
+	}
+
+	// In debug mode, list the timed spells
+	for (var t = 0; t < timedspell.length; t+=1) {
+
+		DC_DPrint("Timed spell #" + t + " is: " + timedspell[t] + ", Skill level: " + me.getSkill((timedspell[t]),0));
+	}
+
+	// In debug mode, list the untimed spells
+	for (var u = 0; u < untimedspell.length; u+=1) {
+
+		DC_DPrint("Untimed spell #" + u + " is: " + untimedspell[u] + ", Skill level: " + me.getSkill((untimedspell[u]),0));
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// Zombie attack Functions
+//////////////////////////////////////////////////////////////////////
+
+// - reworked zombie routine.  now use any char/any skill :)
+function XP_Zombies() {
+
+	// If it is a paladin, flash auras (to be removed)
+	if(me.classid==3) { DC_PutSkill(XP_ZombieAura,0); }
+
+	XP_KillAll(me.x,me.y,null,10);
+	if (me.classid != 1) {
+
+		XP_KillAll(10056,13234,null,5);
+		XP_KillAll(10057,13242,null,5);
+		XP_KillAll(10058,13250,null,5);
+
+	}
+	else { DM_MoveTo(10063, 13234); }
+
+	// Stall until the monsters come to life
+	while(!DA_FindClosestEnemy(10061,13263,15)) { delay(50); }
+
+	// Kill them
+	XP_KillAll(10061,13263,null,15, true);
+	print("Prowling Dead were pwned!! kekekeke");
+}
+
+function XP_KillAll(x, y, monType, range, pickupitematend) {
+
+	DC_Print("Started XP_KillAll",commConsole);
+
+	// set to true if the parameter is null
+	if (arguments.length<5) { pickupitematend=true; } //klmklm
+
+	// If the flag is set to true, move to the spot to pick items
+	if (pickupitematend) { DM_MoveTo(x, y); }
+
+	// Get the closest monster
+	var monster = DA_FindClosestEnemyClassID(x,y,range,monType);
+
+	// If we have a monster, start the kill loop
+	while (monster) {
+
+		DC_Print("Entering the loop",commConsole);
+
+		if (!XP_ZombieStand && XP_ZombieSkill != 151) {
+
+			DM_MoveTo(monster.x,monster.y);
+		}
+
+		if (me.classid == 1 && XP_ZombieUseStatic)	{
+
+			for (s = 1; s <= XP_ZombieStaticTimes; s+=1) {
+
+				DC_DPrint("Casting Static Field #" + s);
+				DC_DoCast(42,0,monster);	// "Static Field"
+				if (monster.hp <= 0) { break; }
+			}
+		}
+
+		while (monster.hp > 0) {
+
+			DC_Print("Attacking the monster",commConsole);
+
+			if (XP_ZombieSkill == 151) { WWAtt(monster); } // Whirlwind
+			else {
+				if (!XP_ZombieStand) { DM_CheckPosition(monster.x, monster.y); }
+
+				if(me.classid!=3) {
+
+					if(!DC_DoCast(XP_ZombieSkill,0,monster)) { return false; }
+				}
+				else {
+
+					if (!DC_DoCast(XP_ZombieSkill,0,monster)) { return false; }
+				}
+			}
+
+			//while (me.getState(121)) { delay(20); }
+		}
+
+		// Get the next monster
+		monster = DA_FindClosestEnemyClassID(x,y,range,monType);
+
+	}
+
+	DC_Print("XP_KillAll done",commConsole);
+
+	if (pickupitematend) { DSN_PickItems(); } //klmklm
+}

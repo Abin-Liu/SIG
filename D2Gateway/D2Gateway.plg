@@ -1,0 +1,73 @@
+<html>
+<body>
+<pre>
+<h1>Build Log</h1>
+<h3>
+--------------------Configuration: D2Gateway - Win32 Release--------------------
+</h3>
+<h3>Command Lines</h3>
+Creating command line "rc.exe /l 0x804 /fo"Release/D2Gateway.res" /d "NDEBUG" /d "_AFXDLL" "D:\Projects\SIG\D2Gateway\D2Gateway.rc"" 
+Creating temporary file "C:\DOCUME~1\Abin\LOCALS~1\Temp\RSPCF.tmp" with contents
+[
+/nologo /MD /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_AFXDLL" /D "_MBCS" /Fp"Release/D2Gateway.pch" /Yu"stdafx.h" /Fo"Release/" /Fd"Release/" /FD /c 
+"D:\Projects\SIG\D2Gateway\D2Gateway.cpp"
+"D:\Projects\SIG\D2Gateway\D2GatewayDlg.cpp"
+"D:\Projects\SIG\D2Gateway\EditEx.cpp"
+"D:\Projects\SIG\D2Gateway\FolderDialog.cpp"
+"D:\Projects\SIG\D2Gateway\HyperLink.cpp"
+"D:\Projects\SIG\D2Gateway\IniFile.cpp"
+"D:\Projects\SIG\D2Gateway\RealmDlg.cpp"
+"D:\Projects\SIG\D2Gateway\SingleSelChkList.cpp"
+"D:\Projects\SIG\D2Gateway\Singleton.cpp"
+"D:\Projects\SIG\D2Gateway\StrSplit.cpp"
+]
+Creating command line "cl.exe @C:\DOCUME~1\Abin\LOCALS~1\Temp\RSPCF.tmp" 
+Creating temporary file "C:\DOCUME~1\Abin\LOCALS~1\Temp\RSPD0.tmp" with contents
+[
+/nologo /MD /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_AFXDLL" /D "_MBCS" /Fp"Release/D2Gateway.pch" /Yc"stdafx.h" /Fo"Release/" /Fd"Release/" /FD /c 
+"D:\Projects\SIG\D2Gateway\StdAfx.cpp"
+]
+Creating command line "cl.exe @C:\DOCUME~1\Abin\LOCALS~1\Temp\RSPD0.tmp" 
+Creating temporary file "C:\DOCUME~1\Abin\LOCALS~1\Temp\RSPD1.tmp" with contents
+[
+/nologo /subsystem:windows /incremental:no /pdb:"Release/D2Gateway.pdb" /machine:I386 /out:"Release/D2Gateway.exe" 
+.\Release\D2Gateway.obj
+.\Release\D2GatewayDlg.obj
+.\Release\EditEx.obj
+.\Release\FolderDialog.obj
+.\Release\HyperLink.obj
+.\Release\IniFile.obj
+.\Release\RealmDlg.obj
+.\Release\SingleSelChkList.obj
+.\Release\Singleton.obj
+.\Release\StdAfx.obj
+.\Release\StrSplit.obj
+.\Release\D2Gateway.res
+.\RealmInfo.lib
+]
+Creating command line "link.exe @C:\DOCUME~1\Abin\LOCALS~1\Temp\RSPD1.tmp"
+<h3>Output Window</h3>
+Compiling resources...
+Compiling...
+StdAfx.cpp
+Compiling...
+D2Gateway.cpp
+D2GatewayDlg.cpp
+EditEx.cpp
+FolderDialog.cpp
+HyperLink.cpp
+IniFile.cpp
+RealmDlg.cpp
+SingleSelChkList.cpp
+Singleton.cpp
+StrSplit.cpp
+Generating Code...
+Linking...
+
+
+
+<h3>Results</h3>
+D2Gateway.exe - 0 error(s), 0 warning(s)
+</pre>
+</body>
+</html>

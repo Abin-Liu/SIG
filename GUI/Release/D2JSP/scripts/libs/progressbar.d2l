@@ -1,0 +1,107 @@
+// progress bar object .d2l
+// written entirely by njaguar
+// version 1.0
+// July 7th, 2003 (4:20pm CST)
+
+// set the height of the progress bar in pixels
+var pb_height = 5;
+// set the width of progress bar in pixels
+var pb_width = 500;
+
+// set the offset x and y of the progress bar
+var pb_xoff = 150;
+var pb_yoff = 530;
+
+// set the colors of the progress bar
+var pb_color_border = 0x97;	// blue
+var pb_color = 0xff; 		// white
+
+// internal progress
+var pb_current_progress = 0;
+
+/*
+	This function will move your project bar
+	To use, set the global pb_xoff and pb_yoff variables, then call this passing your progressbar object
+	Alternately, if you want to modify the colors after this is already created, simply update your color global var, and call this function
+	This function also allows you to resize the progress bar's width, however you cannot adjust the height at run time.
+*/
+function moveProgressBar(pb) {
+	// position the border
+	for(i=0;i<4;i++) pb.border[i].color = pb_color_border;
+	// top
+	pb.border[0].x = pb_xoff;
+	pb.border[0].y = pb_yoff;
+	pb.border[0].x2 = pb_xoff + pb_width;
+	pb.border[0].y2 = pb_yoff;
+	// right
+	pb.border[1].x = pb_xoff + pb_width;
+	pb.border[1].y = pb_yoff;
+	pb.border[1].x2 = pb_xoff + pb_width;
+	pb.border[1].y2 = pb_yoff + pb_height;
+	// bottom
+	pb.border[2].x = pb_xoff;
+	pb.border[2].y = pb_yoff + pb_height;
+	pb.border[2].x2 = pb_xoff + pb_width;
+	pb.border[2].y2 = pb_yoff + pb_height;
+	// left
+	pb.border[3].x = pb_xoff;
+	pb.border[3].y = pb_yoff;
+	pb.border[3].x2 = pb_xoff;
+	pb.border[3].y2 = pb_yoff + pb_height;
+
+	// position the progress bar
+	for(i=0;i<pb_height-1;i++) {
+		pb.progress[i].x = pb_xoff+1;
+		pb.progress[i].y = pb_yoff+1+i;
+		pb.progress[i].y2 = pb_yoff+1+i;
+		pb.progress[i].color = pb_color;
+	}
+
+	setProgressBar(pb, pb_current_progress);
+}
+
+/*
+	This is the function that creates your progress bar. Once you create a progress bar, you cannot modify the height at runtime.
+*/
+function createProgressBar() {
+	var pb = new Object();
+	pb.border = new Array(4);
+	pb.progress = new Array(pb_height);
+
+	// initialize the border
+	for(i=0;i<4;i++) {
+		pb.border[i] = createProgressBarLine();
+	}
+
+	// initialize the progress bar
+	for(i=0;i<pb_height-1;i++) {
+		pb.progress[i] = createProgressBarLine();
+	}
+
+	// move it to our default position
+	moveProgressBar(pb);
+	return pb;
+}
+
+/*
+	Use this function to set the percent of the progress bar. Pass 0 to 100 to set the appropriate display.
+	This function allows floats from 0 to 100.
+*/
+function setProgressBar(pb, percent) {
+	percent = pb_current_progress = (percent<0 || percent>100 ? 0 : percent);
+	// set the progress of the progress bar	
+	cp = (!percent ? 0 : parseInt((pb_width-2) * (percent/100)));
+	for(spb_i=0;spb_i<pb_height-1;spb_i++) {
+		pb.progress[spb_i].x2 = pb_xoff+1 + cp;
+	}
+}
+
+/*
+	This is an internal function creates a progress bar line, and returns the projectbar object
+*/
+function createProgressBarLine() {
+	pb_line = getScreenHook();
+	pb_line.x=1; pb_line.y=1; pb_line.x2=1; pb_line.y2=1; pb_line.text="";
+	return pb_line;
+}
+

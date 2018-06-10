@@ -1,0 +1,551 @@
+// njaguar's Uber Playing Utility [9/19/2003 4:40PM]
+// - updated for 1.10 on 4/3/04
+// ***
+// You may freely use functions from here, only if you give credit in your script
+// ***
+// Thanks to froggy for the Dist and Dist2 routines
+
+var attackHand=1; // 0 = right, 1 = left, this is the hand it will attack with, safest to use left (normal) attack for now
+
+var chickenAt=[25,-1]; // chicken at what amount life,mana (NOT a %) (-1 to disable)
+var usePotionAt=[75,-1,35,-1]; // at what % of life, mana, life juv, mana juv
+
+// a good setting for melee is 5, 20 for amazon/sorc (most), 10 for some sorc attacks
+var attackDistanceThreshold=20; // set this to higher for amazon/sorc or distance attacks
+
+// these are the itemtypes, NOT itemclassids
+//var itemsToGrab=[itemGold,itemSCharm,itemLCharm,itemGCharm,itemJewel,itemRing,itemAmulet]; // runes and gems not listed here
+var itemsToGrab=[4,10,12,58,74,82,83,84,96,97,98,99,100,101,102];
+var grabSetPlus=true;
+
+var fillBooks=true;					// set to false to not pick up scrolls
+var fillKeys=true;					// set to false to not pick up keys
+//var openTrappedChests=true; // set this to false to not open trapped chests
+
+var extraPotions=[4,0,-1];			// how many extra to keep in inventory, healing, mana, juvie, -1 to take all
+var autoExtraPotions=true;			// will base this on your class
+var minPotType=-1;					// -1 = auto determine best pots to keep, otherwise 1 to 5 (hp1 .. hp5)
+var extraAmmo=2;					// if you're using a bow, how many extra arrow/bolt sets to keep in inventory (set this to at LEAST 1!)
+
+var autoaim=true; 					// automatically find targets...
+var autoapproach=true; 				// attempt to run within range (if out of range)
+var autofindclosesttarget=true; 	// set this to true to find closest target first (more cpu taxing)
+var autograbitems=true;				// set this to auto grab items
+var autoopenchests=true;			// auto open chests
+var itemDistanceThreshold=80;		// how far away to walk to get an item, and also
+var chestDistanceThreshold=80;		// how far away to walk to get a chest, and also
+var monsterDistanceThreshold=10;	// how far away closest monster can be before going for an item (don't grab items if any monsters are closer than this)
+
+var ItemChestApproachThreshold=4;	// 4 or 5 is good here
+
+// probably dont need to change this stuff
+var autosearchrange=80; 			// how far away to search for another monster
+var moveThreshold=8;				// how far to move in each step
+
+var debug_status=true;
+
+// ********************************
+// don't modify anything below this
+// ********************************
+
+var currentPrefToggle=0;
+// aDT, chicken,
+// name, [flag ; show inc/decrease messages (!0) or toggle on/off (0), also the threshold to "inc/dec"]
+var prefStrings=[["Attack Distance Threshold",1],["Chicken HP",5],["Chicken MP",5],["Fill Tomes",0],["Fill Keys",0],["Auto Aim",0],["Auto Approach",0],["Auto Find Closest Target",0],["Auto Grab Items",0]];
+var hasJuvies=true;
+var DoShiftClick=3;
+var potionCodes=[76,77,78];
+var potionBase=[587,592,0];
+var modeRun=2, modeWalk=3, modeAttack=[7,8,10,11,18], modeObjectIsIdle=0, modeIdle=[0,1], D2_MODE_Block=9;
+//var itemGold=523, itemGem=20, itemSCharm=603, itemLCharm=604, itemGCharm=605, itemJewel=643, itemRing=522, itemAmulet=520, itemRune=74;
+var attackTimeout=2000, modeItemOnGround=3;
+var vkPrefDec=189, vkPrefInc=187, vkPrefToggle=220;
+
+var current_tbk=0, current_ibk=0, current_keys=0;
+
+var s_h=getScreenHook();
+var p_h=getScreenHook();
+
+function buildHash(x,y) { for(i=0;i<x.length;i++) y[x[i]]=1; }
+
+var TEST_ChestListI = ["ArmorStand","Barrel","Basket","BoneChest","Casket","Chest3","ChestL","ChestSL","ChestSR","CorpseOnStick","GuardCorpse","HungSkeleton","LargeUrn","Ldeathpole","Obelisk","RockPIle","RogueCorpse","Sarcophagus","TrappedSoul","WeaponRack","animated skulland rockpile","barrel wilderness","barrel wilderness","barrel","basket","bed","body","body","bookshelf","burialchestL","burialchestR","burningbodies","burningpit","casket","casket","chest","chestR","cocoon","coffin","corpse","corpse","crate","dead body","dead guard","deadbarbarian","deadperson","deadperson2","deadperson2","deathpole","earmorstandL","earmorstandR","eunuch","eweaponrackL","eweaponrackR","fissure","flag wilderness","goo pile","groundtomb","groundtombL","hidden stash","hidden stash","hiddenstash","hiding spot","hollow log","icecavejar1","icecavejar2","icecavejar3","icecavejar4","jar1","jar2","jar3","jug","loose boulder","loose rock","pileofskullsandrocks","pillar","pole","ratnest","sarcophagus","skeleton","skull pile","skullpile","stash","swingingheads","swingingheads","tomb1","tomb2","tomb3","Urn","urn","woodchest2L","woodchest2R","woodchestL","woodchestL","woodchestR","woodchestR"];
+var TEST_ChestListH = new Array();
+buildHash(TEST_ChestListI,TEST_ChestListH);
+//for (var count_1 = 0; count_1 < TEST_ChestListI.length; count_1++) TEST_ChestListH[TEST_ChestListI[count_1]] = 1;
+
+var TEST_ItemsListH=new Array();
+buildHash(itemsToGrab,TEST_ItemsListH);
+//for(i=0;i<itemsToGrab.length;i++) TEST_ItemsListH[itemsToGrab[i]]=1;
+
+//bolts, arrows, scrolls, key, heal pot, mana pot, juvie
+var TEST_ItemsListExtraI = [5,6,22,41,76,77,78];
+var TEST_ItemsListExtraH=new Array();
+buildHash(TEST_ItemsListExtraI,TEST_ItemsListExtraH);
+//TEST_ItemsListExtraH[5]=TEST_ItemsListExtraH[6]=TEST_ItemsListExtraH[22]=TEST_ItemsListExtraH[41]=TEST_ItemsListExtraH[76]=TEST_ItemsListExtraH[77]=TEST_ItemsListExtraH[78]=1;
+
+function main() {
+
+	if(parseFloat(me.version)<.3) {
+		print("You must use at least version 0.30. Go to www.d2jsp.org");
+		stop();
+	}
+	me.quitonhostile=1;
+	p_h.x=s_h.x=115;
+	s_h.y=540; p_h.y=525; p_h.color=3;
+	updateSH("Initializing...");
+
+// Class Specific Settings Override:
+	switch(me.classid) {
+		case 4: // barbarian
+			attackDistanceThreshold=5;
+			break;
+	}
+
+
+// Character Specific Setting Overloads
+	if(me.name=="Twisted_Faith" || me.name=="Compensate" || me.name=="KassenLloyd" || me.name=="DrummerGirl") {
+		autoaim=autoopenchests=autoapproach=autoExtraPotions=false;
+		itemsToGrab.length=1;
+		extraPotions[0]=extraPotions[1]=extraPotions[2]=0;
+		itemDistanceThreshold=25;
+		attackDistanceThreshold=3;
+		grabSetPlus=false;
+	}
+	if(me.name=="FlashFlood") {
+		itemsToGrab.length=1;
+		extraPotions[0]=extraPotions[1]=extraPotions[2]=0;
+		itemDistanceThreshold=25;
+		attackDistanceThreshold=3;
+		grabSetPlus=false;
+	}
+
+//	load("tools/njautogamble.d2j");
+
+	if(autoExtraPotions) {
+		// ama,sorc,?,?,bar,?,?
+		ep=[4,4,0,0,4,0,0];
+		extraPotions[0]=ep[me.classid];
+	}
+	
+	updatePrefs();
+
+//	msg.watch("keypress",keypressEvent);
+	// on startup, try feeling out the shift click pots to belt, to see if we can clear any out of the inventory..
+
+	print("Now running njaguar's Uber Diablo II Playing Utility!");
+
+	updateChicken();
+	cntr=0;
+
+	while(1) {
+
+		PotionHandler();
+
+		ptUnit=getUnit(100);
+		if(!ptUnit && (autoaim || autograbitems)) {
+			updateSH("Auto Finding a Target");
+			ptUnit=findTarget(autofindclosesttarget);
+		} else updateSH("Using Cursor Target");
+		if(ptUnit) {
+			if(me.mode!=modeRun && me.mode!=modeWalk) {
+				if(ptUnit.type==2) {
+					if(!ptUnit.mode && ptUnit.classid!=59 && ptUnit.classid!=60 && ptUnit.classid!=119 && ptUnit.classid!=267) { // dont interact portals, wp, stash
+						updateSH("Found an Object Unit");
+						MoveOrInteract(ptUnit);
+					}
+				} else if(ptUnit.type==4) {
+					if(ptUnit.mode==modeItemOnGround) {
+						if(AutoGrabItem(ptUnit)) {
+							updateSH("Found an Item Unit");
+							MoveOrInteract(ptUnit);
+						}
+					}
+				} else if(ptUnit.type==1) {
+					if(!checkInTown(me) && !checkInTown(ptUnit) && ptUnit.name!="an evil force") {
+						if(!ptUnit.getStat(172)) {
+							if(ptUnit.hp>0) {
+								if(Dist(me.x,me.y,ptUnit.x,ptUnit.y)>attackDistanceThreshold) {
+									if(autoapproach) {
+										updateSH("Moving Closer to Monster Unit");
+										d=getGoodDistance(Dist(me.x,me.y,ptUnit.x,ptUnit.y),attackDistanceThreshold-1,moveThreshold);
+										moveCloser(ptUnit.x,ptUnit.y,d);//attackDistanceThreshold-1);
+									}
+								} else {
+									attackMonster(ptUnit);
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		delay(50);
+		cntr++;
+		if(cntr==100) {
+			cntr=0;
+			updateSH("Running Garbage Collector");
+			runGC();
+		}
+	}
+}
+
+function PotionHandler() {
+	if(DoShiftClick!=-1) {
+		updateSH("Shift Clicking Potions");
+		ShiftClickPotion();
+	}
+	lifeperc=(me.getStat(6)>>8)/(me.getStat(7)>>8)*(1+me.getStat(76)/100)*100;
+	manaperc=(me.getStat(5)>>8)/(me.getStat(9)>>8)*(1+me.getStat(77)/100)*100;
+	
+	if(lifeperc<=usePotionAt[0]) {
+		updateSH("Need to use a health potion");
+		if(lifeperc<=usePotionAt[2] && hasJuvies) usePotion(2);
+			else usePotion(0);
+	}
+	if(manaperc<=usePotionAt[1]) {
+		updateSH("Need to use a mana potion");
+		if(manaperc<=usePotionAt[3] && hasJuvies) usePotion(2);
+			else usePotion(1);
+	}
+}
+
+function getGoodDistance(dst,atk,mov) {
+	if(dst-atk<mov) mov=dst-atk;
+	return dst-mov;
+}
+
+function updateChicken() {
+	maxlife=(me.getStat(7)>>8)*(1+me.getStat(76)/100);
+	print("Chicken Life set at "+parseInt(maxlife*(chickenAt[0]/100)));
+	me.chickenhp=parseInt(maxlife*(chickenAt[0]/100));
+	me.chickenmp=chickenAt[1];
+}
+
+function MoveOrInteract(unit) {
+	if(Dist(me.x,me.y,unit.x,unit.y)>ItemChestApproachThreshold) {
+		d=getGoodDistance(Dist(me.x,me.y,unit.x,unit.y),ItemChestApproachThreshold-1,moveThreshold);
+//		me.move(unit.x,unit.y);
+		moveCloser(unit.x,unit.y,d);
+	} else {
+		if(unit.type==4 && getUIFlag(1)) return;
+		unit.interact();
+		i=0;
+		if(unit.type==2) while(unit && unit.mode!=2 && i<20) {
+			i++;
+			delay(50);
+		}
+	}
+}
+
+function attackMonster(unit) {
+	updateSH("Starting Attack of Monster Unit");
+	unit.useSkill(attackHand);
+	updateSH("Waiting for Attack to Start");
+	acnt=0;
+	while(me.mode==modeIdle[1]) delay(10);// || me.mode==modeIdle[1]) delay(10);
+
+/*
+	while(!checkMode(modeAttack)) {
+		delay(10); acnt++;
+		if(acnt>attackTimeout/10) { print("debug: attack timed out (1)"); break; }
+	}*/
+	updateSH("Waiting for Attack to Finish");
+	while(me.mode!=modeIdle[1]) delay(10);// && me.mode!=modeIdle[1]) delay(10);
+/*	acnt=0;
+	while(checkMode(modeAttack)) {
+		delay(10); acnt++;
+		if(acnt>attackTimeout/10) { print("debug: attack timed out (2)"); break; }
+	}*/
+	updateSH("Attack Finished");
+}
+
+function checkInTown(unit) { if(unit.area==1 || unit.area==40 || unit.area==75 || unit.area==103 || unit.area==109) return 1; return 0; }
+
+function updateSH(txt) { if(debug_status) s_h.text="ÿc4Status: "+txt; }
+
+function checkMode(ml) { for(i=0;i<ml.length;i++) if(me.mode==ml[i]) return 1; return 0; }
+
+var closest_found_unit_dist=0;
+
+function findNearUnit(type, rv) {
+	ptUnit=getUnit(type,null,(type==2?modeObjectIsIdle:(type==4?modeItemOnGround:null)));
+	if(ptUnit) do {
+		x=getDistance(me,ptUnit); //Dist(me.x,me.y,ptUnit.x,ptUnit.y);
+//		print(ptUnit.name + " : " + x + " [" + closest_found_unit_dist + "]");
+		if( (type==1 && (!ptUnit.getStat(172) && ptUnit.mode!=8 && ptUnit.hp>0 && (x<=(autoapproach?autosearchrange:attackDistanceThreshold))))
+		   || (type==2 && (ptUnit.name in TEST_ChestListH && ptUnit.mode==modeObjectIsIdle))
+		   || (type==4 && (x<=itemDistanceThreshold && AutoGrabItem(ptUnit)))
+			&& x<closest_found_unit_dist && !checkCollision(me, ptUnit, 3) ) {
+			closest_found_unit_dist=x;
+			rv=copyUnit(ptUnit);
+		}
+	} while(ptUnit.getNext());
+	return rv;
+}
+
+function getItemContentsCount(itc, m) {
+	unit=getUnit(4,itc,m);
+	return (unit ? unit.getStat(70) : -1);
+}
+
+function findTarget(ty) {
+	closest_found_unit_dist=255;
+	rv=0;
+	weapon_type = getBaseStat(0, getUnit(4,null,204).classid, 77);
+	if(autoaim) {
+//		rv=findNearUnit(1,rv);
+		ptUnit=getUnit(1);
+		if(ptUnit) do {
+//			if(ptUnit.getStat(172) && ptUnit.mode!=8 && ptUnit.hp>0 && (x=Dist(me.x,me.y,ptUnit.x,ptUnit.y))<=(autoapproach?autosearchrange:attackDistanceThreshold)) {
+			if(!ptUnit.getStat(172) && ptUnit.mode!=8 && ptUnit.hp>0 && (x=getDistance(me,ptUnit))<=(autoapproach?autosearchrange:attackDistanceThreshold)) {
+				if(!ty) return ptUnit;
+				if(x<closest_found_unit_dist && !checkCollision(me, ptUnit, (weapon_type==10 || weapon_type==11 ? 1 : 3))) {
+					if(x==0) return ptUnit; // if it's on your ass, no need to find another source ^.^
+					closest_found_unit_dist=x;
+					rv=copyUnit(ptUnit);
+	//				print(rv.name);
+				}
+			}
+		} while(ptUnit.getNext());
+	}
+	
+	if(autograbitems && monsterDistanceThreshold<=closest_found_unit_dist) {
+		current_tbk = getItemContentsCount("tbk",100);
+		current_ibk = getItemContentsCount("ibk",100);
+		current_keys = getItemContentsCount("key",100);
+
+//		rv=findNearUnit(4,rv);
+		ptUnit=getUnit(4,null,modeItemOnGround);
+		if(ptUnit) do {
+			if(AutoGrabItem(ptUnit)) {
+//				x=Dist(me.x,me.y,ptUnit.x,ptUnit.y)
+				x=getDistance(me,ptUnit);
+				if(x<=itemDistanceThreshold && x<closest_found_unit_dist && !checkCollision(me, ptUnit, 3)) {
+					closest_found_unit_dist=x;
+					rv=copyUnit(ptUnit);
+				}
+			}
+		} while(ptUnit.getNext(null,modeItemOnGround));
+	}
+
+	if(autoopenchests && monsterDistanceThreshold<=closest_found_unit_dist) {
+//		rv=findNearUnit(4,rv);
+		ptUnit=getUnit(2,null,modeObjectIsIdle);
+		if(ptUnit) do {
+			if(ptUnit.name in TEST_ChestListH && ptUnit.mode==modeObjectIsIdle) {
+//				x=Dist(me.x,me.y,ptUnit.x,ptUnit.y)
+				x=getDistance(me,ptUnit);
+				if(((ptUnit.status==128 && current_keys>0) || ptUnit.status!=128) && x<=chestDistanceThreshold && x<closest_found_unit_dist && !checkCollision(me, ptUnit, 3)) {
+					closest_found_unit_dist=x;
+					rv=copyUnit(ptUnit);
+				}
+			}
+		} while(ptUnit.getNext(null,modeObjectIsIdle));
+	}
+
+
+	return rv;
+}
+
+var shiftClickThreshold=250;
+
+function ShiftClickPotion() {
+//print("shift");
+	min=max=DoShiftClick;
+	if(DoShiftClick==3) {
+		min=0; max=2; // fresh load, so probe all types
+	}
+	
+	DoShiftClick=-1;
+	
+	for(i=min;i<max+1;i++) {
+		potion=getUnit(4,null,100);
+		if(!potion) return;
+		do {
+			if(potion.itemtype==potionCodes[i] && potion.mode!=2) {
+				clickItem(2,potion);
+				c=0;
+				while(c<shiftClickThreshold/10) {
+					if(potion.mode==2) break;
+					c++;
+					delay(25);
+				}
+				if(potion.mode!=2) return;
+			}
+		} while(potion.getNext(null,100));
+	}
+}
+
+function GetPotionByIType(itype, beltok, wh) {
+	item=getUnit(4);
+	if(item) do {
+		if(item.itemtype==itype) { // found the itype, now match it up!
+			if(item.mode==2 && beltok) return item;
+			if(item.mode==0 && item.itemloc==0) {
+				ptParent=item.getParent();
+				if(ptParent && ptParent.name==me.name) return item;
+			}
+		}
+	} while(item.getNext());
+	return 0;
+}
+
+var potionStates=[100,106];
+
+function usePotion(x) {
+	if(x<2 && me.getState(potionStates[x])) return;
+	potionx=GetPotionByIType(potionCodes[x], true);
+	if(!potionx) {
+		if(x==2) hasJuvies=false;
+		return;
+	}
+	if(potionx.mode==2) DoShiftClick=x;
+//	print(potion);
+	clickItem(1,potionx);
+	delay(shiftClickThreshold);
+//	while(1) { if(potion.name==undefined) break; delay(10); print(potion.itemtype+"stuck"); } // wait for the item to disappear
+}
+
+function Dist2(x1, y1, x2, y2) { return Math.floor((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2)); }
+
+function Dist(x1, y1, x2, y2) { return Math.floor(Math.sqrt(Dist2(x1, y1, x2, y2))); }
+
+function checkForAmmo(ty) {
+	for(i=0;i<2;i++) if((x=getUnit(4,null,204+i)) && x.itemtype==ty) return true;
+	return 0;
+}
+
+function checkAmmoGrab(unit) {
+	if(!checkForAmmo(unit.itemtype)) return false;
+	count=CountItemType(unit.itemtype,100);
+	return (count<extraAmmo ? true : false);
+}
+
+// logic to fill books, keys, arrows, grab pots
+function AutoGrabItemCheckExtras(unit) {
+//bolts, arrows, scrolls, key, heal pot, mana pot, juvie
+//var TEST_ItemsListExtraI = [5,6,22,41,76,77,78];
+	if(!unit) return false;
+	switch(unit.itemtype) {
+		case 5:// bolts and arrows
+		case 6: {
+			return checkAmmoGrab(unit);
+			break;
+		}
+		case 22: // scrolls
+			if(fillBooks && (unit.classid==529 && current_tbk<20 && current_tbk!=-1) || (unit.classid==530 && current_ibk<20 && current_ibk!=-1)) return true;
+			break;
+		case 41: // keys
+			if(fillKeys && unit.getStat(70)+current_keys<=12) return true;
+			break;
+		case 76: // heal potions
+		case 77: // mana potions
+		case 78: // juvie potions
+			return checkPotionGrab(unit);
+			break;
+	}
+	return false;
+}
+
+function AutoGrabItem(unit) {
+	if(grabSetPlus && unit.quality>4) return true;
+	if(unit.itemtype in TEST_ItemsListH) return true;//print("found item " + unit.name);
+	
+	// check to see if item is an "extra", and if so, do the extra logic
+	if(unit.itemtype in TEST_ItemsListExtraH) return AutoGrabItemCheckExtras(unit);
+
+//	for(i=0;i<itemsToGrab.length;i++) if(unit.itemtype==itemsToGrab[i]) return true;
+
+// auto fill books/keys routine
+
+/*	if(fillBooks && unit.classid==529 && (x=getUnit(4,"tbk",100)) && x.getStat(70)<20) return true;
+	if(fillBooks && unit.classid==530 && (x=getUnit(4,"ibk",100)) && x.getStat(70)<20) return true;
+	if(fillKeys && unit.classid==543 && (x=getUnit(4,"key",100)) && unit.getStat(70)+x.getStat(70)<=12) return true;
+	for(i=0;i<potionCodes.length;i++) if(unit.itemtype==potionCodes[i]) return checkPotionGrab(unit);*/
+	return false;
+}
+
+function checkPotionGrab(unit) {
+	x=CountItemType(unit.itemtype,100);
+	y=GetPotIndex(unit.itemtype);
+	if(extraPotions[y]==-1 || x<extraPotions[y]) {
+		if(y==2) return true;
+//		zz=(me.getStat(12)-8)/4; if(zz>4) zz=4;
+		zz=(me.diff==0 ? me.act-1 : 4);
+		z=(minPotType==-1? zz:minPotType-1);
+//		print(z + ":" + unit.classid + ">=" + parseInt(potionBase[y]+z));
+		if(unit.classid>=parseInt(potionBase[y]+z)) {
+			if(y==2) hasJuvies=true;
+			return true;
+		}
+	}
+	return false;
+}
+
+function GetPotIndex(x) { for(i=0;i<potionCodes.length;i++) if(x==potionCodes[i]) return i; }
+
+function CountItemType(itype, wh) {
+	c=0;
+	s=getUnit(4,null,wh);
+	if(s) do { if(s.itemtype==itype) c++; } while(s.getNext(null,wh));
+	return c;
+}
+
+function moveCloser(x, y, d) {
+	var theta = Math.atan2(y-me.y, x-me.x);
+	var d = Dist(x, y, me.x, me.y) - d;
+	var x = me.x + parseInt(d*Math.cos(theta));
+	var y = me.y + parseInt(d*Math.sin(theta));
+	me.move(x, y);
+}
+
+function keypressHandler() {
+//	delay(100);
+	x=parseInt(arguments[0]);
+//	print(x);
+
+//	x=parseInt(msg.keypress);
+
+	if(x==53) {
+		autoaim=!autoaim;
+		if(autoaim) updateChicken();
+	}
+
+	if(x==vkPrefToggle) {
+		currentPrefToggle++;
+		if(currentPrefToggle>=prefStrings.length) currentPrefToggle=0;
+	}
+	if(x==vkPrefDec || x==vkPrefInc) {
+		y=(x==vkPrefDec ? -1 : 1);
+		switch(currentPrefToggle) {
+			case 0: attackDistanceThreshold+=1*y; break;
+			case 1: chickenAt[0]+=5*y; break;
+			case 2: chickenAt[1]+=5*y; break;
+			case 3: fillBooks=!fillBooks; break;
+			case 4: fillKeys=!fillKeys; break;
+			case 5: autoaim=!autoaim; break;
+			case 6: autoapproach=!autoapproach; break;
+			case 7: autofindclosesttarget=!autofindclosesttarget; break;
+			case 8: autograbitems=!autograbitems; break;
+		}
+	}
+
+	updatePrefs();
+}
+
+function updatePrefs() {
+	switch(currentPrefToggle) {
+		case 0: ov=attackDistanceThreshold; break;
+		case 1: ov=chickenAt[0]; break;
+		case 2: ov=chickenAt[1]; break;
+		case 3: ov=(fillBooks?"On":"Off"); break;
+		case 4: ov=(fillKeys?"On":"Off"); break;
+		case 5: ov=(autoaim?"On":"Off"); break;
+		case 6: ov=(autoapproach?"On":"Off"); break;
+		case 7: ov=(autofindclosesttarget?"On":"Off"); break;
+		case 8: ov=(autograbitems?"On":"Off"); break;
+	}
+	p_h.text=prefStrings[currentPrefToggle][0] + ": "+ov;
+}
+
+//function hostilemsgHandler() { quit(); }

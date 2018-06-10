@@ -1,0 +1,1204 @@
+//////////////////////////////////////////////////////////////////////
+//
+// Xizeta's CountessXP script
+// Countess run bot script.
+//
+// The script will use any char excepted Assassins (for now).
+//
+// It is suggested to keep a Tome of Identification in
+// inventory to make it work better.
+//
+// Version 1.09
+// Updated on 2004/07/26
+//
+// Original authors : Xizeta, DaBeerMan and the core scripters
+// Collaboration : Ven0m, Muellsammler, Darien, Killkeeper, Damoon, HellNucleus,
+//                 DaBeerMan, Gill_105, Syadasti, Smoke and others :)
+//
+// Legal stuff :
+// This program is free software; You can redistrubute freely as long as this
+// header and contents stays intact. Modifications for redistribution can only
+// be done by submitting to the core scripters team for approval. If you don't
+// want to submit the modifications and wanted to redistribute this script, you
+// must rename it by remplacing d2jsp with your own name to avoid conflicts.
+//
+// This program is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY
+// or FITNESS FOR A PARTICULAR PURPOSE.
+//
+//////////////////////////////////////////////////////////////////////
+var CXP_Version = "1.09";
+
+//////////////////////////////////////////////////////////////////////
+// Please edit CXP_Config.d2l in the libs folder for your needs.
+//////////////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////////////////////
+// Settings for multiple chars of the same class
+//////////////////////////////////////////////////////////////////////
+// Change the below file to point to different setting files if you need 2 setups for different chars
+// Within the same class.
+// To edit the settings for both chars, make a copy of the CXP_Config.d2l, and change the below
+// character selection to that character and file.
+//
+// This is only needed if you have 2 characters of the same type! If you are not sure, don't touch!!
+//--------------------------------------------------------------------
+
+// First char of the same class
+if (me.name=="Your Character name here") { CXP_CharConfigFile="CXP_Config.d2l"; }
+
+// Second char of the same class
+else if (me.name=="Your Other Character name here") { CXP_CharConfigFile="CXP_Config.d2l"; }
+
+// Default for all chars
+else { CXP_CharConfigFile="CXP_Config.d2l"; }
+
+
+
+
+
+
+
+
+
+
+//////////////////////////////////////////////////////////////////////
+// ***** NO EDITION BELOW THIS POINT *****
+// MESSING WITH THE CODE BELOW WILL MAKE THE SCRIPT
+// WORK DIFFERENTLY, WITH BAD RESULTS !!
+//////////////////////////////////////////////////////////////////////
+
+
+//////////////////////////////////////////////////////////////////////
+// Script public variables
+//////////////////////////////////////////////////////////////////////
+
+// General variables
+var CXP_SkipCredits=true;	// Show the credits at the start of runs
+var CXP_ShowRuneConsole=true;	// Set to true to display the rune log console on screen
+var CXP_UseConsole = false;	// Set to true to display the upper console
+var CXP_UseTaunts=true;		// Will Countess taunt you :)
+var CXP_FormatHTML=true;	// Build a HTML log for CXP
+var CXP_UseOverheads=false;	// Use overheads to show actions
+var CXP_UseBeltManager=false;	// Set to true to use belt management
+var CXP_QuitOnAmpDamage=false;	// Set to true to abort if we got Amplify Damage
+var CXP_StallMana=true;		// Stall at the start of Tower Level 5 if mana is low
+var CXP_MinManaPercent=50;	// Minimum mana percent before resuming
+var CXP_ShowInnerExceptions=false; // Set to true to show the inner exceptions
+var CXP_UseVigor = false;	// If you are a pally and want to cast Vigor in town
+
+// Shopping and gambling
+var CXP_ShopIt=true;		// Enable or disable shopping at NPC
+var CXP_GambleIt=false;		// Enable or disable gambling at NPC
+var CXP_AlwaysGamble=false;	// Flag to always gamble each run
+var CXP_GambleMinGold=250000;	// Min gold amount to start gambling
+var CXP_SellBackItems=false;	// Set false to not sell
+
+// NPC interactions
+var CXP_AlwaysAkara=false;	// Always visit Malah no matter what
+var CXP_AlwaysCharsi=false;	// Always visit Larzuk no matter what
+var CXP_VisitGheed=false;	// Visit Gheed before portal ?
+var CXP_RandomNPC=false;	// Randomly visit NPC each run
+
+// Run variables
+var CXP_StopFullInv=true;	// Stop the script if inventory is full
+var CXP_Automule=false;		// Use Sicojola's Automule script when inv is full
+var CXP_StartGameDelay=0;	// Delay to stall at the start of game
+var CXP_MaxGameLength=60;	// Length of the run before aborting, 0 to stay indefinitely
+var CXP_InitType=1;		// Map init type for the pathing calls
+
+
+//////////////////////////////////////////////////////////////////////
+// Script private variables
+//////////////////////////////////////////////////////////////////////
+
+var _CXP_RunLogPath="output\\" + me.name + "-CXP-RunLog.html";
+var _CXP_Position="start";
+var _CXP_KeyPressed = false;
+var _CXP_NeedPotions = false;
+
+// Classes
+var commPather = false;
+var commTown = false;
+
+//////////////////////////////////////////////////////////////////////
+// AndyXP functions
+//////////////////////////////////////////////////////////////////////
+
+function CXP_ShowCredits() {
+
+	if (!CXP_SkipCredits) {
+
+		DC_Print("ÿc9******************** CountessXP version " + CXP_Version + " by Xizeta ********************");
+		DC_Print("ÿc7Extra thanks to : DaBeerMan, mattlant, Muellsammler, Darien, TristanOfADown, ");
+		DC_Print("ÿc7..................Ven0m, damoon, HellNucleus, killkeeper and others...");
+		DC_Print("ÿc7Testers : Racer_X, Tempo, SinfulDude, Kenneth, RamasseTonDrum and others...");
+		DC_Print("ÿc1D2JSP.DLL core created and coded by nJaguar! Support him by donating :)");
+	}
+	var _successpercent=String((DL_Kills / (DL_Total-1)) * 100).substring(0,5);
+	if (DL_Kills === 0) { DC_Print("ÿc9*** CountessXP version " + CXP_Version + " by Xizeta ***"); }
+	else { DC_Print("ÿc9*** CountessXP version " + CXP_Version + " by Xizeta *** ÿc1Total runs:  " + (DL_Total-1) + "  Total kills:  " + DL_Kills + "  With a " + _successpercent +"% success rate!"); }
+}
+
+function CXP_CountessTaunt() {
+
+	switch (parseInt(Math.random() * 24)) {
+
+		case 0: DC_Print("ÿc4Countess : ÿc@HELP!! I'm being humped by a MULE!!"); break;
+		case 1: DC_Print("ÿc4Countess : ÿc@Damn, I cannot play cards without being disturbed"); break;
+		case 2: DC_Print("ÿc4Countess : ÿc@Eat shit, nOObzor"); break;
+		case 3: DC_Print("ÿc4Countess : ÿc@Oh FFS, just take what you want and leave me the fuck alone"); break;
+		case 4: DC_Print("ÿc4Countess : ÿc@You know if DClone spawns your fucked, right?"); break;
+		case 5: DC_Print("ÿc4Countess : ÿc@Fuck me your Merc is lazy, what a slack fuck"); break;
+		case 6: DC_Print("ÿc4Countess : ÿc@A little lag and i'll rape your sorry ass"); break;
+		case 7: DC_Print("ÿc4Countess : ÿc@You call yourself " + me.name + " ? Where the hell did you find such a stupid name?"); break;
+		case 8: DC_Print("ÿc4Countess : ÿc@Here comes the PAIN BABY"); break;
+		case 9: DC_Print("ÿc4Countess : ÿc@Yo Mama was tighter than your SISTER!!"); break;
+		case 10: DC_Print("ÿc4Countess : ÿc@You'll never get an Ist out of me!!"); break;
+  		case 11: DC_Print("ÿc4Countess : ÿc@Tyrael's Might ?  Ha!  The only might you'll feel is my foot in your ass!"); break;
+  		case 12: DC_Print("ÿc4Countess : ÿc@Tell your mom I said hi!"); break;
+  		case 13: DC_Print("ÿc4Countess : ÿc@PKPKPKPK COME COME POTAL!"); break;
+  		case 14: DC_Print("ÿc4Countess : ÿc@Bring it beotch!"); break;
+  		case 15: DC_Print("ÿc4Countess : ÿc@You want a Grandfather, go bother cain, you want a POS +1 light radius charm then we'll talk business"); break;
+  		case 16: DC_Print("ÿc4Countess : ÿc@If I weren't already dead, I might care!"); break;
+  		case 17: DC_Print("ÿc4Countess : ÿc@I'm gonna pwn your a$$!  If I don't though, please forward these gifts to Xizeta for me"); break;
+  		case 18: DC_Print("ÿc4Countess : ÿc@Kiss my shriveled undead posterior!"); break;
+  		case 19: DC_Print("ÿc4Countess : ÿc@Come on down and give aunt Countess a big hug!"); break;
+		case 20: DC_Print("ÿc4Countess : ÿc@Damn Xizeta, another update to CountessXP!"); break;
+		case 21: DC_Print("ÿc4Countess : ÿc@Hell, Killkeeper. Before you update the Console, bring some perfume to me!"); break;
+		case 22: DC_Print("ÿc4Countess : ÿc@May the god punish mattlant, his pathing library always catches me!"); break;
+		case 23: DC_Print("ÿc4Countess : ÿc@I wanna call for a executioner to resist the pressure you bring to me!"); break;
+		default: DC_Print("ÿc4Countess : ÿc@I might as well set my ass on fire now"); break;
+	}
+}
+
+function CXP_FormatLog() {
+
+	if (CXP_FormatHTML) {
+
+		// Tell the user that formatting is running
+		DC_Print("Now formatting the HTML log...");
+
+		// Start the chrono
+		DC_ChronoMe();
+
+		// Open the new log file for formatting
+		file = fileOpen("output/"+me.name+"-CXP-Log.html", 1);		
+		if (file) {
+
+			// Start the html log
+			DHL_OpenLog(file);
+
+			// Add run log info
+			DHL_AddSection(file,_CXP_RunLogPath,"Run Log for " + me.name);
+
+			// Integrate error logging if there is a error log available
+			DHL_AddSection(file,DC_ErrorLogPath,"Error Log for " + me.name);
+
+			// Add the logged items section
+			DHL_AddItemLogSection(file);
+
+			// Close the log
+			DHL_CloseLog(file);
+			file.close();
+		}
+		else {
+			DC_Print("Unable to open " + me.name + "-CXP-Log.html for writing!");
+		}
+
+		// Stop the chrono and display the total time (add a suggestion if formatting take too much time)
+		var _formattime=DC_ChronoMe();
+		if (_formattime > 1000) {
+
+			DC_Print("Formatting done in " + _formattime + " ms!! To reduce the time, reset or trim the item log");
+		}
+		else {
+			DC_Print("Formatting done in " + _formattime + " ms");
+		}
+	}
+	else {
+		DC_Print("Ignoring HTML formatting");
+	}
+}
+
+function keypressHandler(key) { CXP_CheckKey(key); }
+
+function CXP_CheckKey(key) {
+
+	// Get the entered key in the global var
+	_CXP_KeyPressed = key;
+
+	// stopping main script (when i'm in town), started tools (eg. pwnlifewatch) will continue
+	if (_CXP_KeyPressed == 88) { // "X" was pressed
+
+ 		if (DC_InTown(me)) {
+
+  			DC_Print("ÿc;Key 'X' is pressed, stopping the main script");
+  			delay(500);
+ 			stop(1);
+		}
+        }
+
+	// Toggling the console on and off
+	if (_CXP_KeyPressed == 85) { // "U" was pressed
+
+		if (CXP_UseConsole) {
+
+			DC_Print("ÿc;Key 'U' is pressed, toggling the console off");
+			DC_DoDel(50);
+			XP_DestroyConsole();
+			CXP_UseConsole = false;
+		}
+		else {
+			DC_Print("ÿc;Key 'U' is pressed, toggling the console on");
+			DC_DoDel(50);
+			XP_CreateConsole("CountessXP");
+			CXP_UseConsole = true;
+		}
+        }
+
+	// stopping all scripts (when i'm in town)
+	if (_CXP_KeyPressed == 191) { // "#" was pressed
+
+ 		if (DC_InTown(me)) {
+
+  			DC_Print("ÿc;Key '#' is pressed, stopping all scripts");
+  			delay(500);
+  			stop();
+        	}
+	}
+}
+
+function CXP_NPCinteract(npc) {
+
+	// If the npc object is not present, abort the game
+	if (!npc) {
+
+		DL_AddAbort();
+		DC_QuitMessage("No NPC available!");
+	}
+
+	// Interact with the npc
+	if (!DT_DoInteract(npc)) {
+
+		DL_AddAbort();
+		DC_QuitMessage("Unable to interact with " + npc.name + "!");
+	}
+
+	// Do stuff depending on which npc
+	switch (npc.classid) {
+
+		// Kashya
+		case 150:
+			if (!DT_ReviveMerc(npc)) {
+
+				DC_Print("Failed to revive the mercenary!");
+			}
+			break;
+
+		// Charsi
+		case 154:
+			DT_DoTrade(npc);
+			DT_RepairItems(npc);
+			if (DT_CheckAmmo()) { DT_BuyAmmo(npc); }
+			break;
+
+		// Akara
+		case 148:
+			if (_XP_GetNumUnId > 0) { XP_DoCheckItems(npc); }
+			if (CXP_UseBeltManager && _CXP_NeedPotions) { DT_DoTrade(npc); DT_FillBelt(npc); }
+			break;
+
+		// Gheed
+		case 147:
+			if (CXP_GambleIt) {
+
+				if (DC_MyGold() > CXP_GambleMinGold) {
+
+					DT_DoTrade(npc,1);
+					DT_GambleIt(npc);
+					DT_MenuCancel(npc,1);
+					DT_DoInteract(npc);
+				}
+			}
+			break;
+
+		// Stash !!LINE303!!
+		case 267:
+			DT_ManageStash();
+			if (DCU_CubingEnabled) { DCU_transform(); } // only this line added
+			break;
+	}
+
+	// If shopping is enabled and it is not Kashya or stash, stop the npc
+	if (CXP_ShopIt && npc.classid!=150 && npc.classid!=267) {
+
+		if (!getUIFlag(0x0c)) {	DT_DoTrade(npc); }
+		DT_ShopIt(npc);
+	}
+
+	// Use the right cancel method depending if it is a npc or object
+	if (npc.classid==267) { DT_MenuCancel(npc,0); }
+	else { DT_MenuCancel(npc,1); }
+}
+
+function CXP_CheckAct() {
+
+	if (me.act != 1)	{
+
+		DC_Print("You are not in act 1!  Going from act #" + me.act + " to act #1.");
+		if (CXP_UseOverheads) { me.overhead("Walking to Waypoint"); }
+
+		switch (me.act)	{
+
+			case 2:	commPather.GotoDest(5069, 5086);
+				break;
+
+			case 3:	commPather.GotoDest(5159, 5049);
+				break;
+
+			case 4: commPather.GotoDest(5044, 5019);
+				break;
+
+			case 5: commPather.GotoDest(5115, 5070);
+		}
+
+		// Mod the info so it use the way to act1-wp1
+		DM_UsePortal("Waypoint",1);
+	}
+	else { return true; }
+
+	// If we didn't change of act, there is a problem so abort
+	if (me.act != 1) { DC_QuitMessage("You're not in act 1!"); }
+}
+
+function CXP_PathToAkara() {
+
+	if (CXP_UseOverheads) { me.overhead("Walking to Akara"); }
+
+	commTown.GotoAkara();
+}
+
+function CXP_PathToCharsi() {
+
+	if (CXP_UseOverheads) { me.overhead("Walking to Charsi"); }
+	
+	commTown.GotoCharsi();
+}
+
+function CXP_PathToStash() {
+
+	if (CXP_UseOverheads) { me.overhead("Walking to Stash"); }
+
+	commTown.GotoStash();
+}
+
+function CXP_PathToKashya() {
+
+	if (CXP_UseOverheads) { me.overhead("Walking to Kashya"); }
+
+	commTown.GotoKashya();
+}
+
+function CXP_PathToGheed() {
+
+	if (CXP_UseOverheads) { me.overhead("Walking to Gheed"); }
+
+	commTown.GotoGheed();
+}
+
+function CXP_PathToWaypoint() {
+
+	if (CXP_UseOverheads) { me.overhead("Walking to WayPoint"); }
+
+	commTown.GotoWP();
+}
+
+// ToDo : Add coords of coords sweet spot.
+function CXP_GoToCountess() {
+
+	// Display a overhead while moving
+	if (CXP_UseOverheads) { me.overhead("Going to Da_Countess"); }
+
+	// Set to 0 for Black Marsh
+	commPather.InitType = 0;
+
+	// Move from Black Marsh waypoint to Countess Temple level 5
+	DC_Print("ÿc2    Give me a lil bit to get my bearings here");
+	commPather.GotoLevel(20, 20, false);
+
+	DC_Print("ÿc0    Ahhhh the Tower! Lets go down here.");
+	DM_TakeStairs(10,10);
+	DM_TakeStairs(12,12); //(area 20 is very very small so no pathing is needed)
+
+	// Change the map resolution to make it higher
+	commPather.InitType = CXP_InitType;
+
+	// Going down the tower levels
+
+	DC_Print("ÿc0    Tower 1 reached! Let me read this map!");
+	commPather.GotoWarp(mlWARPNEXT, 20, false);
+	DM_TakeStairs(9,9);
+	DC_Print("ÿc0    Tower 2 reached! Hold on Countess I'm on my way!");
+	commPather.GotoWarp(mlWARPNEXT, 20, false);
+	DM_TakeStairs(9,9);
+	DC_Print("ÿc4    Tower 3 reached! You can't hide from me!");
+	commPather.GotoWarp(mlWARPNEXT, 20, false);
+	DM_TakeStairs(9,9);
+	DC_Print("ÿc9    Tower 4 reached! Good thing mattlant knows where I'm going!");
+	commPather.GotoWarp(mlWARPNEXT, 20, false);
+	DM_TakeStairs(9,9);
+	DC_Print("ÿc1    Tower 5 reached! Hold onto that Ist I'll be right there Babe!");
+	XP_Precasts();
+	if (me.classid == 1) {XP_SorcSetSkills(); }
+
+	// Check if we have Amplify Damage, chicken if true
+	CXP_CheckAmpDamage();
+
+	// check the mana level and stall until the level come back
+	if (CXP_StallMana) { CXP_CheckMana(); }
+}
+
+// Calculate the 3 "best case" locations (Middle, Right & Left)
+// ToDo : Check the coords so we can be in a safe position while detecting Countess then go to the safest corner
+function CXP_FindCountess() {
+
+	//var _myroom = getRoom();
+
+	// Corresponds to room 1
+	if (me.y > 11060 && me.y < 11070) {
+
+		// Move from starting point to the detection spot with teleport
+		DC_Print("   DEBUG : Using level type 1 (middle)");
+		DC_Print("ÿc2    Lets get in a spot where we can detect her?");
+		DM_MoveTo(12620,11064);
+		DM_MoveTo(12602,11066);
+		DM_MoveTo(12586,11068);
+
+		// Move to a spot where we can surely detect that countess
+		DM_MoveTo(12564,11070);
+
+		// Find The Countess
+		for (var i = 0; i < 3; i+=1) {
+
+			var _countess = DC_FindMonster(45,0x04);
+			if (_countess) { break; }
+		}
+
+		// Abort if we didn't find her
+		if (!_countess) {
+
+			DL_AddAbort();
+			DC_QuitMessage("The Countess not found!! Aborting the run...");
+		}
+
+		// She's to the far right outside main room
+		if (_countess.y <= 11054) { commPather.GotoDest(12548,11052); }
+
+		// She's in the main room, the right 
+		if (_countess.y > 11056 && _countess.y <= 11070) {
+
+			// In the lower section
+			if (_countess.x < 12533) { commPather.GotoDest(12518,11057); }
+
+			// In the upper section
+			else { commPather.GotoDest(12548,11057);}
+		}
+
+		// She's in the main room, left side
+		if (_countess.y > 11070 && _countess.y <= 11085) {
+
+			// In the lower section
+			if (_countess.x < 12533) { DM_MoveTo(12518,11083); }
+
+			// In the upper section
+			else{ commPather.GotoDest(12548,11083); }
+			
+		}
+
+		// She's outside the main room to the left.
+		if (_countess.y > 11085) { commPather.GotoDest(12548,11087); }
+	}
+
+	// Corresponds to room 2
+	else {
+
+		// Move from starting point to the detection spot with teleport
+		DC_Print("   DEBUG : Using level type 2 (right)");
+		DC_Print("ÿc2    Lets get in a spot where we can detect her?");
+		DM_MoveTo(12570,11113);
+		DM_MoveTo(12570,11095);
+		DM_MoveTo(12570,11076);
+		//DM_MoveTo(12555,11069);
+
+		// Move to a spot where we can surely detect that countess
+		DM_MoveTo(12570,11057);
+
+		// Move to a spot where we can surely detect The Countess
+		//commPather.GotoDest(12563+rnd(-4,4), 11025+rnd(-8,8));
+
+		// Find The Countess
+		for (i = 0; i < 3; i+=1) {
+
+			_countess = DC_FindMonster(45,0x04);
+			if (_countess) { break; }
+		}
+
+		// Abort if we didn't find her
+		if (!_countess) {
+
+			DL_AddAbort();
+			DC_QuitMessage("The Countess not found!! Aborting the run...");
+		}
+
+		// She's to the far left outside main room
+		if (_countess.x <= 12550){
+
+			DC_Print("ÿc2    Ahhh she's over here on the left?");
+
+			DM_MoveTo(12562,11057);
+			DM_MoveTo(12548,11043);
+			//commPather.GotoDest(12548,11043); 
+		}
+
+		// She's in the main room, in the left side somewhere
+		if (_countess.x > 12550 && _countess.x <= 12561) {
+
+			// upper side
+			if (_countess.y < 11027) {
+
+				DM_MoveTo(12577,11043);
+				//DM_MoveTo(12577,11025);
+				//commPather.GotoDest(12552,11012);
+			}
+
+			// lower side
+			else{
+				DM_MoveTo(12565,11043);
+				DM_MoveTo(12577,11025);
+				//commPather.GotoDest(12552,11043);
+			}
+
+			// Move a little closer if she is far
+			//_newcoord = DM_GetNextCoords(_countess.x,_countess.y,me.x,me.y,15);
+			//DM_MoveTo(_newcoord.x,_newcoord.y);
+		}
+
+		// She's in the main room, left side
+		if (_countess.x > 12561 && _countess.x <= 12579) {
+
+			DC_Print("ÿc2    Ahhh she's over here in this room?");
+
+			// Upper side
+			if (_countess.y < 11027) {
+
+				DM_MoveTo(12555,11043);
+				//DM_MoveTo(12555,11025);
+				//commPather.GotoDest(12578,11012);
+			}
+
+			// Lower side
+			else{
+				DM_MoveTo(12565,11043);
+				DM_MoveTo(12555,11025);
+				//commPather.GotoDest(12578,11043);
+			}
+
+			// Move a little closer if she is far
+			//_newcoord = DM_GetNextCoords(_countess.x,_countess.y,me.x,me.y,15);
+			//DM_MoveTo(_newcoord.x,_newcoord.y);
+		}
+
+		// She's outside the main room to the left.
+		if (_countess.x > 12579) {
+
+			DC_Print("ÿc2    Ahhh she's over here on the right?");
+
+			DM_MoveTo(12578,11057);
+			DM_MoveTo(12582,11043);
+			//commPather.GotoDest(12582,11043);
+
+		}
+	}
+
+	return _countess;
+}
+
+function CXP_FindCountessWalk() {
+
+	var _myroom = getRoom();
+
+	// Corresponds to room 1
+	if (Math.abs(Math.round(me.x/5) - _myroom.x) < 4 ) {
+
+		DC_Print("ÿc2    Lets get in a spot where we can detect her?");
+		// Move to a spot where we can surely detect that countess
+		commPather.GotoDest(12530+rnd(-4,4), 11069+rnd(-8,8));
+
+		// Find The Countess
+		for (var i = 0; i < 3; i+=1) {
+
+			var _countess = DC_FindMonster(45,0x04);
+			if (_countess) { break; }
+		}
+
+		// Abort if we didn't find her
+		if (!_countess) {
+
+			DL_AddAbort();
+			DC_QuitMessage("The Countess not found!! Aborting the run...");
+		}
+
+		// She's to the far right outside main room
+		if (_countess.y <= 11054){ commPather.GotoDest(12548,11052); }
+
+		// She's in the main room, the right 
+		if (_countess.y > 11056 && _countess.y <= 11070) {
+
+			// In the lower section
+			if (_countess.x < 12533) { commPather.GotoDest(12518,11057); }
+
+			// In the upper section
+			else { commPather.GotoDest(12548,11057);}
+		}
+
+		// She's in the main room, left side
+		if (_countess.y > 11070 && _countess.y <= 11085) {
+
+			// In the lower section
+			if (_countess.x < 12533) { DM_MoveTo(12518,11083); }
+
+			// In the upper section
+			else{ commPather.GotoDest(12548,11083); }
+			
+		}
+
+		// She's outside the main room to the left.
+		if (_countess.y > 11085) { commPather.GotoDest(12548,11087); }
+	}
+
+	// Corresponds to room 2
+	else {
+		// Move to a spot where we can surely detect The Countess
+		commPather.GotoDest(12563+rnd(-4,4), 11025+rnd(-8,8));
+
+		// Find The Countess
+		for (i = 0; i < 3; i+=1) {
+
+			_countess = DC_FindMonster(45,0x04);
+			if (_countess) { break; }
+		}
+
+		// Abort if we didn't find her
+		if (!_countess) {
+
+			DL_AddAbort();
+			DC_QuitMessage("The Countess not found!! Aborting the run...");
+		}
+
+		// She's to the far right outside main room
+		if (_countess.x<=12550){ 
+		commPather.GotoDest(12548,11043); 
+		DC_Print("ÿc2    Ahhh she's over here on the right?");
+		}
+
+		// She's in the main room, in the right side somewhere
+		if (_countess.x > 12550 && _countess.x <= 12561) {
+
+			// Lower side
+			if (_countess.y < 11027) { commPather.GotoDest(12552,11012); }
+
+			// Upper side
+			else{ commPather.GotoDest(12552,11043); }
+		}
+
+		// She's in the main room, left side
+		if (_countess.x > 12561 && _countess.x <= 12579) {
+
+			// Lower side
+			if (_countess.y < 11027) { commPather.GotoDest(12578,11012);
+			DC_Print("ÿc2    Ahhh she's over here in this room?");
+			}
+
+			// Upper side
+			else{ commPather.GotoDest(12578,11043); }
+		}
+
+		// She's outside the main room to the left.
+		if (_countess.x > 12579) { commPather.GotoDest(12582,11043); }
+	}
+
+	return _countess;
+}
+
+function CXP_AttackCountess() {
+
+	var target = CXP_FindCountess();
+
+	// If Countess is detected, 
+	if (target) {
+
+		var _countessname = target.name;
+		DC_Print("ÿc2    Attacking the Countess! Show me Da_Runes!!!!!");
+		// If the target has a enchantment i want to chicken, log and quit
+		if (DA_CheckImmunities(target)) { 
+
+			// Increase the chicken counter
+			DL_AddChicken();
+
+			// Leave the game
+			DC_Print("CXP : Now chickening due to a bad immunity/enchant/aura!");
+			quit();
+		}
+
+		XP_Attack(target);
+
+		DC_Print("ÿc0" + _countessname + " killed!");
+
+		if (CXP_UseTaunts) { 
+
+			DC_Print("ÿc4" + _countessname + "ÿc@: AAAAaaaaaarrrgghh...!!!");
+			DC_Print("ÿc4" + me.name + "ÿc@: Pwned !!!");
+		}
+
+		target=false;
+	}
+
+	else {
+
+		DL_AddAbort();
+		DC_QuitMessage("Countess not found!! Aborting the run...");
+	}
+}
+
+
+function CXP_CheckMana() {
+
+        if ((me.mp / me.mpmax) * 100 < CXP_MinManaPercent) {
+
+		DC_Print("Phew, waiting until my mana level come back");
+
+		do {
+			DC_DoDel(100);
+
+		} while ((me.mp / me.mpmax) * 100 < CXP_MinManaPercent);
+        }
+}
+
+// Function by X-NerdGT, modified by Xizeta
+function CXP_CheckAmpDamage() {
+
+        if (CXP_QuitOnAmpDamage && me.getState(9)) {
+
+		DC_QuitMessage("Cursed with Amplify Damage...");
+        }
+}
+
+// evaluation, to test the cube lib
+function CXP_ChestManager() {
+
+	DC_Print("DCU_CubingEnabled="+DCU_CubingEnabled);
+
+	// If we got items to stash, go to the stash
+	if (1) {
+
+		CXP_PathToStash();
+		CXP_NPCinteract(DC_getObject(267));
+		DSN_CheckGround(); // Check the ground to see if any nice item is dropped by accident
+	}
+
+	DC_Print("stopped");
+	stop();
+}
+
+// Todo : Get npc coords
+function CXP_TownManager() {
+
+	// If randomNPC is true, pick a npc number
+	if (CXP_RandomNPC) { NPCnum=parseInt(Math.random() * 11); }
+
+	// Else, set npc at 0
+	else { NPCnum=0; }
+
+	// Check if we need to go to Akara
+	_XP_GetNumUnId = DT_CheckUnids();
+	if (CXP_UseBeltManager) { _CXP_NeedPotions = DT_CheckBelt(); }
+	if (CXP_AlwaysAkara || DT_CheckHeal() || _XP_GetNumUnId > 0 || _CXP_NeedPotions || NPCnum>=rnd(2,9)) {
+
+		CXP_PathToAkara();
+		CXP_NPCinteract(DC_getNPC(148));
+	}
+
+	// Check if we need to go to Charsi
+	if (CXP_AlwaysCharsi || DT_CheckRepair(DT_RepairPercent) || DT_CheckAmmo() || NPCnum>=rnd(2,9)) {
+
+		CXP_PathToCharsi();
+		CXP_NPCinteract(DC_getNPC(154));
+	}
+
+	// If we need to revive the merc, go to Kashya
+	if (DT_CheckMerc()) {
+
+		DC_Print("Need to revive the merc, going to Kashya.");
+		CXP_PathToKashya();
+		CXP_NPCinteract(DC_getNPC(150));
+	}
+
+	// If we got items to stash, go to the stash
+	if (DT_CheckInventory()) {
+
+		CXP_PathToStash();
+		CXP_NPCinteract(DC_getObject(267));
+		DSN_CheckGround(); // Check the ground to see if any nice item is dropped by accident
+	}
+
+	// If we want to gamble or visit Gheed, go to Gheed
+	if ((CXP_AlwaysGamble && DC_MyGold() > CXP_GambleMinGold) || ((CXP_VisitGheed || NPCnum>=rnd(2,9)) && CXP_ShopIt)) { 
+
+		CXP_PathToGheed();
+		CXP_NPCinteract(DC_getNPC(147));
+	}
+
+	//At the end of in-town stuff, if the eth weapon refill is not finished, let it finish
+	if (DT_CheckRecharge()) {
+
+		DT_DoRecharge();
+		if (CXP_UseOverheads) { me.overhead("Recharing done!"); }
+	}
+
+	// Do precasts before going into the portal
+	XP_Precasts();
+
+	// If it is a sorceress, switch to the right tab and set the sorceress skills
+	if (me.classid == 1) { XP_SorcSetSkills(); }
+
+	// If we switched weapons on kill, switch back to the attack tab
+	if (XP_SwitchOnKill) { DC_SelectTab(1); }
+
+	// Display taunts if set to true and show MF info
+	if (CXP_UseTaunts) { CXP_CountessTaunt(); }
+	DT_DisplayMF();
+}
+
+function CXP_RuneConsole() {
+
+	commRuneCon.System.pMsgLines = 32;
+	commRuneCon.System.oPos["ConsoleN"] = [700,60,770,60];
+	commRuneCon.System.oPos["ConsoleS"] = [700,500,770,500];
+	commRuneCon.System.oPos["ConsoleTitle"] = [718,57];
+
+	commRuneCon.System._CreateConsole = function() {
+
+		commRuneCon.System.Painter.Put(commRuneCon.System.oPos["ConsoleN"][0],commRuneCon.System.oPos["ConsoleN"][1],commRuneCon.System.oPos["ConsoleN"][2],commRuneCon.System.oPos["ConsoleN"][3],21);
+		commRuneCon.System.Painter.Put(commRuneCon.System.oPos["ConsoleS"][0],commRuneCon.System.oPos["ConsoleS"][1],commRuneCon.System.oPos["ConsoleS"][2],commRuneCon.System.oPos["ConsoleS"][3],21);
+				
+		for (var pN=0;pN<33;pN+=1) {
+
+			commRuneCon.System.pMsgPtr = commRuneCon.System.Texter.Allocate(commRuneCon.System.oPos["ConsoleN"][0] + 5, commRuneCon.System.oPos["ConsoleN"][1] + 18 + pN*12, " ", COLORWHITE, FONT_PIXEL_9);
+		}
+		commRuneCon.System.pMsgPtr -= 32;
+
+		commRuneCon.System.Shape = getScreenHook();
+		commRuneCon.System.Shape.x = 700;
+		commRuneCon.System.Shape.y = 60;
+		commRuneCon.System.Shape.x2 = 770;
+		commRuneCon.System.Shape.y2 = 500;
+		commRuneCon.System.Shape.text = "";
+		commRuneCon.System.Shape.color = 2;
+		commRuneCon.System.Shape.opacity = 1;
+		commRuneCon.System.Shape.type = 1;
+
+		commRuneCon.System.Texter.Put(commRuneCon.System.oPos["ConsoleTitle"][0],commRuneCon.System.oPos["ConsoleTitle"][1],"Runes",COLORCRAFT,FONT_PIXEL_11);
+		
+	};
+
+	commRuneCon.System.Initialize = function() {
+
+		commRuneCon.System._InitArray();
+		commRuneCon.System._CreateConsole();
+	};
+
+	commRuneCon.System.Initialize();
+
+	// Fill the rune console with the rune log contents
+	for (var i = 0; i < 33; i+=1) {
+
+		var _runestring = _DL_Runes[i][0] + DC_MultiChar(" ",(7 - _DL_Runes[i][0].length)) + "[" + _DL_Runes[i][1] + "]" + " [" + _DL_Runes[i][2] + "]";
+
+		if (i <= 11) { DC_Print("ÿc1" + _runestring,commRuneCon); }
+		else if (i <= 22) { DC_Print("ÿc3" + _runestring,commRuneCon); }
+		else { DC_Print("ÿc9" + _runestring,commRuneCon); }
+	}
+}
+
+function DC_MultiChar(character,repeat) {
+
+	var _string = "";
+
+	for (var i = 0; i < repeat; i+=1) {
+
+		_string = _string + character;
+	}
+
+	return _string;
+}
+
+//////////////////////////////////////////////////////////////////////
+// CountessXP libs loading
+//////////////////////////////////////////////////////////////////////
+
+function CXP_LoadIncludes() {
+
+	// Load the d2jsp common libs files
+	DC_LoadInclude("common/d2jsp-attack.d2l");
+	DC_LoadInclude("common/d2jsp-town.d2l");
+	DC_LoadInclude("common/d2jsp-move.d2l");
+	DC_LoadInclude("common/d2jsp-pathing.d2l");
+	DC_LoadInclude("common/d2jsp-htmllog.d2l");
+	DC_LoadInclude("common/d2jsp-logging.d2l");
+	DC_LoadInclude("common/d2jsp-snagit.d2l");
+    	DC_LoadInclude("common/d2jsp-cubing.d2l");
+	DC_LoadInclude("common/d2jsp-console.d2l");
+
+	// Load the XP scripts common include
+	DC_LoadInclude("XP_Include.d2l");
+
+	// Load the configuration info
+	DC_LoadInclude(CXP_CharConfigFile);
+
+	// Initialize the new classes
+	commRuneCon = new oConsole();
+	commPather = new commonLib.Pathing();
+	commTown = new commonLib.PathAct1();
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// CountessXP main section
+//////////////////////////////////////////////////////////////////////
+
+// Main function
+function CountessXP() {
+
+	// If the core is less than 0.41, stop the script
+	if (parseFloat(me.version)<0.41) {
+
+		DC_StopMessage("This is only for donators!  Please redownload and install d2jsp 0.41+!");
+	}
+
+	// Register the events to watch
+	//registerEvent( EVENT_KEYUP, keypressHandler );
+
+	// Add the title to the screen
+	var _sh = getScreenHook(null,20,500,-1);
+	_sh.x = 228;
+	_sh.y = 30;
+	_sh.font = 8;
+	_sh.color = 4;
+	_sh.text = "===== CountessXP version " + CXP_Version + " running =====";
+
+	// Load the libs files
+	CXP_LoadIncludes();
+
+	// Initialise the XP_Include with user variables
+	XP_InitInclude();
+
+	// Set the maximum game delay before aborting with the user setting
+	me.gamelength=CXP_MaxGameLength*1000;
+
+	// set the teleport vars with the user setting
+	commPather.UseTeleport = XP_UseTeleport;
+	commPather.UseTeleSorc = XP_UseTeleSorc;
+	commPather.TeleFH = mlFHMANHATTAN;
+
+	// Lets setup the Top console
+	XP_CreateConsole("CountessXP");
+	DC_Print("Thanks Killkeeper for the SUPER new console!");
+
+	// Load the rune log in memory
+	DSN_LogRunes=true;
+	DL_LoadRuneLog();
+
+	// Set the rune console if it is set to true
+	if (CXP_ShowRuneConsole) { CXP_RuneConsole(); }	
+
+	// Initialize the Cubing settings
+	CXP_CubeSettings();
+	DIM_TempSnagFile = DCU_Snagfile;
+
+	// Configure the item log path
+	DL_ItemLogPath = "output/" + me.name + "CXP-ItemLog.html";
+
+	// Get the configured run log path
+	DL_RunLogPath = _CXP_RunLogPath;
+
+	// Init the run logging
+	DL_LoadRun();
+
+	// show the credits to the user
+	CXP_ShowCredits();
+
+	// If the user want to stall at the start until the game settle, wait a fixed amount of time
+	if (CXP_StartGameDelay > 0) {
+
+		DC_Print("Waiting " + (parseInt(CXP_StartGameDelay / 1000)) + " seconds for game initialization...");
+		DC_DoDel(CXP_StartGameDelay);
+	}
+
+	// Prepare the temp snagit file before we load snagit.ini
+	if (DCU_CubingEnabled) { DCU_UpdateCubeIniAtStartup(); }
+
+	// Preload the snagit.ini file
+	DIM_getINI("settings/" + DSN_SnagItINIFile);
+
+	// Format the html log file
+	CXP_FormatLog();
+
+	// Check if we have a body then get it if yes
+	DT_getCorpses();
+	if (DT_HaveCorpse) { DL_AddDeath(); }
+
+	// Load the life watch script
+	load("tools/lifewatchXP.d2j");
+
+	// Clear the cursor of any item
+	DC_ClearCursor();
+
+	// If we use a pally and want to use Vigor for faster town movement, cast it
+	if (me.classid = 3 && CXP_UseVigor) { DC_PutSkill(115,0); }
+
+	// Check if we are in the right act, if not, change act
+	CXP_CheckAct();
+
+	// Do a cleaning of the inventory of any useless items
+	DT_CleanPotions();
+	DT_TossItem(100, "isc");
+	DT_TossItem(100, "tsc");
+	DT_TossItem(100, "aqv");
+	DT_TossItem(100, "cqv");
+
+	// Initialize the town pathing class to make it work
+	commTown.Initialize();
+
+	// Do town stuff
+	CXP_TownManager();
+
+	// If the inventory is full and we want to stop on full inv, stop the script
+	// ToDo : If inv is full, return to stash to retry to stash items in case last attempt failed
+	if (CXP_StopFullInv) {
+
+        	if ( DT_CountFreeSpaces() >= (DT_FreeSpace * 4)) {
+
+          		DC_Print("Got some space in my inventory, let's go :)");
+		}
+
+        	else {
+
+			var freespaces = DT_CountFreeSpaces();
+                	DC_Print("freespaces = " + freespaces);
+        		DC_Print("Don't take the red portal now, I can't clear my inventory :-/");
+
+			if (CXP_Automule) {
+
+				DC_Print("BUT WAIT! I HAVE SICOJOLA'S AUTOMULE! LET'S SEE IF I HAVE ANY FREE MULES...");
+				DC_LoadInclude("automule.d2l");
+
+			}
+			if (!CXP_Automule || !Automule()) {
+
+				DL_AddAbort();
+				DC_Print("To avoid stopping, set CXP_StopFullInv to false");
+				DC_StopMessage("Inventory is full and CXP_StopFullInv is set to true !");
+			}
+        	}
+	}
+
+	// If the merc is not found, CXP_AbortNoMerc is set to true and we use a merc, abort the game
+	if (DT_UseMerc && !DC_GetMerc() && CXP_AbortNoMerc) {
+
+		DL_AddAbort();
+		DC_QuitMessage("CXP : Mercenary not found and CXP_AbortNoMerc is set to true !");
+	}
+
+	// Go to the waypoint area
+	CXP_PathToWaypoint();
+
+	// Link the UseTele var from pathing to the move one
+	DM_UseTeleport = commPather.UseTele;
+
+	// Use the WP to go to BlackMarsh
+	DM_UsePortal("Waypoint",6);
+
+	// Path to the Andariel's lair
+	CXP_GoToCountess();
+
+	// Go attack Andariel
+	CXP_AttackCountess();
+
+	// Increase the kills counter
+	DL_AddKill();
+
+	// If we want to attack the monsters around, do it now
+	if (XP_KillMinions) { XP_KillAll(me.x,me.y,null,15,false); }
+
+	// Pick the dropped items
+	DSN_PickItems();
+
+	// Save the rune log to file
+	DL_SaveRuneLog();
+
+	// Quit the game
+	quit();
+}
+
+// Error handling
+function main() {
+
+	// Include the base d2jsp lib
+	include("common/d2jsp-common.d2l");
+
+	// Set the maximum game delay before aborting
+	me.gamelength=CXP_MaxGameLength*1000;
+
+	// configure the debug and error log paths
+	DC_DebugLogPath = "output/" + me.name + "CXP-DebugLog.html";
+	DC_ErrorLogPath = "output/" + me.name + "CXP-ErrorLog.html";
+
+	// Call the main function to check for exceptions
+    	try { CountessXP(); }
+
+	// Then catch and log any exception throwed by the script before quitting
+	catch (CXP_Exception) {
+
+		if (CXP_ShowInnerExceptions && CXP_Exception.inner) {
+
+			DC_LogError("Inner Exceptions Attached - details below");
+			var einner = CXP_Exception.inner;
+			while (einner) {
+				DC_LogError("Name: " + einner.name);
+				DC_LogError("Error code: " + einner.number);
+				DC_LogError("Message: " + einner.message);
+				DC_LogError("lineNumber: " + einner.lineNumber);
+				DC_LogError("fileName: " + einner.fileName);
+				var einstack = einner.stack;
+				if(!(einstack instanceof Array)) {
+					einstack = einstack.split("\n");
+					einstack.pop();
+					einstack.pop();
+					einstack.reverse();
+				}
+					
+				for(var i = 0; i < einstack.length; i+=1) {
+					DC_LogError("Stack Trace -> function[" + (i+1) + "]: " + einstack[i]);
+				}
+				einner = einner.inner;
+			}
+
+		}
+
+		// Got a exception so quit the game after writing the error in the file
+		DC_QuitMessage("CXP_Exception : name = " + CXP_Exception.name + ", message = " + CXP_Exception.message);
+
+
+    	}
+}

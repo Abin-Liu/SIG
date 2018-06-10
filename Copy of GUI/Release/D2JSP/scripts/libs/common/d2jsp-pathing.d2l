@@ -1,0 +1,493 @@
+//////////////////////////////////////////////////////////////////////
+//
+// d2jsp-movement.d2l Common functions library
+//
+// Written by Killkeeper, Xizeta and Muellsammler
+//
+// This library include the call of BotOS.Pathing
+// BotOS.Pathing is one part of the BotOS framework of d2jsp project started by mattlant.
+// Thanks goes for credits of BotOS.Pathing of mattlant
+//
+// Core scripters team : Xizeta, Muellsammler, Darien, Killkeeper
+// Version 3.4
+// Updated on 2004/07/09
+//
+// Legal stuff :
+// This program is free software; You can redistrubute freely as long as this
+// header and contents stays intact. Modifications for redistribution can only
+// be done by submitting to the core scripters team for approval. If you don't
+// want to submit the modifications and wanted to redistribute this script, you
+// must rename it by remplacing d2jsp with your own name to avoid conflicts.
+//
+// This program is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY
+// or FITNESS FOR A PARTICULAR PURPOSE.
+//
+//////////////////////////////////////////////////////////////////////
+/*
+
+Library README :
+
+  -Purpose:
+    To do movement to a certain room/level/coordinate/warp
+    To explorer a certain level/area
+  
+  -Usage:
+    -> No need to initialize map any more!
+    
+    -> To move to a certain level/area:
+        DP_GotoLevel(AREA_NUMBER, DISTANCE_BETWEEN_POINTS, WALKCALLFLAG);
+    
+       	   i.e.
+       	     DP_GotoLevel(102, 15, false); //move to Durance of Hate level 3 with a teleporting distance of 15, non-walkcallflag
+       	   
+    -> To move to a certain room:
+        DP_GotoRoom(ROOM_NUMBER_LOW, ROOM_NUMBER_HIGH, DISTANCE_BETWEEN_POINTS, WALKCALLFLAG);
+        
+           i.e.
+             DP_GotoRoom(931, 938, 15, false); //move to the nearest room among room 931~938 where locates Sharptooth with a teleporting distance of 15, non-walkcallflag
+    
+    -> To move to a certain destination on coordinates:
+        DP_GotoDest(DESTINATION_X, DESTINATION_Y, DISTANCE_BETWEEN_POINTS, WALKCALLFLAG);
+            
+           i.e.
+             DP_GotoDest ( 3734, 5075, 15, false); //move to the coordinate at (3734,5075) where locates Eldritch with a teleporting distance of 15, non-walkcallflag
+    
+    -> To enter a certain warp:
+        DP_GotoWarp(WARP_TYPE,DISTANCE_BETWEEN_POINTS, WALKCALLFLAG);
+        
+           i.e.
+             DP_GotoWarp(mlWARPNEXT, 15, false);  //move to the next warp which links to current warp on a teleporting distance of 15, non-walkcallflag
+    
+    -> To explorer current level/area:
+        DP_ExploreLevel(DISTANCE_BETWEEN_POINTS, WALKCALLFLAG, CALLBACK_PER_ROOM);
+        
+        => Warning:
+           CALLBACK_PER_ROOM must be a function in which you defines what to do in each room the bot steps.
+           for example, if The Pit contains 10 rooms, then CALLBACK_PER_ROOM will work 10 times after the bot reach the room
+           you need to know the difference between WALKCALLFLAG AND CALLBACK_PER_ROOM.
+           WALKCALLFLAG works every step you take while WALKCALL_PER_ROOM works every room.
+        
+           i.e.
+           
+             function RoomCleaner()
+             {
+           	  // see Dae_Attack.d2l and Dae_Objects.d2l for CleanUpMe() and CheckObjects()
+           	  // in fact, you don't need to know how to use them :p
+           	  
+           	  CleanUpMe(40);
+       		  CheckObjects( true, DaeShrineMove );
+    		  DoDel(500);
+    	     }
+           
+             DP_ExploreLevel(15, false, RoomCleaner); //explore current level, non-walkcallflag, clean up monsters, check for objects and delay for 500 ms in each room the bot steps
+    
+    -> What is WALKCALLFLAG?
+        WALKCALLFLAG is a optional parameter. if you don't need WALKCALLFLAG, you can pass null or false.
+        WALKCALLFLAG can be a object, array or a string, integer etc.... it is something you need to pass to the movement function "walkcalls"
+        when you use WALKCALLFLAG, you can pass a certain boss distance to walkcalls.
+        
+        | -> What is walkcalls
+        |   you should write a function named walkcalls which defines what you should do while moving on steps
+        |   
+        |   the function must be like this:
+        |   function walkcalls(x, y, currentpoint, walkcallflag)
+        |   {
+        |   	//PUT WHATEVER YOU WANT TO DO WITH.
+        |   }
+        |    
+        |   you have 3 return values to choose:
+        |      mlSTEPBACK - for example you like to interact with a chest and after that you want to step back to current point
+        |      mlSTEPAHEAD - go ahead to next point after you've done what you need.
+        |       mlSTOP - stop the pathmove no matter where the character is. very useful when you need a long distance of boss
+        |   
+        |   i.e.
+        |      for example, we need to check if we are get close to Mephisto
+        |      then we create a function like this:
+        |      
+        |      function walkcalls(x, y, currentpoint, walkcallflag)
+        |      {
+        |      	meph=getUnit(1,"Mephisto");
+        |      	if (!meph) return mlSTEPAHEAD;
+        |      	
+        |      	if (getDistance(me,meph)<=15) 
+        |      		return mlSTOP;
+        |      	
+        |      	return mlSTEPAHEAD;
+        |      }
+        |      
+        |      in this function, we made a trigger that once ever we get enough close to Mephisto, stop at once.
+        
+	back to "What is WALKCALLFLAG" now. in the defination of walkcalls, we have talked about the usage of WALKCALLFLAG.
+	if you want to know more about how to use WALKCALLFLAG, you can see the orginal barb.d2l of Daemon Multi-MF Bot.
+	
+	the usage in Daemon is like this:
+	   var databack=new Object();
+	   databack["bossname"]=xxxx;
+	   databack["bossdist"]=xx;
+	   .....
+  
+  -Dijkstra Algorithm supports
+    If you have the need of Dijkstra algorithm on pathfinding, that is to say, you don't wanna use BotOS.Pathing on some pathing work
+    you may check Dae_ShFindPath.d2l
+    
+    see  function GotoRoom2(min, max, offset, builddist) { ... }   in your libs\dae\sorc.d2l
+  
+  -Notes:
+    You need BotOS libraries(especially with BotOS.Pathing and BotOS.Linear.Move) and BotOS.Linear.Mover_Pro.d2l and BotOS.Pathing.Pather_Pro.d2l to run with this library.
+    Otherwise you cannot get Enigma support on non-sorceress support!
+    Remember!
+  
+  -History:
+    3.5 : Fixed a problem with GotoRoom which will cause a walking bug
+    3.4 : Added the "area" parameter to InitMap() to make advanced map init
+    3.3 : Fixed a problem with teleport with Enigma
+    3.2 : Added commonLib.Pathing.DumpMap function, call at any time you like
+          commonLib.Pathing.DumpMap(type,bit)
+          type = 0 for Hex dump, 1 for visual dump, 2 for no axis map
+          bit is used during visual to dump a particular bit when in visual
+          
+          Added commonLib.Pathing.NeedDump & commonLib.Pathing.DumpType property
+          when commonLib.Pathing.NeedDump sets to true, automaticlly dump the map when initialize map
+          
+          Added the area number for the cMapping object name, useful when you want to dump the map
+          
+          Fixed some minor bugs inside the class object. Now all properties are passed very well.
+          
+          Notice: if you're using BotOS.Pathing.MapLow2, you will get a smaller dumping map, it's better for you to see all the map :p
+  
+    3.0 : Rewrite the whole with class, now much easier to customize something :p
+    2.1 : Fix GotoWarp, a very big bug both existed in BotOS.Pathing and d2jsp-pathing
+    2.0 : Finally Enabled MapLow2 now!
+    1.9 : Remplaced the libs with the latest version
+          Modified map initialization so we can use MapLow2 for speed improvment of 400% - 1600%
+    1.8 : Fixed DP_GotoRoom();
+    1.7 : Fixed oMovement parser error when oMovement.Type=="Town"
+          Added oMovement.ChangeArea, work with oMovement.Type=="Town"
+          Fixed Map Initializations
+          Modified supporting library to "BotOS.Pathing_Pro.d2l 
+    1.6 : Added ParseMovementObject();
+    1.4 : Added DP_GotoWarp();
+    1.3 : Added DP_ExploreLevel()
+    1.2 : Rewrited all code with support of BotOS.Pathing, high speed up
+    1.0 : First release
+
+
+    >>>>>>> Example of using d2jsp-pathing_class edition <<<<<<<<<<
+    
+    here i give a very easy GotoWarp example:
+    
+    var commPather = commonLib.Pathing();  //create a commonlib.Pathing class object
+    commPather.InitType = 0; //MapLow2
+    commPather.TeleDist = 10; //i wanna custom the teleport distance!
+    commPather.InteractTile = true; //auto interact tiles
+    commPather.GotoWarp(mlWARPNEXT,20,false); //nearly the same as before, the same paramters!
+    
+    >>>>>>> You can try to use like this example, you can find the parameters below <<<<<<<
+    
+    
+    
+    >>>>>>> All supported Class's Paramters <<<<<<<<<<<
+    		
+    		this.InitType 
+		this.UseTeleSorc 
+		this.UseTeleport 
+		this.InteractTile 
+		this.TeleFH 
+		this.WalkFH 
+		this.TeleDist 
+		this.WalkDist 
+		this.TeleSquare
+		this.WalkSquare 
+		this.WalkcallFreq 
+		this.Walkcallflag 
+		this.NeedDump 
+		this.DumpType 
+   
+   >>>>>>>>>>> take what you need <<<<<<<<<<<<<<<<
+
+*/////////////////////////////////////////////////////////////////////
+var DP_version = "3.4";
+include("common/d2jsp-common.d2l");
+include("BotOS/Pathing/BotOS.Pathing.d2l");
+
+//////////////////////////////////////////////////////////////////////
+// Private variables
+//////////////////////////////////////////////////////////////////////
+
+var cMapping = null;
+
+//////////////////////////////////////////////////////////////////////
+// Public class/functions
+//////////////////////////////////////////////////////////////////////
+
+commonLib.Pathing = function(_info) {
+
+	if (_info) {
+
+		this.InitType = _info.InitType;
+		this.UseTeleSorc = _info.UseTeleSorc;
+		this.UseTeleport = _info.UseTeleport;
+		this.InteractTile = _info.InteractTile;
+		this.TeleFH = _info.TeleFH;
+		this.WalkFH = _info.WalkFH;
+		this.TeleDist = _info.TeleDist;
+		this.WalkDist = _info.WalkDist;
+		this.TeleSquare = _info.TeleSquare;
+		this.WalkSquare = _info.WalkSquare;
+		this.WalkcallFreq = _info.WalkcallFreq;
+		this.Walkcallflag = _info.Walkcallflag;
+		this.NeedDump = _info.NeedDump;
+		this.DumpType = _info.DumpType;
+	}
+	if (typeof(this.UseTeleSorc)=="undefined") { this.UseTeleSorc = true; }
+	this.UseTele = me.classid==1 ? this.UseTeleSorc : this.UseTeleport ;
+	if (isNaN(this.TeleFH)) { this.TeleFH = mlFHEUCLIDIANNOSQRT; }
+	if (isNaN(this.WalkFH)) { this.WalkFH = mlFHMANHATTAN; }
+	if (!this.TeleDist) { this.TeleDist = 20; }
+	if (!this.WalkDist) { this.WalkDist = 8; }
+	if (isNaN(this.WalkcallFreq)) { this.WalkcallFreq = 1; }
+	if (isNaN(this.InitType)) { this.InitType = 0; }
+	if (isNaN(this.DumpType) || this.DumpType>2  || this.DumpType<0) { this.DumpType = 2; }
+	this.Version = DP_version;
+	this.Map = null;
+
+	this.InitMap = _DP_InitMap;
+	this.GotoRoom = DP_GotoRoom;
+	this.GotoLevel = DP_GotoLevel;
+	this.GotoDest = DP_GotoDest;
+	this.GotoWarp = DP_GotoWarp;
+	this.ExploreLevel = DP_ExploreLevel;
+	this.DumpMap = DP_DumpMap;
+	
+	function DP_GotoRoom(lo,hi,teledist,databack) {
+	
+		if (!databack && this.Walkcallflag) { databack = this.Walkcallflag; }
+		this.UseTele = me.classid==1 ? this.UseTeleSorc : this.UseTeleport ;
+		if ( ( me.classid==1 || ( me.classid!=1 && _DP_CheckTeleport() ) ) && this.UseTele  ) {
+	
+			if (!teledist) { teledist = this.TeleDist; }
+			if (teledist>30)  { teledist=30; }
+	
+			this.InitMap();
+			var cPather = new BotOS.Pathing.Pather({Pathable:cMapping, PathToMap:true});
+	
+			var trooms = getRoom();
+			if (trooms) { do {
+	
+				if (trooms.number>=lo && trooms.number<=hi) {
+	
+					var tc = cPather.Pathable.FindClosestWalkable(trooms.x*5+20,trooms.y*5+20);
+					var reval = this.GotoDest(tc.x, tc.y, teledist, databack);
+					if (reval!=0) { return true; }
+				}
+			
+			} while (trooms && trooms.getNext()); }
+	           	
+		}
+	
+		else {
+			if (!teledist) { teledist=this.WalkDist; }
+			if (teledist>12) { teledist=12; }
+	
+			this.InitMap();
+			cPather = new BotOS.Pathing.Pather({Pathable:cMapping, PathToMap:true});
+	
+			trooms = getRoom();
+			if (trooms) { do {
+	
+				if (trooms.number>=lo && trooms.number<=hi) {
+	
+					tc = cPather.Pathable.FindClosestWalkable(trooms.x*5+20,trooms.y*5+20);
+					reval = this.GotoDest(tc.x, tc.y, teledist, databack);
+					if (reval!=0) { return true; }
+				}
+			} while (trooms && trooms.getNext()); }
+		}
+	}
+	
+	function DP_GotoLevel( destlevel, teledist, databack) {
+	
+		if (!databack && this.Walkcallflag) { databack = this.Walkcallflag; }
+		this.UseTele = me.classid==1 ? this.UseTeleSorc : this.UseTeleport ;
+		if ( ( me.classid==1 || ( me.classid!=1 && _DP_CheckTeleport() ) ) && this.UseTele ) {
+			
+			if (!teledist) { teledist=this.TeleDist; }
+			if (teledist>30) { teledist=30; }
+			
+			this.InitMap();
+	        	var cPather = new BotOS.Pathing.Pather({Pathable:cMapping, PathToMap:true, InteractTile:this.InteractTile});
+	        	cPather.FindPathToArea(destlevel, me.x, me.y, teledist, mlREDUCESORC, mlASTAR, this.TeleFH, this.TeleSquare);
+	        	cMover = new BotOS.Linear.Mover({Pather:cPather, Callback:databack, WalkcallFreq:this.WalkcallFreq});
+	       		cMover.PathMove();
+	       	}
+	
+	       	else {
+	       		if (!teledist) { teledist=this.WalkDist; }
+			if (teledist>12) { teledist=12; }
+	
+			this.InitMap();
+	        	cPather = new BotOS.Pathing.Pather({Pathable:cMapping, PathToMap:true, InteractTile:this.InteractTile});
+	        	cPather.FindPathToArea(destlevel, me.x, me.y, teledist, mlREDUCEWALK, mlASTAR, this.WalkFH, this.TeleSquare);
+	        	cMover = new BotOS.Linear.Mover({Pather:cPather, Callback:databack, WalkcallFreq:this.WalkcallFreq});
+	       		cMover.PathMove();
+	       	}
+	
+	       	return true;
+	}
+	
+	function DP_GotoDest( destx, desty, teledist, databack) {
+	
+		if (!databack && this.Walkcallflag) { databack = this.Walkcallflag; }
+		this.UseTele = me.classid==1 ? this.UseTeleSorc : this.UseTeleport ;
+		if ( ( me.classid==1 || ( me.classid!=1 && _DP_CheckTeleport() ) ) && this.UseTele ) {
+	
+			if (!teledist) { teledist=this.TeleDist; }
+			if (teledist>30) { teledist=30; }
+			
+	        	this.InitMap();
+	        	
+	        	var cPather = new BotOS.Pathing.Pather({Pathable:cMapping, PathToMap:true});
+	        	cPather.FindPath(me.x, me.y, destx, desty, teledist, mlREDUCESORC, mlASTAR, this.TeleFH, this.TeleSquare);
+	        	var cMover = new BotOS.Linear.Mover({Pather:cPather, Callback:databack, WalkcallFreq:this.WalkcallFreq});
+	       		cMover.PathMove();
+	       	}
+	
+	       	else {
+	       		if (!teledist) { teledist=this.WalkDist; }
+			if (teledist>12) { teledist=12; }
+	
+			this.InitMap();
+	        	cPather = new BotOS.Pathing.Pather({Pathable:cMapping, PathToMap:true});
+	        	cPather.FindPath(me.x, me.y, destx, desty, teledist, mlREDUCEWALK, mlASTAR, this.WalkFH, this.WalkSquare);
+	        	cMover = new BotOS.Linear.Mover({Pather:cPather, Callback:databack, WalkcallFreq:this.WalkcallFreq});
+	       		cMover.PathMove();
+	       	}
+		return true;
+	}
+	
+	function DP_GotoWarp(warptype, teledist, databack) {
+
+		if (!databack && this.Walkcallflag) { databack = this.Walkcallflag; }
+		this.UseTele = me.classid==1 ? this.UseTeleSorc : this.UseTeleport ;
+		if ( ( me.classid==1 || ( me.classid!=1 && _DP_CheckTeleport() ) ) && this.UseTele ) {
+	
+			if (!teledist) { teledist=this.TeleDist; }
+			if (teledist>20) { teledist=20; }
+			
+	        	this.InitMap();
+	        	var cPather = new BotOS.Pathing.Pather({Pathable:cMapping, PathToMap:true, InteractTile:this.InteractTile});
+	        	cPather.FindPathToWarp(warptype, me.x, me.y, teledist, mlREDUCESORC, mlASTAR, this.TeleFH, this.TeleSquare);
+	        	var cMover = new BotOS.Linear.Mover({Pather:cPather, Callback:databack, WalkcallFreq:this.WalkcallFreq});
+	       		cMover.PathMove();
+	       	}
+	
+	       	else {
+	       		if (!teledist) { teledist=this.WalkDist; }
+			if (teledist>12) { teledist=12; }
+	
+			this.InitMap();
+	        	cPather = new BotOS.Pathing.Pather({Pathable:cMapping, PathToMap:true, InteractTile:this.InteractTile});
+	        	cPather.FindPathToWarp(warptype, me.x, me.y, teledist, mlREDUCEWALK, mlASTAR, this.WalkFH, this.WalkSquare);
+	        	cMover = new BotOS.Linear.Mover({Pather:cPather, Callback:databack, WalkcallFreq:this.WalkcallFreq});
+	       		cMover.PathMove();
+	       	}
+	       	return true;
+	}
+	
+	function DP_ExploreLevel(teledist, databack, callback_perroom) {
+	
+		var roomlist=new Array();
+		var troom=getRoom();
+		do {
+	
+	    		var found=false;
+	    		for(var i=0;i<roomlist.length;i+=1) {
+	
+	    			if (roomlist[i][0]==troom.number) {
+	
+	    				found=true;
+	    				break;
+	    			}
+	    		}
+	
+	    		if (!found) { roomlist.push([troom.number,troom.x*5,troom.y*5]); }
+	
+		} while (troom && troom.getNext());  	
+		
+		if (!this.UseTele && !teledist) { teledist=this.WalkDist; }
+		if (this.UseTele && !teledist) { teledist=this.TeleDist; }
+
+		if (!databack && this.Walkcallflag) { databack = this.Walkcallflag; }
+		if (roomlist) {
+	
+	    		do {
+	    			roomlist.sort(_DP_SortRoom);
+	    			DP_GotoRoom(roomlist[0][0],roomlist[0][0],teledist,databack);
+	
+	    			if (typeof(callback_perroom)=="function") { callback_perroom(); }
+	
+		        	roomlist.shift(); //remove the lastest room which has been explored.
+	
+			} while (roomlist && roomlist.length);
+		}
+	}
+	
+	function DP_DumpMap(dumptype,bit) {
+
+		if (!dumptype) { dumptype = this.DumpType; }
+		this.InitMap();
+		cMapping.Dump(dumptype,bit);
+	}
+
+	//////////////////////////////////////////////////////////////////////
+	// Private functions
+	//////////////////////////////////////////////////////////////////////
+	function _DP_InitMap(area) {
+
+		if (arguments.length < 1) { area = me.area; }
+		if (this.InitType==1) {
+	
+			if (!cMapping || cMapping.Number != area || !cMapping.Initialized) {
+	
+				cMapping = new BotOS.Pathing.Map({Area:area, Name:"MATTSMAP" + area});
+				cMapping.Initialize();
+				if (this.NeedDump) { cMapping.Dump(this.DumpType); }
+			}
+		}
+	
+		else {
+	
+			if (!cMapping || cMapping.Number != area || !cMapping.Initialized) {
+	
+				cMapping = new BotOS.Pathing.MapLow2({Area:area, Name:"MATTSMAP" + area});
+				cMapping.Initialize();
+				if (this.NeedDump) { cMapping.Dump(this.DumpType); }
+			}
+		}
+		
+		this.Map = cMapping;
+		return true;
+	}
+
+
+	function _DP_SortRoom(a,b) {
+	
+		if (!a || !b) { return 1; }
+		if (_DP_Dist(me.x,me.y,a[1],a[2]) >= _DP_Dist(me.x,me.y,b[1],b[2])) { return 1; }
+	
+		return -1;
+	}
+	
+	function _DP_Dist(x1, y1, x2, y2) { return Math.floor((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2)); }
+		
+	function _DP_CheckTeleport() {
+
+		var _haveteleport = me.getSkill(54,0);
+
+		DC_DPrint("_DP_CheckTeleport() : Teleport skill level is " + _haveteleport);
+
+		if (!_haveteleport) { return 0; }
+		else { return _haveteleport; }
+	}
+};

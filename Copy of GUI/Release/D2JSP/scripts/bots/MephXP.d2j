@@ -1,0 +1,939 @@
+//////////////////////////////////////////////////////////////////////
+//
+// Xizeta's MepXP script
+// Mephisto runs bot script.
+//
+// The script will use any char excepted Assassins (for now).
+//
+// It is suggested to keep a Tome of Identification in
+// inventory to make it work better.
+//
+// Version 1.01 Beta
+// Updated on 2004/07/26
+//
+// Original authors : Xizeta and DaBeerMan
+// Collaboration : Muellsammler, Darien, Killkeeper, Damoon, HellNucleus,
+//                 Gill_105 and others :)
+//
+// Legal stuff :
+// This program is free software; You can redistrubute freely as long as this
+// header and contents stays intact. Modifications for redistribution can only
+// be done by submitting to the core scripters team for approval. If you don't
+// want to submit the modifications and wanted to redistribute this script, you
+// must rename it by remplacing d2jsp with your own name to avoid conflicts.
+//
+// This program is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY
+// or FITNESS FOR A PARTICULAR PURPOSE.
+//
+//////////////////////////////////////////////////////////////////////
+var MXP_Version = "1.01";
+
+//////////////////////////////////////////////////////////////////////
+// Please edit MXP_Config.d2l in the libs folder for your needs.
+//////////////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////////////////////
+// Settings for multiple chars of the same class
+//////////////////////////////////////////////////////////////////////
+// Change the below file to point to different setting files if you need 2 setups for different chars
+// Within the same class.
+// To edit the settings for both chars, make a copy of the MXP_Config.d2l, and change the below
+// character selection to that character and file.
+//
+// This is only needed if you have 2 characters of the same type! If you are not sure, don't touch!!
+//--------------------------------------------------------------------
+
+// First char of the same class
+if (me.name=="Your Character name here") { MXP_CharConfigFile="MXP_Config.d2l"; }
+
+// Second char of the same class
+else if (me.name=="Your Other Character name here") { MXP_CharConfigFile="MXP_Config.d2l"; }
+
+// Default for all chars
+else { MXP_CharConfigFile="MXP_Config.d2l"; }
+
+
+
+
+
+
+
+
+
+
+//////////////////////////////////////////////////////////////////////
+// ***** NO EDITION BELOW THIS POINT *****
+// MESSING WITH THE CODE BELOW WILL MAKE THE SCRIPT
+// WORK DIFFERENTLY, WITH BAD RESULTS !!
+//////////////////////////////////////////////////////////////////////
+
+
+//////////////////////////////////////////////////////////////////////
+// Script public variables
+//////////////////////////////////////////////////////////////////////
+
+// General variables
+var MXP_SkipCredits=true;	// Show the credits at the start of runs
+var MXP_UseTaunts=true;		// Will Meph taunt you :)
+var MXP_FormatHTML=true;	// Build a HTML log for MXP
+var MXP_UseOverheads=false;	// Use overheads to show actions
+var MXP_UseConsole = true;	// Set to true to display the upper console
+var MXP_UseBeltManager=false;	// Set to true to use belt management
+var MXP_ShowInnerExceptions=false; // Set to true to read the full stack
+var MXP_MephSafeCheck = true;	// This is to check life/mana and curse befor attacking meph
+var MXP_AlwaysGoAct4 = true;	// Set to true to always go to act 4
+var MXP_BridgeWait = 1000;	// Amount of time to wait until the bridge is up
+var MXP_UseVigor = false;	// If you are a pally and want to cast Vigor in town
+
+// Shopping and gambling
+var MXP_ShopIt=true;		// Enable or disable shopping at NPC
+var MXP_GambleIt=false;		// Enable or disable gambling at NPC
+var MXP_AlwaysGamble=false;	// Flag to always gamble each run
+var MXP_GambleMinGold=250000;	// Min gold amount to start gambling
+
+// NPC interactions
+var MXP_AlwaysJamella=false;	// Always visit Jamella no matter what
+var MXP_AlwaysHalbu=false;	// Always visit Halbu no matter what
+var MXP_AlwaysOrmus=false;	// Always visit Ormus no matter what (if you are in act3)
+var MXP_RandomNPC=false;	// Randomly visit NPC each run
+
+// Run variables
+var MXP_StopFullInv=true;	// Stop the script if inventory is full
+var MXP_Automule=false;		// Use Sicojola's Automule script when inv is full
+var MXP_StartGameDelay=0;	// Delay to stall at the start of game
+var MXP_MaxGameLength=60;	// Length of the run before aborting, 0 to stay indefinitely
+
+// Class variables to make use of OO libs
+var commPather = null;
+var commTown4 = null;
+
+//////////////////////////////////////////////////////////////////////
+// Script private variables
+//////////////////////////////////////////////////////////////////////
+
+var _MXP_RunLogPath="output\\" + me.name + "-MXP-RunLog.html";
+var _MXP_Position="start";
+var _MXP_KeyPressed = false;
+var _MXP_NeedPotions = false;
+var _MXP_NeedTP = false;
+var _MXP_MephCoord = false;
+
+
+
+//////////////////////////////////////////////////////////////////////
+// MephXP functions
+//////////////////////////////////////////////////////////////////////
+
+function MXP_ShowCredits() {
+
+	if (!MXP_SkipCredits) {
+
+		DC_Print("ÿc9******************** MephXP version " + MXP_Version + " by Xizeta and DaBeerMan ********************",commConsole);
+		DC_Print("ÿc7Extra thanks to : Smoore701, Muellsammler, Darien, Killkeeper, ",commConsole);
+		DC_Print("ÿc7.................. Mattlant, rizarjay and others...");
+		DC_Print("ÿc7Testers : Kenneth, Gohei27, trycez, zeronx, SilverSoul and others...",commConsole);
+		DC_Print("ÿc1D2JSP.DLL core created and coded by nJaguar! Support him by donating :)",commConsole);
+	}
+	var _successpercent=String((DL_Kills / (DL_Total-1)) * 100).substring(0,5);
+	if (DL_Kills === 0) { DC_Print("ÿc9*** MephXP version " + MXP_Version + " by Xizeta ***",commConsole); }
+	else { DC_Print("ÿc9*** MephXP version " + MXP_Version + " by Xizeta *** ÿc1Total runs:  " + (DL_Total-1) + "  Total kills:  " + DL_Kills + "  With a " + _successpercent +"% success rate!",commConsole); }
+}
+
+function MXP_MephTaunt() {
+
+	switch (parseInt(Math.random() * 22)) {
+
+		case 0: DC_Print("ÿc4Mephisto : ÿc@HELP!! I'm being humped by a MULE!!",commConsole); break;
+		case 1: DC_Print("ÿc4Mephisto : ÿc@Damn, I cannot play cards without being disturbed",commConsole); break;
+		case 2: DC_Print("ÿc4Mephisto : ÿc@Eat shit, NOOB",commConsole); break;
+		case 3: DC_Print("ÿc4Mephisto : ÿc@Oh FFS, just take what you want and leave me the fuck alone",commConsole); break;
+		case 4: DC_Print("ÿc4Mephisto : ÿc@You know if DClone spawns your fucked, right?",commConsole); break;
+		case 5: DC_Print("ÿc4Mephisto : ÿc@Fuck me your Merc is lazy, what a slack fuck",commConsole); break;
+		case 6: DC_Print("ÿc4Mephisto : ÿc@A little lag and i'll rape your sorry ass",commConsole); break;
+		case 7: DC_Print("ÿc4Mephisto : ÿc@You call yourself " + me.name + " ? Where the hell did you find such a stupid name?",commConsole); break;
+		case 8: DC_Print("ÿc4Mephisto : ÿc@Here comes the PAIN BABY",commConsole); break;
+		case 9: DC_Print("ÿc4Mephisto : ÿc@Yo Mama was tighter than your SISTER!!",commConsole); break;
+		case 10: DC_Print("ÿc4Mephisto : ÿc@You'll never get a SoJ out of me!!",commConsole); break;
+  		case 11: DC_Print("ÿc4Mephisto : ÿc@Tyrael's Might ?  Ha!  The only might you'll feel is my foot in your ass!",commConsole); break;
+  		case 12: DC_Print("ÿc4Mephisto : ÿc@Tell your mom I said hi!",commConsole); break;
+  		case 13: DC_Print("ÿc4Mephisto : ÿc@PKPKPKPK COME COME POTAL!",commConsole); break;
+  		case 14: DC_Print("ÿc4Mephisto : ÿc@Bring it beotch!",commConsole); break;
+  		case 15: DC_Print("ÿc4Mephisto : ÿc@You want a Grandfather, go bother cain, you want a POS +1 light radius charm then we'll talk business",commConsole); break;
+  		case 16: DC_Print("ÿc4Mephisto : ÿc@If I weren't already dead, I might care!",commConsole); break;
+  		case 17: DC_Print("ÿc4Mephisto : ÿc@I'm gonna pwn your a$$!  If I don't though, please forward these gifts to Xizeta for me",commConsole); break;
+  		case 18: DC_Print("ÿc4Mephisto : ÿc@Kiss my shriveled undead posterior!",commConsole); break;
+  		case 19: DC_Print("ÿc4Mephisto : ÿc@Come on down and give aunt Meph a big hug!",commConsole); break;
+		case 20: DC_Print("ÿc4Mephisto : ÿc@Damn Xizeta, another update to MephXP!",commConsole); break;
+		default: DC_Print("ÿc4Mephisto : ÿc@I might as well set my ass on fire now",commConsole); break;
+	}
+}
+
+function MXP_FormatLog() {
+
+	if (MXP_FormatHTML) {
+
+		// Tell the user that formatting is running
+		DC_Print("Now formatting the HTML log...",commConsole);
+
+		// Start the chrono
+		DC_ChronoMe();
+
+		// Open the new log file for formatting
+		file = fileOpen("output/"+me.name+"-MXP-Log.html", 1);		
+		if (file) {
+
+			// Start the html log
+			DHL_OpenLog(file);
+
+			// Add run log info
+			DHL_AddSection(file,_MXP_RunLogPath,"Run Log for " + me.name);
+
+			// Integrate error logging if there is a error log available
+			DHL_AddSection(file,DC_ErrorLogPath,"Error Log for " + me.name);
+
+			// Add the logged items section
+			DHL_AddItemLogSection(file);
+
+			// Close the log
+			DHL_CloseLog(file);
+			file.close();
+		}
+		else {
+			DC_Print("Unable to open " + me.name + "-MXP-Log.html for writing!",commConsole);
+		}
+
+		// Stop the chrono and display the total time (add a suggestion if formatting take too much time)
+		var _formattime=DC_ChronoMe();
+		if (_formattime > 1000) {
+
+			DC_Print("Formatting done in " + _formattime + " ms!! To reduce the time, reset or trim the item log",commConsole);
+		}
+		else {
+			DC_Print("Formatting done in " + _formattime + " ms",commConsole);
+		}
+	}
+	else {
+		DC_Print("Ignoring HTML formatting",commConsole);
+	}
+}
+
+function keypressHandler(key) { MXP_CheckKey(key); }
+
+function MXP_CheckKey(key) {
+
+	// Get the entered key in the global var
+	_MXP_KeyPressed = key;
+
+	// stopping main script (when i'm in town), started tools (eg. pwnlifewatch) will continue
+	if (_MXP_KeyPressed == 88) { // "X" was pressed
+
+ 		if (DC_InTown(me)) {
+
+  			DC_Print("ÿc;Key 'X' is pressed, stopping the main script",commConsole);
+  			delay(500);
+ 			stop(1);
+		}
+        }
+
+	// Toggling the console on and off
+	if (_MXP_KeyPressed == 85) { // "U" was pressed
+
+		if (MXP_UseConsole) {
+
+  			DC_Print("ÿc;Key 'U' is pressed, toggling the console off");
+			DC_DoDel(50);
+			XP_DestroyConsole();
+			MXP_UseConsole = false;
+		}
+		else {
+  			DC_Print("ÿc;Key 'U' is pressed, toggling the console on");
+			DC_DoDel(50);
+			XP_CreateConsole("MephXP");
+			MXP_UseConsole = true;
+		}
+        }
+
+	// stopping all scripts (when i'm in town)
+	if (_MXP_KeyPressed == 191) { // "#" was pressed
+
+ 		if (DC_InTown(me)) {
+
+  			DC_Print("ÿc;Key '#' is pressed, stopping all scripts",commConsole);
+  			delay(500);
+  			stop();
+        	}
+	}
+}
+
+function MXP_NPCinteract(npc) {
+
+	// If the npc object is not present, abort the game
+	if (!npc) {
+
+		DL_AddAbort();
+		DC_QuitMessage("No NPC available!");
+	}
+
+	// Interact with the npc
+	if (!DT_DoInteract(npc)) {
+
+		DL_AddAbort();
+		DC_QuitMessage("Unable to interact with " + npc.name + "!");
+	}
+
+	// Do stuff depending on which npc
+	// Remain to get valid NPC ID's
+	switch (npc.classid) {
+
+		// Tyrael
+		case 367:
+			DT_DoTrade(npc);
+			if (!DT_ReviveMerc(npc)) {
+
+				DC_Print("Failed to revive the mercenary!",commConsole);
+			}
+			break;
+
+		// Halbu
+		case 257:
+			DT_DoTrade(npc);
+			DT_RepairItems(npc);
+			if (DT_CheckAmmo()) { DT_BuyAmmo(npc); }
+			break;
+
+		// Ormus
+		case 255:
+			if (_XP_GetNumUnId > 0) { XP_DoCheckItems(npc); }
+			if (MXP_UseBeltManager && _MXP_NeedPotions) { DT_DoTrade(npc); DT_FillBelt(npc); }
+			if (MXP_MephSafeCheck && _MXP_NeedTP) {
+
+				if (DT_GetTome(1)) { DT_FillTome(npc,1); }
+				else { DT_BuyScrolls(npc,1); }
+			}
+			break;
+
+		// Jamella
+		case 405:
+			if (_XP_GetNumUnId > 0) { XP_DoCheckItems(npc); }
+			if (MXP_UseBeltManager && _MXP_NeedPotions) { DT_DoTrade(npc); DT_FillBelt(npc); }
+			if (MXP_GambleIt) {
+
+				if (DC_MyGold() > MXP_GambleMinGold) {
+
+					DT_DoTrade(npc,1);
+					DT_GambleIt(npc);
+					DT_MenuCancel(npc,1);
+					DT_DoInteract(npc);
+				}
+			}
+			break;
+
+		// Stash
+		case 267:
+			DT_ManageStash();
+			break;
+	}
+
+	// If shopping is enabled and it is not Tyrael or stash, stop the npc
+	if (MXP_ShopIt && npc.classid!=367 && npc.classid!=267) {
+
+		if (!getUIFlag(0x0c)) {	DT_DoTrade(npc); }
+		DT_ShopIt(npc);
+	}
+
+	// Use the right cancel method depending if it is a npc or object
+	if (npc.classid==267) { DT_MenuCancel(npc,0); }
+	else { DT_MenuCancel(npc,1); }
+}
+
+function MXP_RogueChange() {
+
+	var waypoint=getUnit(2,"Waypoint");
+	var i=0;
+
+	while (!waypoint && i < 3) {
+
+		i+=1;
+		DC_DoDel(50+DC_LagDelay);
+		if (waypoint) { break; }
+		else { waypoint=getUnit(2,"Waypoint"); }
+	}
+
+	if(!waypoint) { DC_QuitMessage("Unable to find waypoint in Rogue Camp!"); }
+
+	if (waypoint.x - me.x == 26 && waypoint.y - me.y == -19) {
+
+		DM_WalkTo(me.x + 16, me.y + -1);
+		DM_WalkTo(me.x + 8, me.y + -15);
+	}
+	else if (waypoint.x - me.x == 21 && waypoint.y - me.y == -24) {
+
+		DM_WalkTo(me.x + 1, me.y + -16);
+		DM_WalkTo(me.x + 16, me.y + -5);
+	}
+	else if (waypoint.x - me.x == -19 && waypoint.y - me.y == -29) {
+
+		DM_WalkTo(me.x + -5, me.y + -12);
+		DM_WalkTo(me.x + -13, me.y + -16);
+	}
+	else if (waypoint.x - me.x == -14 && waypoint.y - me.y == -29) {
+
+		DM_WalkTo(me.x + -2, me.y + -14);
+		DM_WalkTo(me.x + -12, me.y + -15);
+	}
+	else { DC_QuitMessage("Got a problem leaving the Rogue Camp. I wonder what I did wrong?"); }
+}
+
+function MXP_CheckAct() {
+
+	if (me.act != 3 && me.act != 4) {
+
+		DC_Print("You are not in act 4!  Going from act #" + me.act + " to act #4.",commConsole);
+		if (MXP_UseOverheads) { me.overhead("Walking to Waypoint"); }
+
+		switch (me.act)	{
+
+			case 1: MXP_RogueChange();
+				break;
+
+			case 2:	commPather.GotoDest(5069, 5086);
+				break;
+
+			case 5: commPather.GotoDest(5115, 5070);
+		}
+
+		DM_UsePortal("Waypoint",0x67);
+		DC_Print("We must be in act 4 now!",commConsole);
+	}
+	else { return true; }
+
+	// If we didn't change of act, there is a problem so abort
+	if (me.act != 4) { DC_QuitMessage("You're not in act 4!"); }
+}
+
+function MXP_PathToOrmus() {
+
+	if (MXP_UseOverheads) { me.overhead("Walking to Ormus"); }
+
+	commTown3.GotoOrmus();
+}
+
+function MXP_PathToHalbu() {
+
+	if (MXP_UseOverheads) { me.overhead("Walking to Halbu"); }
+	
+	commTown4.GotoHalbu();
+}
+
+function MXP_PathToStash() {
+
+	if (MXP_UseOverheads) { me.overhead("Walking to Stash"); }
+
+	if (me.act == 4) {
+
+		commTown4.GotoStash();
+	}
+	else {
+
+		commTown3.GotoStash();
+	}
+}
+
+function MXP_PathToTyrael() {
+
+	if (MXP_UseOverheads) { me.overhead("Walking to Tyrael"); }
+
+	commTown4.GotoTyrael();
+}
+
+function MXP_PathToJamella() {
+
+	if (MXP_UseOverheads) { me.overhead("Walking to Jamella"); }
+
+	commTown4.GotoJamella();
+}
+
+function MXP_PathToWaypoint() {
+
+	if (MXP_UseOverheads) { me.overhead("Walking to WayPoint"); }
+
+	if (me.act == 4) {
+
+		commTown4.GotoWP();
+	}
+	else {
+
+		commTown3.GotoWP();
+	}
+}
+
+// ToDo : Add coords of Meph's sweet spot.
+function MXP_GoToMeph() {
+
+	// Display a overhead while moving
+	if (MXP_UseOverheads) { me.overhead("Going to Durance 3"); }
+
+	// Move from Durance 2 waypoint to Mephisto's lair
+	DC_Print("ÿc9    This must be the WP to find Meph! Good thing mattlant knows where I'm going!",commConsole);
+	commPather.InitType = 1;
+    	commPather.GotoLevel(102,20,false);
+    	DM_TakeStairs(67,68);
+	DC_Print("ÿc4    HAHA! You look like an Ass with that haircut Meph!",commConsole);
+
+	// Move to the final spot
+	DSN_UsePathing=false;
+	DM_MoveTo(17677,8033);
+	DM_MoveTo(17662,8040);
+	DM_MoveTo(17636,8040);
+	DM_MoveTo(17618,8046);
+	DM_MoveTo(17597,8050);
+	DM_MoveTo(17582,8058);
+
+	// Here is where we check health and mana/cursed and heal if needed 
+	if (MXP_MephSafeCheck) {
+
+		DC_Print("ÿc2    Let's check our shit and make sure he doesn't pwn us");
+		if (MXP_HaveCurse() || DT_CheckHeal()) {
+
+			var _tptome = DT_GetTome(1);
+
+			if ((_tptome && _tptome.getStat(70) > 0) || DT_GetScroll(1)) {
+
+				DC_Print("ÿc8    Not ready for this bad boy... let's get another beer before the fight!");
+				DM_MakeTP(102,75);
+				MXP_PathToOrmus();
+				MXP_NPCinteract(DC_getNPC(255));
+				MXP_PathToWaypoint();
+				DM_UsePortal("BluePortal",102);
+				DC_Print("ÿc8    burppp.... Let's pwn this bad mofo!");
+			}
+		}
+	}
+
+	DM_MoveTo(17565,8066);
+}
+
+// Function Ripped from Darien, modified by DaBeerMan and Xizeta
+function MXP_HaveCurse() {
+
+	if (me.getState(55) || me.getState(9) || me.getState(19) || me.getState(61)) { return true; }
+	else { return false; }
+}
+
+function MXP_AttackMeph() {
+
+	// Detecting Mephisto with 3 retries to be sure to get the target
+	for (var i = 0; i < 3; i+=1) {
+
+		var target = DC_FindMonster(242);
+		if (target) { break; }
+	}
+
+	// If Meph is detected, 
+	if (target) {
+
+		var _Mephname = target.name;
+
+		// If the target has a enchantment i want to chicken, log and quit
+		// I don't think we need to do this with Mephy??
+		if (DA_CheckImmunities(target)) { 
+
+			// Increase the chicken counter
+			DL_AddChicken();
+
+			// Leave the game
+			DC_DDC_Print("Now leaving the game due to a bad immunity/enchantment/aura!!! See the log for the exact data",commConsole);
+			quit();
+		}
+
+		// Set to true so we use the meph dodge function
+		XP_MephDodge = true;
+
+		XP_Attack(target);
+
+		DC_Print("ÿc0" + _Mephname + " killed!",commConsole);
+
+		if (MXP_UseTaunts) { 
+
+			DC_Print("ÿc4" + _Mephname + "ÿc@: AAAAaaaaaarrrgghh...!!!",commConsole);
+			DC_Print("ÿc4" + me.name + "ÿc@: Pwned !!!",commConsole);
+		}
+
+		// Get the initial Meph coords
+		_MXP_MephCoord = new XP_Coord(target.x,target.y);
+
+		target=false;
+	}
+
+	else {
+
+		DL_AddAbort();
+		DC_QuitMessage("Mephisto not found!! Aborting the run...");
+	}
+}
+
+function MXP_TownManager() {
+
+	// If randomNPC is true, pick a npc number
+	if (MXP_RandomNPC) { NPCnum=parseInt(Math.random() * 11); }
+
+	// Else, set npc at 0
+	else { NPCnum=0; }
+
+	// Check if we need to go to Ormus or Jamella depending on which act
+	_XP_GetNumUnId = DT_CheckUnids();
+	if (MXP_UseBeltManager) { _MXP_NeedPotions = DT_CheckBelt(); }
+	if (MXP_MephSafeCheck) {
+
+		var _tptome = DT_GetTome(1);
+
+		if (!_tptome || _tptome.getStat(70) === 0 || !DT_GetScroll(1)) { _MXP_NeedTP = true; }
+	}
+
+	// Check which act we are on then decide
+	if (me.act == 3) {
+
+		// Check if we need to go to Ormus
+		if (MXP_AlwaysOrmus || DT_CheckHeal() || _XP_GetNumUnId > 0 || _MXP_NeedPotions || _MXP_NeedTP || NPCnum>=rnd(2,9)) {
+
+			MXP_PathToOrmus();
+			MXP_NPCinteract(DC_getNPC(255));
+		}
+	}
+	else {
+		// Check if we need to go to Jamella
+		if (MXP_AlwaysJamella || DT_CheckHeal() || _XP_GetNumUnId > 0 || _MXP_NeedPotions || _MXP_NeedTP || (MXP_AlwaysGamble && DC_MyGold() > MXP_GambleMinGold) || NPCnum>=rnd(2,9)) {
+
+			MXP_PathToJamella();
+			MXP_NPCinteract(DC_getNPC(405));
+		}
+	}
+
+	// Check if we need to go to Halbu
+	if (MXP_AlwaysHalbu || DT_CheckRepair(DT_RepairPercent) || DT_CheckAmmo() || NPCnum>=rnd(2,9)) {
+
+		if (me.act == 3) {
+
+			MXP_PathToWaypoint();
+			DM_UsePortal("Waypoint",0x67);
+		}
+
+		MXP_PathToHalbu();
+		MXP_NPCinteract(DC_getNPC(257));
+	}
+
+	// If we need to revive the merc, go to Tyrael
+	if (DT_CheckMerc()) {
+
+		DC_Print("Need to revive the merc, going to Tyrael.",commConsole);
+
+		if (me.act == 3) {
+
+			MXP_PathToWaypoint();
+			DM_UsePortal("Waypoint",0x67);
+		}
+
+		MXP_PathToTyrael();
+		MXP_NPCinteract(DC_getNPC(367));
+	}
+
+	// If we got items to stash, go to the stash
+	if (DT_CheckInventory()) {
+
+		MXP_PathToStash();
+		MXP_NPCinteract(DC_getObject(267));
+		DSN_CheckGround(); // Check the ground to see if any nice item is dropped by accident
+	}
+
+	//At the end of in-town stuff, if the eth weapon refill is not finished, let it finish
+	if (DT_CheckRecharge()) {
+
+		DT_DoRecharge();
+		if (MXP_UseOverheads) { me.overhead("Recharing done!"); }
+	}
+
+	// Do precasts before goind into the portal
+	XP_Precasts();
+
+	// If it is a sorceress, switch to the right tab and set the sorceress skills
+	if (me.classid == 1) { XP_SorcSetSkills(); }
+
+	// If we switched weapons on kill, switch back to the attack tab
+	if (XP_SwitchOnKill) { DC_SelectTab(1); }
+
+	// Display taunts if set to true and show MF info
+	if (MXP_UseTaunts) { MXP_MephTaunt(); }
+	DT_DisplayMF();
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// PwnageXP libs loading
+//////////////////////////////////////////////////////////////////////
+
+function MXP_LoadIncludes() {
+
+	// Load the d2jsp common libs files
+	DC_LoadInclude("common/d2jsp-attack.d2l");
+	DC_LoadInclude("common/d2jsp-town.d2l");
+	DC_LoadInclude("common/d2jsp-move.d2l");
+	DC_LoadInclude("common/d2jsp-pathing.d2l");
+	DC_LoadInclude("common/d2jsp-htmllog.d2l");
+	DC_LoadInclude("common/d2jsp-logging.d2l");
+	DC_LoadInclude("common/d2jsp-snagit.d2l");
+	DC_LoadInclude("common/d2jsp-console.d2l");
+
+	// Load the XP scripts common include
+	DC_LoadInclude("XP_Include.d2l");
+
+	// Load the configuration info
+	DC_LoadInclude(MXP_CharConfigFile);
+	
+	// Initialize the new classes
+	commConsole = new oConsole();
+	commPather = new commonLib.Pathing();
+	commTown3 = new commonLib.PathAct3();
+	commTown4 = new commonLib.PathAct4();
+
+	// Pass the new initialized console to the d2jsp-common one so all prints point to the right console
+	DC_Console = commConsole;
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// PwnageXP main section
+//////////////////////////////////////////////////////////////////////
+
+// Main function
+function MephXP() {
+
+	// If the core is less than 0.41, stop the script
+	if (parseFloat(me.version)<0.41) {
+
+		DC_StopMessage("This is only for donators!  Please redownload and install d2jsp 0.41+!");
+	}
+
+	//registerEvent( EVENT_KEYUP, keypressHandler );
+
+	// Add the title to the screen
+	var _sh = getScreenHook(null,20,500,-1);
+	_sh.x = 228;
+	_sh.y = 30;
+	_sh.font = 8;
+	_sh.color = 4;
+	_sh.text = "===== MephXP version " + MXP_Version + " running =====";
+
+	// Load the libs files
+	MXP_LoadIncludes();
+
+	// Initialise the XI_Include with user variables
+	XP_InitInclude();
+
+	// If the char doesn't have teleport, abort
+	if (!DM_CheckTeleport()) {
+
+		DC_StopMessage("You must have a char with teleport to use this script !!!");
+	}
+
+	// Set the maximum game delay before aborting with the user setting
+	me.gamelength=MXP_MaxGameLength*1000;
+
+	// set the teleport vars to true
+	commPather.UseTeleport = true;
+	commPather.UseTeleSorc = true;
+
+	// Lets setup the Top console
+	if (MXP_UseConsole) {
+
+		XP_CreateConsole("MephXP");
+		DC_Print("Thanks Killkeeper for the SUPER new console!",commConsole);
+	}
+
+	// Load the life watch script
+	load("tools/lifewatchXP.d2j");
+
+	// Configure the item log path
+	DL_ItemLogPath = "output/" + me.name + "MXP-ItemLog.html";
+
+	// Get the configured run log path
+	DL_RunLogPath = _MXP_RunLogPath;
+
+	// Init the run logging
+	DL_LoadRun();
+
+	// show the credits to the user
+	MXP_ShowCredits();
+
+	// If the user want to stall at the start until the game settle, wait a fixed amount of time
+	if (MXP_StartGameDelay > 0) {
+
+		DC_Print("Waiting " + (parseInt(MXP_StartGameDelay / 1000)) + " seconds for game initialization...",commConsole);
+		DC_DoDel(MXP_StartGameDelay);
+	}
+
+	// Preload the snagit.ini file
+	DIM_getINI("settings/" + DSN_SnagItINIFile);
+
+	// Format the html log file
+	MXP_FormatLog();
+
+	// Check if we have a body then get it if yes
+	DT_getCorpses();
+	if (DT_HaveCorpse) { DL_AddDeath(); }
+
+	// Clear the cursor of any item
+	DC_ClearCursor();
+
+	// If we use a pally and want to use Vigor for faster town movement, cast it
+	if (me.classid = 3 && MXP_UseVigor) { DC_PutSkill(115,0); }
+
+	// Check if we are in the right act, if not, change act
+	MXP_CheckAct();
+
+	// Do a cleaning of the inventory of any useless items
+	DT_CleanPotions();
+	DT_TossItem(100, "isc");
+	DT_TossItem(100, "tsc");
+	DT_TossItem(100, "aqv");
+	DT_TossItem(100, "cqv");
+
+	// Do town stuff
+	MXP_TownManager();
+
+	// If the inventory is full and we want to stop on full inv, stop the script
+	// ToDo : If inv is full, return to stash to retry to stash items in case last attempt failed
+	if (MXP_StopFullInv) {
+
+        	if ( DT_CountFreeSpaces() >= (DT_FreeSpace * 4)) {
+
+          		DC_Print("Got some space in my inventory, let's go :)",commConsole);
+		}
+
+        	else {
+
+			var freespaces = DT_CountFreeSpaces();
+                	DC_Print("freespaces = " + freespaces);
+        		DC_Print("Don't take the red portal now, I can't clear my inventory :-/");
+
+			if (MXP_Automule) {
+
+				DC_Print("BUT WAIT! I HAVE SICOJOLA'S AUTOMULE! LET'S SEE IF I HAVE ANY FREE MULES...");
+				DC_LoadInclude("automule.d2l");
+
+			}
+			if (!MXP_Automule || !Automule()) {
+
+			DL_AddAbort();
+				DC_Print("To avoid stopping, set MXP_StopFullInv to false");
+				DC_StopMessage("Inventory is full and MXP_StopFullInv is set to true !");
+			}
+        	}
+	}
+
+	// If the merc is not found, MXP_AbortNoMerc is set to true and we use a merc, abort the game
+	if (DT_UseMerc && !DC_GetMerc() && MXP_AbortNoMerc) {
+
+		DL_AddAbort();
+		DC_QuitMessage("MXP : Mercenary not found and MXP_AbortNoMerc is set to true !");
+	}
+
+	// Go to the waypoint area
+	MXP_PathToWaypoint();
+
+	// Use the WP to go to Durance level 2
+	DM_UsePortal("Waypoint",101);
+
+	// Do precasts after goind into the portal
+	XP_Precasts();
+
+	// Path to the Mephisto's lair
+	MXP_GoToMeph();
+
+	// Go attack Mephisto
+	MXP_AttackMeph();
+
+	// Increase the kills counter then leave the game
+	DL_AddKill();
+
+	// Move to where Meph spawned to check for items
+	DM_MoveTo(_MXP_MephCoord.x,_MXP_MephCoord.y);
+
+	// Pick the dropped items
+	DSN_PickItems();
+
+	// Display a message telling that we picked items
+	DC_Print("ÿc1All items have been picked up!  Yes, this is working right.  Don't ask.",commConsole);
+
+	// Check if we need to go to act4 to revive/repair
+	if (MXP_AlwaysGoAct4 || (DT_CheckRepair(DT_RepairPercent) || DT_CheckAmmo() || DT_CheckMerc())) {
+
+		// Going to the bridge before red portal
+		if (me.x < 17540) { DM_MoveTo(17550,8069); }
+		if (me.x < 17560) { DM_MoveTo(17570,8069); }
+		DM_MoveTo(17590,8069);
+
+		// Stall until the bridge get up
+		while (MXP_BridgeWait > 0) {
+
+			DC_DoDel(20);
+			MXP_BridgeWait-=20;
+		}
+
+		// Use red portal to go to Act4 before quitting
+		DM_UsePortal("Portal",103);
+	}
+
+	// Quit the game
+	quit();
+}
+
+// Error handling
+function main() {
+
+	// Include the base d2jsp lib
+	include("common/d2jsp-common.d2l");
+
+	// Set the maximum game delay before aborting
+	me.gamelength=MXP_MaxGameLength*1000;
+
+	// configure the debug and error log paths
+	DC_DebugLogPath = "output/" + me.name + "MXP-DebugLog.html";
+	DC_ErrorLogPath = "output/" + me.name + "MXP-ErrorLog.html";
+
+	// Call the main function to check for exceptions
+    	try { MephXP(); }
+
+	// Then catch and log any exception throwed by the script before quitting
+	catch (MXP_Exception) {
+
+		if (MXP_Exception.inner && MXP_ShowInnerExceptions) {
+
+			DC_LogError("Inner Exceptions Attached - details below");
+			var einner = MXP_Exception.inner;
+			while (einner) {
+				DC_LogError("Name: " + einner.name);
+				DC_LogError("Error code: " + einner.number);
+				DC_LogError("Message: " + einner.message);
+				DC_LogError("lineNumber: " + einner.lineNumber);
+				DC_LogError("fileName: " + einner.fileName);
+				var einstack = einner.stack;
+				if(!(einstack instanceof Array)) {
+					einstack = einstack.split("\n");
+					einstack.pop();
+					einstack.pop();
+					einstack.reverse();
+				}
+					
+				for(var i = 0; i < einstack.length; i+=1) {
+					DC_LogError("Stack Trace -> function[" + (i+1) + "]: " + einstack[i]);
+				}
+				einner = einner.inner;
+			}
+
+		}
+
+		// Got a exception so quit the game after writing the error in the file
+		DC_QuitMessage("MXP_Exception : name = " + MXP_Exception.name + ", message = " + MXP_Exception.message);
+    	}
+}

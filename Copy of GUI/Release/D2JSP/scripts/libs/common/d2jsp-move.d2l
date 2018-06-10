@@ -1,0 +1,2294 @@
+//////////////////////////////////////////////////////////////////////
+//
+// d2jsp-move.d2l Common functions library
+//
+// Written by Xizeta and Muellsammler
+//
+// Core scripters team : Xizeta, Muellsammler, Darien, Killkeeper
+// Version 1.0
+// Updated on 2004/07/22 by Xizeta (Added MakeTP to create a portal and enter it)
+// Updated on 2004/07/20 by Xizeta (added act3 and act4 town pathing + changed fixed del with a var for useportal)
+// Updated on 2004/07/15 by Xizeta (integrated vec_coord.d2l with this lib in preparation to make it a class lib)
+// Updated on 2004/07/09 by Xizeta (Added a function to get the coords along a line between 2 points)
+// Updated on 2004/07/06 by Xizeta (Reworked the town points and paths to make it more efficient)
+// Updated on 2004/07/04 by Muellsammler (switched from old to new wp usage, works for non bnet !!)
+// Updated on 2004/07/03 by Muellsammler (DM_WalkTo(x,y), random move changed from 1x2 to 2x2)
+// Updated on 2004/07/02 by Muellsammler (act1 move points)
+//
+//
+// Legal stuff :
+// This program is free software; You can redistrubute freely as long as this
+// header and contents stays intact. Modifications for redistribution can only
+// be done by submitting to the core scripters team for approval. If you don't
+// want to submit the modifications and wanted to redistribute this script, you
+// must rename it by remplacing d2jsp with your own name to avoid conflicts.
+//
+// This program is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY
+// or FITNESS FOR A PARTICULAR PURPOSE.
+//////////////////////////////////////////////////////////////////////
+var DM_version = "1.0";
+include("common/d2jsp-common.d2l");
+include("common/d2jsp-town.d2l");
+
+//////////////////////////////////////////////////////////////////////
+// Public variables
+//////////////////////////////////////////////////////////////////////
+
+var DM_UseTeleport=true;
+var DM_RandomMove=true;
+var DM_RandomMoveDel=true;
+var DM_WalkDel=40;
+var DM_AreaChangeDel = 500; // Delay after changing area (by using stairs)
+
+// If the pathing lib is loaded, set DM_UseTeleport to the one from d2jsp-pathing
+if (typeof(DP_version) != 'undefined') { DM_UseTeleport = _DP_UseTele; }
+
+
+//////////////////////////////////////////////////////////////////////
+// Private variables
+//////////////////////////////////////////////////////////////////////
+var _DM_WPWasUsed = false;
+
+var _DM_AreaWPArray = [
+    0, 0x01, 0, 0x03, 0x04, 0x05, 0x06, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 0..15
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x1b, 0, 0x1d, 0, 0, // 16..31
+    0x20, 0, 0, 0x23, 0, 0, 0, 0, 0x28, 0, 0x2a, 0x2b, 0x2c, 0, 0x2e, 0, // 32..47
+    0x30, 0, 0, 0, 0x34, 0, 0, 0, 0, 0x39, 0, 0, 0, 0, 0, 0, // 48..63
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f, // 64..79
+    0x50, 0x51, 0, 0x53, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 80..95
+    0, 0, 0, 0, 0, 0x65, 0, 0x67, 0, 0, 0x6a, 0x6b, 0, 0x6d, 0, 0x6f, // 96..111
+    0x70, 0x71, 0, 0x73, 0, 0x75, 0x76, 0, 0, 0, 0, 0x7b, 0, 0, 0, 0, // 112..127
+    0, 0x81, 0, 0, 0]; // 128..132
+
+var _DM_Waypoints = [
+    0x01, 0x03, 0x04, 0x05, 0x06, 0x1b, 0x1d, 0x20, 0x23, // 0..8 act1
+    0x28, 0x30, 0x2a, 0x39, 0x2b, 0x2c, 0x34, 0x4a, 0x2e, // 9..17 act2
+    0x4b, 0x4c, 0x4d, 0x4e, 0x4f, 0x50, 0x51, 0x53, 0x65, // 18..26 act3
+    0x67, 0x6a, 0x6b, // 27..29 act4
+    0x6d, 0x6f, 0x70, 0x71, 0x73, 0x7b, 0x75, 0x76, 0x81]; // 30..38 act5
+
+
+//////////////////////////////////////////////////////////////////////
+// Public functions
+//////////////////////////////////////////////////////////////////////
+
+// Function by Xizeta
+function DM_Coord(x,y) {
+
+	this.x = x;
+	this.y = y;
+	this.dist = DM_Dist(x,y,me.x,me.y);
+}
+
+// Function by Xizeta from Darien concept
+// Return value : Skill level of the Teleport skill if we have it or 0
+function DM_CheckTeleport() {
+
+	if (!DM_UseTeleport) { return 0; }
+
+	var _haveteleport = me.getSkill(54,0);
+
+	if (!_haveteleport) { return 0; }
+    	else { return _haveteleport; }
+}
+
+// Function from Pwnage Pindle
+// Parameters :
+// -x,y		Coordinates to check my position against
+function DM_CheckPosition(x, y) {
+
+	if ((Math.abs(me.x - x) > 7) || (Math.abs(me.y - y) > 7)) {
+
+		DC_DPrint("DM_CheckPosition() : Correcting position");
+		DM_MoveTo(x, y);
+	}
+}
+
+// Function by Xizeta
+// Move to the body
+function DM_GoToBody() {
+
+	// Get the body
+	var _timer = Timeout * 1000;
+
+	// Loop while mycorpse is false
+	do {
+		// For each second, retry to get mycorpse object
+		if ((_timer % 250) === 0) { 
+
+			DC_DPrint("DM_GoToBody() : Trying to find your body...");
+			var _mycorpse = getUnit(0,me.name,17);
+		}
+		_timer -= 50;
+		delay(50);
+
+	}while(!_mycorpse && _timer > 0);
+
+	// If i'm unable to find the body, quit
+	if (!_mycorpse) {
+
+		DC_QuitMessage("DM_GoToBody() : Whoops! We can't find your body!");
+	}
+
+	// Go near the body
+	DM_MoveTo(_mycorpse.x,_mycorpse.y);
+}
+
+// Function by Xizeta
+// Parameters :
+// -x,y		Coordinates of the destination
+// The function will select the right movement method depending on criterias
+function DM_MoveTo(x,y) {
+
+	// Stall while you are doing something
+	while (me.mode==7 || me.mode==8 || (me.mode>9 && me.mode<19)) { DC_DoDel(10); }
+
+	// If you are very close to the end spot, use walk only
+	if (Math.abs(me.x - x) < 4 && Math.abs(me.y - y) < 4) {	return DM_WalkTo(x, y); }
+
+	// If you are in town, use walk only
+	if(DC_InTown(me)) { return DM_WalkTo(x, y); }
+
+	// If you have teleport and is set to use it, teleport to the end position	
+	if (DM_CheckTeleport()) {
+
+		return DM_TeleportTo(x, y);
+	}
+
+	//If nothing fit, use walk by default
+	return DM_WalkTo(x, y);
+}
+
+// Coded by Xizeta, part of code from Darien used
+function DM_TeleportTo(x,y) {
+
+	// If we randomize the movement, modify the coords a little
+	if (DM_RandomMove) {
+
+		rndx=x+rnd(-1,1);
+		rndy=y+rnd(-4,4);
+	}
+
+	// We are not using random movement so use the exact coords
+	else {
+
+		rndx=x;
+		rndy=y;
+	}
+
+	// Loop for 5 retries until we are moved to the destination point
+	for (rv = 0; rv < 5; rv+=1) {
+
+		// Cast teleport
+		DC_DoCast(54,0,rndx,rndy);
+
+		// Loop until we arrive at destination
+		var _timer = 500;
+
+		do {
+
+			// If we are within the destination coords, we are teleported correctly
+			if ((Math.abs(me.x - rndx) < 4) && (Math.abs(me.y - rndy) < 4)) {
+
+				DC_DPrint("DM_TeleportTo() : Teleported to [" + me.x + ", " + me.y + "]");
+				return true;
+			}
+			_timer-=10;
+			delay(10);
+
+		} while (_timer > 0);
+
+		// If it doesn't work, get new coords because you may have tried to go to a bad spot
+		rndx=x+rnd(-1,1);
+		rndy=y+rnd(-4,4);
+	}
+
+	DC_DPrint("DM_TeleportTo() : Teleport failed, now walking instead");
+	return DM_WalkTo(x, y);
+}
+
+// Function from Pwnage Pindle, modified by Xizeta
+function DM_WalkTo(x,y) {
+
+	var _startx = me.x;
+	var _starty = me.y;
+	var _currdestx = x;
+	var _currdesty = y;
+	var _retry = 0;
+	var _numtrys=parseInt(10000/DM_WalkDel);
+	var _thrash = 0;
+	var _nthrash=parseInt(3000/DM_WalkDel);
+
+	// If the char has running disabled, toggle to enable it
+	if (me.runwalk === 0) { me.runwalk=1; }
+
+	// If we are already in the correct coords, return true
+	if (Math.abs(me.x - x) <= 1 && Math.abs(me.y - y) <= 1) { return true; }
+
+	// Display a debug message
+	DC_DPrint("Walking to [" + x + ", " + y + "]");
+
+	// Loop until we got in the dest coords
+	while ((Math.abs(me.x - x) > 4 || Math.abs(me.y - y) > 4) && _retry <= _numtrys) {
+
+		// Randomize the coords if RandomMove is set to true
+		if (DM_RandomMove) {
+
+			_currdestx+=rnd(-2,2);
+			_currdesty+=rnd(-2,2);
+		}
+
+		// Click on the current coords set to go there
+		DC_DoClick(0,0,_currdestx,_currdesty);
+
+		// If the RandomMoveDel is set to true, randomize the movement delay
+		if(DM_RandomMoveDel) { DC_DoDel(DM_WalkDel); }
+		else { delay(DM_WalkDel); }
+
+		// Increase the retry counter
+		_retry+=1;
+
+		// If we don't arrive in the destination point, calculate the next set of coords
+		if ((Math.abs(me.x - _startx) < 2 && Math.abs(me.y - _starty) < 2)) {
+
+			if (_thrash >= _nthrash) {
+
+				//updated by Pachelbel
+				var dx = _currdestx - _startx;
+				var dy = _currdesty - _starty;
+				var a = Math.atan2(dx, dy);
+				a = Math.floor(a * 100) + 157;  // + pi/2;
+				var direction = rnd(a, a+314)/100;  // + pi
+				_currdestx = Math.floor(Math.sin(direction)*20) + me.x;
+				_currdesty = Math.floor(Math.cos(direction)*20) + me.y;
+				_thrash=0;
+			}
+			else { _thrash+=1; }
+		}
+
+		// Else, use my pos as coords
+		else {
+
+			_startx = me.x;
+			_starty = me.y;
+			_currdestx = x;
+			_currdesty = y;
+		}
+	}
+
+	// If we didn't succeed moving to the end coords, we got a problem so abort the game
+	if (Math.abs(me.x - x) > 4 || Math.abs(me.y - y) > 4) {
+
+		DC_QuitMessage("DM_WalkTo() : We got stuck someplace!");
+	}
+
+	return true;
+}
+
+// Function from Scavenger, modified by Killkeeper and Xizeta
+// Parameters :
+// -lo		Starting classid
+// -hi		Ending classid
+// -area	Area where the stairs is placed
+// Return value : Success of the function
+function DM_TakeStairs(lo, hi, area) {
+
+	// Get the stair tile
+	var _tile = _DM_GetStairs(lo, hi, area);
+
+	// If no tile is found, return a error message
+	if (!_tile) {
+
+		DC_DPrint("DM_TakeStairs() : No tile found with classid: " + lo + "-" + hi);
+		return false;
+	}
+
+	// Loop until we changed area by using the stairs
+	var _myarea = me.area;
+	var _retry = 0;
+    	do {
+
+		// If we tried 3 times, retry to move to get closer
+        	if ( _retry % 3 === 0 ) { DM_MoveTo(_tile.x,_tile.y); }
+
+		// Stall while we are not moved closer to the tile
+        	for (var _retry2 = 0; _DM_Dist2( _tile.x, _tile.y ) > 9 && ( _retry2 < 10 ); _retry2+=1) {
+
+           		DC_DoDel(100);
+        	}
+
+		// Click on the stair tile
+        	DC_DoClick(0,0,_tile);
+
+		// Stall until we changed area
+        	for (_retry2 = 0; _myarea == me.area && ( _retry2 < 10 ); _retry2+=1) {
+
+            		DC_DoDel(100);
+        	}
+
+		// Increase the counter
+		_retry+=1;
+
+    	} while (_myarea == me.area && _retry < 10 );
+
+	// If we didn't change area, we failed to use the stairs
+    	if (_myarea == me.area) {
+
+        	DC_DPrint("DM_TakeStairs() : Failed to take stairs!");
+        	return false;
+    	}
+
+	// Stall a little to let the game catch up (until the area is loaded in memory)
+    	DC_DoDel(DM_AreaChangeDel);
+   	return true;
+}
+
+function DM_GetNextCoords(sx,sy,dx,dy,dist) {
+
+	var _fx = sx;
+	var _fy = sy;
+
+	var _dist = DM_Dist(sx,sy,dx,dy);
+	if (_dist < dist) {
+
+		_finalcoords = new DM_Coord(_fx,_fy);
+		return _finalcoords;
+	}
+
+	// If the X is the same for both, we are in the same axis so get the distance correctly with simple calcs
+	if (sx == dx) {
+
+		// Add or substract depending where the starting is positionned against ending
+		if (sy > dy) { _fy = dy - dist; }
+		else { _fy = dy + dist; }
+	}
+
+	// If the Y is the same for both, we are in the same axis so get the distance correctly with simple calcs
+	else if (sy == dy) {
+
+		// Add or substract depending where the starting is positionned against ending
+		if (sx > dx) { _fx = dx - dist; }
+		else { _fx = dx + dist; }
+	}
+
+	// We got different axis so calculate the points using ratios
+	else {
+		// Calculate the angle of the triangle
+		//var _angle = DM_Angle(sx,sy,dx,dy);
+
+		// Get the new offsets using trigonometry
+		//_fx = dx + Math.sin(_angle);
+		//_fy = dy + Math.cos(_angle);
+
+		// Calculate the offsets
+		var _distx = -1 * (sx - dx);
+		var _disty = -1 * (sy - dy);
+
+		// Get the right ratio
+		var _ratio = dist / _dist;
+
+		// Obtain the proper offset with the ratio
+		_fx = dx + Math.round(_distx * _ratio);
+		_fy = dy + Math.round(_disty * _ratio);
+	}
+
+	DC_Print("DM_GetNextCoords() : sx = " + sx + " sy = " + sy + " dx = " + dx + " dy = " + dy + " dist = " + dist + " fx = " + _fx + " fy = " + _fy,DC_Console);
+	// Return the coord object with the proper ratios
+	_finalcoords = new DM_Coord(_fx,_fy);
+	return _finalcoords;
+}
+
+function DM_Angle(x1, x2, y1, y2) {
+
+	rad_degree = 180/Math.PI;
+	return Math.acos((x1 * x2) + (y1 * y2)) * rad_degree;
+}
+
+function DM_Dist(x1, y1, x2, y2) { return Math.floor((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2)); }
+
+//////////////////////////////////////////////////////////////////////
+// Portal and waypoints functions
+//////////////////////////////////////////////////////////////////////
+
+// function to link to new wp/tp function
+function DM_ChangeArea(how, dest, where) {
+	if (how == "Portal") { how = "BluePortal"; }
+	return DM_UsePortal(how, dest);
+}
+
+//How to change, your destination area, and for waypoints the area to change to
+// ----------------------- To be cleaned
+function DM_ChangeArea_old(how,des,where) {	
+
+	var portal = getUnit(2,how);
+	var i = 0;
+
+	while (!portal && i < 3) {
+
+		i+=1;
+		DC_Print("Waiting to detect the " + how + ". Doing try " + i + ".");
+		DC_DoDel(150);
+		if (portal) { break; }
+		else { portal = getUnit(2,how); }
+	}
+
+	if (!portal) { DC_QuitMessage(how +" Not found!!"); }
+
+	DM_WalkTo(portal.x, portal.y);
+
+	if (how=="Waypoint") {
+
+		portal.interact(where);
+	}
+	else {
+
+		DC_DoClick(0,0,portal);
+	}
+
+	i=0;
+	while (me.area != des) {
+
+		DC_DoDel(20);
+		if (i == 50) {
+
+			DM_WalkTo(portal.x, portal.y);
+
+			if(how=="Waypoint") {
+
+				portal.interact(where);
+			}
+			else {
+
+				DC_DoClick(0,0,portal);
+			}
+		}
+		if (i >= 150) { DC_QuitMessage("Use of " +how +" failed!"); }
+		i+=1;
+	}
+
+	if (how=="Waypoint") { DT_MenuCancel(portal,0); }
+	DC_DoDel(100);
+	DC_Print("Area changed in " +parseInt(i*20+100) +" ms!");
+}
+
+// this is a example function
+// we should use something like this to generate our messages
+// call ChangeArea() and display messages
+function DM_UsePortal(how, dest, ownername) {
+
+    // no need to use this function when we're already in the destination area
+    if (me.area == dest) { return true; }
+
+    // try to change the area
+    _msg_select = _DM_ChangeAreaNew(how, dest, ownername);
+
+    // success message
+    if (_msg_select > 0) {
+        DC_Print("Changed Area in " + _msg_select + "msec !");
+        return true;
+    }
+
+    // error messages
+    switch (_msg_select) {
+        case -1: DC_QuitMessage("usePortal(): " + how + " not found !"); break;
+        case -2: DC_QuitMessage("usePortal(): " + ownername + "'s Portal not found !"); break;
+        case -3: DC_QuitMessage("usePortal(): Red Portal not found !"); break;
+        case -4: DC_QuitMessage("usePortal(): Area " + dest + " has no Waypoint !"); break;
+        case -5: DC_QuitMessage("usePortal(): Wanted Waypoint to area " + dest + " is not available !"); break;
+        case -6: DC_QuitMessage("usePortal(): Unable to interact with Waypoint !"); break;
+        case -7: DC_QuitMessage("usePortal(): Unable to reach the Destination Area !"); break;
+    }
+}
+
+// changing an area by using a existing town portal or a waypoint
+// how = [string]        "Waypoint" / "Portal" (red portals) / "BluePortal" (blue portals)
+// dest = [integer]        destination area (1..132)
+// ownername = [string]        player name of the portal owner (needed when how="BluePortal"), uses me.name when not given
+// returns -1..-5 (errors) or a positive number (needed time of a warp in msecs)
+// ToDo : To be cleaned and modified to use numbers instead of strings in the "how" part
+function _DM_ChangeAreaNew(how, dest, ownername) {
+
+    // red or blue portal ?
+    PlayerPortal = false;
+    if (how == "BluePortal") {
+        if (!ownername) { ownername = me.name; }
+        how = "Portal";
+        PlayerPortal = true;
+    }
+
+    // search for the portal/wp
+    if (how == "Portal") {
+        portal = _DM_FindCorrectPortal(PlayerPortal, ownername);
+        if (portal==-1) { return -1; } // portal not found
+        if (portal==-2) { return -2; } // no portal with the correct owner found
+        if (portal==-3) { return -3; } // no red portal found
+        } else {
+            wpHex = _DM_AreaWPArray[dest];
+            if (!wpHex) { return -4; } // destination area has no wp 
+            portal = getUnit(2,how);
+        }
+
+    // return when the unit wasn't found
+    if (!portal) { return -1; } // portal not found
+
+    // walk to the portal/waypoint
+    DM_MoveTo(portal.x, portal.y);
+
+    // interact with portal/waypoint (max 3 tries)
+    for (var x=0; x<3; x+=1) {
+
+        portal.interact();
+        DC_PingDel(DM_AreaChangeDel);
+
+        if(how == "Waypoint") {
+
+            if (!getUIFlag(0x14) && x<2) { continue; } //interact again
+            if (!getUIFlag(0x14)) { return -6; } // unable to interact
+            if (!_DM_CheckWP(wpHex)) {
+                DT_MenuCancel(portal,0);
+                return -5; // wp for me not available
+            }
+            portal.interact(wpHex);
+            print("interacted");
+        }	
+
+        i=0;
+        while( me.area != dest && i< ((DC_Timeout * 1000) / 50) ) { // wait up to 1000msec for reaching the destination area
+
+            delay(50);
+            i+=1;
+        }
+
+        if (me.area == dest) { break; } // break the for loop after reaching the destination area
+    }
+
+    // we didn't reach the destination area
+    if (me.area != dest) { return -7; } // unable to reach destination area in 5secs
+  
+    
+    // cancel interaction menus
+    if(how == "Waypoint") {
+
+        DT_MenuCancel(portal,0);
+        _DM_WPWasUsed = true;
+    }
+    delay(rnd(200,400));
+
+    // success
+    return parseInt((i*50)+(x*1000));
+}
+
+// Function from Muellsammler, modified by Xizeta
+function DM_MakeTP(from,dest) {
+
+	if (me.area == from) {
+
+		// Get the book or scroll object first
+		var _scroll= getUnit(4,"tbk",0);
+
+		// If we don't have a book, check for a scroll
+		if (!_scroll) { _scroll= DC_getItem("tsc",0); }
+
+		// Else, check if the book is empty, get a scroll
+		else if (_scroll.getStat(70) === 0) { _scroll = DC_getItem("tsc",0); }
+
+		// If we have a scroll, make the portal
+		tploop:
+		if (_scroll) {
+
+			// Cycle until we find my portal in case someone else made one
+			_foundportal = false;
+			_cycles=0;
+			while (!_foundportal && _cycles<3 && _scroll) {
+
+				_cycles+=1;
+				if (_DM_UseScroll(_scroll)) {
+
+					DC_DoDel(250);
+
+					for (var tries=0; tries<  20; tries+=1) {
+
+						_portal = getUnit(2,"portal");
+
+						// Look for my portal
+						if (_portal) { do {
+
+							if (_portal.getParent() && _portal.getParent() == me.name) {
+
+								_foundportal=true;
+								break tploop;
+							}
+
+						} while (_portal.getNext()); }
+
+						delay(50);
+					}
+
+				}
+				else {
+
+					DC_QuitMessage("MakeTP() : Unable to use TP book/scroll !");
+				}
+			}
+
+			if (!_foundportal && !_scroll) { DC_QuitMessage("MakeTP() : Scroll has gone, but no portal !"); }
+
+			if (!_foundportal) { DC_QuitMessage("MakeTP() : Failed 3 times to create a portal !"); }
+
+		}
+		else { DC_QuitMessage("MakeTP() : No TP scroll, time to go ..."); }
+
+		DM_UsePortal("BluePortal",dest,me.name);
+	}
+}
+
+// Function by Muellsammler, modified by Xizeta
+// ToDo : Check the movepoints array for the correct offsets and adjust them
+commonLib.PathAct1 = function(_info) {
+
+	// Private variables
+	var _upperwp=false;
+	var _position="start";
+	var _foundwp=false;
+
+	// Variables
+	//this.Version = DM_Version;
+	this.Position = _position;
+	this.UpperWP = _upperwp; // waypoint.x < mychest.x
+	this.FoundWP =  _foundwp;
+
+	if (_info) {
+
+		this.Position = _info.Position;
+	}
+
+	// functions
+	this.Initialize = Initialize;
+	this.GotoStash = MoveToStash;
+	this.GotoTP = MoveToTP;
+	this.GotoWP = MoveToWP;
+	this.GotoCharsi = MoveToCharsi;
+	this.GotoGheed = MoveToGheed;
+	this.GotoStart = MoveToStart;
+	this.GotoAkara = MoveToAkara;
+	this.GotoKashya = MoveToKashya;
+	this.GotoWarriv = MoveToWarriv;
+
+	// Building the base points array
+	var MovePoint= new Array();
+	MovePoint[1]= new Array(0,0);		//stash
+	MovePoint[2]= new Array(7,-1);		//start
+	MovePoint[3]= new Array(-16,38);	//gheed to stash 1 <<<<< Now useless
+	MovePoint[4]= new Array(-16,32);	// gheed to charsi 1
+	MovePoint[5]= new Array(-16,0);		// gheed to charsi 2
+	MovePoint[6]= new Array(-26,-10);	// near charsi
+	MovePoint[7]= new Array(-16,18);	// gheed to stash 2
+	MovePoint[8]= new Array(-4,10);		// gheed to stash 3
+	MovePoint[9]= new Array(-9,-11);	// charsi to stash 1
+	MovePoint[10]= new Array(7,-7);		// charsi to stash 2
+	MovePoint[11]= new Array(22,-1);	// charsi to akara 1
+	MovePoint[12]= new Array(36,-2);	// charsi to akara 2
+	MovePoint[13]= new Array(48,-12);	// charsi to akara 3
+	MovePoint[14]= new Array(62,-13);	// near akara
+	MovePoint[15]= new Array(-21,47);	// near gheed
+	MovePoint[16]= new Array(23,6);		// stash to tp 1
+	MovePoint[17]= new Array(24,22);	// stash to tp 2
+	MovePoint[18]= new Array(0,31);		// gheed to tp 1
+	MovePoint[19]= new Array(14,31);	// gheed to tp 2
+	MovePoint[20]= new Array(0,0); 		// waypoint
+
+	// updates the coordinates based on fortress layout
+	function UpdateMovePoints(xx, yy) {
+		MovePoint[1]= [xx, yy];
+		for (var x=2; x<20; x+=1) {
+			MovePoint[x] = [MovePoint[x][0] + MovePoint[1][0], MovePoint[x][1] + MovePoint[1][1]];
+		}
+	}
+
+	function Initialize() {
+
+		FindWP();
+		GetNPCCoords();
+	}
+
+	// Find the waypoint of act1
+	function FindWP() {
+
+		// Return if the waypoint is already found
+		if (_foundwp) { return; }
+
+		// Get the waypoint object
+		Waypoint = getUnit(2,"Waypoint");
+
+		// if no waypoint is found, move closer and retry
+		if (!Waypoint) {
+
+			DM_WalkTo(me.x,me.y-15);
+			Waypoint = getUnit(2,"Waypoint");
+
+			// If the waypoint is still not found, abort
+			if (!Waypoint) {
+
+				DC_QuitMessage("commonLib.PathAct1.FindWP() : No waypoint is found in act1!");
+			}
+        	}
+
+		// Get the stash object
+		var mychest= Object();
+		mychest = getUnit(2,"bank");
+
+		// If the chest is not found, abort
+		if (!mychest) {
+
+			DC_QuitMessage("commonLib.PathAct1.FindWP() : No stash is found in act1!");
+		}
+
+		// Build the MovePoint array with the chest coords
+		UpdateMovePoints(mychest.x, mychest.y);
+
+		// Set the coords of the waypoint in the MovePoint array
+		MovePoint[20][0]= Waypoint.x;
+		MovePoint[20][1]= Waypoint.y;
+
+		// If the waypoint is higher than the stash, set the flag to true
+		if (Waypoint.x < mychest.x) { _upperwp=true; }
+		else { _upperwp=false; }
+
+		// Set the flag to true because we found the waypoint
+		_foundwp=true;
+	}
+
+	var _Gheed=null;
+	var _Charsi=null;
+	var _Akara=null;
+	var _Kashya=null;
+	var _Cain=null;
+	var _Stash=null;
+	var _PortalSpot=null;
+	var _Waypoint=null;
+
+	function GetNPCCoords() {
+
+		// Get the fireplace object as a starting point
+		var _fire = DC_getObject(39);
+		if (!_fire) {
+
+			DC_DPrint("commonLib.PathAct1.GetNPCCoords() : Can't build act1 map, not near the fire");
+			return false;
+		}
+
+		// Set the coords of all npc and objects
+		_Gheed 		= new DM_Coord(_fire.x - 34, _fire.y + 36);
+		_Charsi 	= new DM_Coord(_fire.x - 39, _fire.y - 25);
+		_Akara		= new DM_Coord(_fire.x + 56, _fire.y - 30);
+		_Kashya 	= new DM_Coord(_fire.x + 14, _fire.y - 4);
+		_Cain		= new DM_Coord(_fire.x + 6, _fire.y - 5);
+		_Stash		= new DM_Coord(_fire.x - 7, _fire.y - 12);
+		_PortalSpot	= new DM_Coord(_fire.x + 22, _fire.y + 28);
+
+		// Get the waypoint object and use his coords
+		var _wp = DC_getObject("Waypoint");
+		if (_wp) { _Waypoint = new DM_Coord(_wp.x, _wp.y); }
+	}
+
+	// Move to the coords in MovePoint
+	function MovingTo(dest) {
+
+		// If there is no MovePoint, we got a bad problem
+		if (!MovePoint[dest]) {
+
+			DC_StopMessage("commonLib.PathAct1.MovingTo() : The coord set # " + dest + " is undefined"); // destination not defined
+		}
+
+		// Go to the corresponding MovePoint coords
+		DM_WalkTo(MovePoint[dest][0], MovePoint[dest][1]);
+	}
+
+	// Move to the waypoint
+	// Path fully corrected
+	function MoveToWP() {
+
+		switch(_position) {
+
+			case "warriv":
+			case "kashya":
+			case "cain":
+			case "start":
+			case "stash":
+				MovingTo(2);
+				if (_upperwp) { MovingTo(10); }
+				else { 
+					MovingTo(11);
+					MovingTo(12);
+				}
+				break;
+			case "akara":
+				MovingTo(14);
+				MovingTo(13);
+				MovingTo(12);
+				if (_upperwp) {
+					MovingTo(11);
+					MovingTo(2);
+					MovingTo(10);
+		        	}
+				break;
+			case "charsi":
+				MovingTo(9);
+				MovingTo(10);
+				if (!_upperwp) {
+					MovingTo(11);
+					MovingTo(12);
+		        	}
+				break;
+			case "gheed":
+				MovingTo(4);
+				MovingTo(7);
+				MovingTo(8);
+				MovingTo(2);
+				if (_upperwp) { MovingTo(10); }
+				else {
+					MovingTo(11);
+					MovingTo(12);
+				}
+				break;
+			case "portal":
+				MovingTo(17);
+				MovingTo(16);
+				if (_upperwp) {
+					MovingTo(2);
+					MovingTo(10);
+		        	}
+				else { MovingTo(12); }
+				break;
+		}
+
+		// Update the current position flag
+		_position="waypoint";
+
+		// Move to the final position
+		DM_MoveTo(_Waypoint.x,_Waypoint.y);
+	}
+
+	// Path fully corrected
+	function MoveToTP() {
+
+		switch(_position) {
+
+			case "warriv":
+			case "kashya":
+			case "cain":
+			case "start":
+			case "stash":
+				MovingTo(16);
+				MovingTo(17);
+				break;
+			case "akara":
+				MovingTo(14);
+				MovingTo(13);
+				MovingTo(12);
+				MovingTo(11);
+				MovingTo(16);
+				MovingTo(17);
+				break;
+			case "charsi":
+				MovingTo(9);
+				MovingTo(10);
+				MovingTo(11);
+				MovingTo(16);
+				MovingTo(17);
+				break;
+			case "waypoint":
+				if (_upperwp) {
+					MovingTo(10);
+					MovingTo(2);
+		        	}
+				else {
+					MovingTo(12);
+					MovingTo(11);
+				}
+				MovingTo(16);
+				MovingTo(17);
+				break;
+			case "gheed":
+				MovingTo(4);
+				MovingTo(18);
+				MovingTo(19);
+				break;
+		}
+
+		// Update the current position flag
+		_position="portal";
+
+		// Move to the final position
+		DM_MoveTo(_PortalSpot.x,_PortalSpot.y);
+	}
+
+	// Path fully corrected
+	function MoveToGheed() {
+
+		switch(_position) {
+
+			case "warriv":
+			case "kashya":
+			case "cain":
+			case "start":
+			case "stash":
+				MovingTo(2);
+				MovingTo(8);
+				MovingTo(7);
+				MovingTo(4);
+				MovingTo(15);
+				break;
+			case "akara":
+				MovingTo(14);
+				MovingTo(13);
+				MovingTo(12);
+				MovingTo(11);
+				MovingTo(2);
+				MovingTo(8);
+				MovingTo(7);
+				MovingTo(4);
+				MovingTo(15);
+				break;
+			case "charsi":
+				MovingTo(5);
+				MovingTo(7);
+				MovingTo(4);
+				MovingTo(15);
+				break;
+			case "waypoint":
+				if (_upperwp) { MovingTo(10); }
+				else {
+					MovingTo(12);
+					MovingTo(11);
+				}
+				MovingTo(2);
+				MovingTo(8);
+				MovingTo(7);
+				MovingTo(4);
+				MovingTo(15);
+				break;
+			case "portal":
+				MovingTo(19);
+				MovingTo(18);
+				MovingTo(4);
+				MovingTo(15);
+				break;
+		}
+
+		// Update the current position flag
+		_position="gheed";
+
+		// Move to the final position
+		DM_MoveTo(_Gheed.x,_Gheed.y);
+	}
+
+	// Path fully corrected
+	function MoveToAkara() {
+
+		switch(_position) {
+
+			case "warriv":
+			case "kashya":
+			case "cain":
+			case "start":
+			case "stash":
+				MovingTo(11);
+				MovingTo(12);
+				MovingTo(13);
+				MovingTo(14);
+				break;
+			case "gheed":
+				MovingTo(4);
+				MovingTo(7);
+				MovingTo(8);
+				MovingTo(2);
+				MovingTo(11);
+				MovingTo(12);
+				MovingTo(13);
+				MovingTo(14);
+				break;
+			case "charsi":
+				MovingTo(9);
+				MovingTo(10);
+				MovingTo(11);
+				MovingTo(12);
+				MovingTo(13);
+				MovingTo(14);
+				break;
+			case "waypoint":
+				if (_upperwp) {
+					MovingTo(10);
+					MovingTo(11);
+		       		}
+				MovingTo(12);
+				MovingTo(13);
+				MovingTo(14);
+				break;
+			case "portal":
+				MovingTo(17);
+				MovingTo(16);
+				MovingTo(11);
+				MovingTo(12);
+				MovingTo(13);
+				MovingTo(14);
+				break;
+		}
+
+		// Update the current position flag
+		_position="akara";
+
+		// Move to the final position
+		DM_MoveTo(_Akara.x,_Akara.y);
+	}
+
+	// Path fully corrected
+	function MoveToCharsi() {
+
+		switch(_position) {
+
+			case "warriv":
+			case "kashya":
+			case "cain":
+			case "start":
+			case "stash":
+				MovingTo(2);
+				MovingTo(10);
+				MovingTo(9);
+				MovingTo(6);
+				break;
+			case "gheed":
+				MovingTo(4);
+				MovingTo(7);
+				MovingTo(5);
+				MovingTo(6);
+				break;
+			case "akara":
+				MovingTo(14);
+				MovingTo(13);
+				MovingTo(12);
+				MovingTo(11);
+				MovingTo(10);
+				MovingTo(9);
+				MovingTo(6);
+				break;
+			case "waypoint":
+				if (!_upperwp) {
+					MovingTo(12);
+					MovingTo(11);
+					MovingTo(10);
+		        	}
+				MovingTo(9);
+				MovingTo(6);
+				break;
+			case "portal":
+				MovingTo(19);
+				MovingTo(18);
+				MovingTo(2);
+				MovingTo(10);
+				MovingTo(9);
+				MovingTo(6);
+				break;
+		}
+
+		// Update the current position flag
+		_position="charsi";
+
+		// Move to the final position
+		DM_MoveTo(_Charsi.x,_Charsi.y);
+	}
+
+	// Path fully corrected
+	function MoveToKashya() {
+
+		switch(_position) {
+
+			case "warriv":
+			case "stash":
+			case "cain":
+			case "start":
+				MovingTo(2);
+				break;
+			case "charsi":
+				MovingTo(9);
+				MovingTo(10);
+				MovingTo(2);
+				break;
+			case "gheed":
+				MovingTo(4);
+				MovingTo(7);
+				MovingTo(8);
+				MovingTo(2);
+				break;
+			case "akara":
+				MovingTo(14);
+				MovingTo(13);
+				MovingTo(12);
+				MovingTo(11);
+				MovingTo(2);
+				break;
+			case "waypoint":
+				if (_upperwp) { MovingTo(10); }
+		        	else {
+		        		MovingTo(12);
+		        		MovingTo(11);
+		        	}
+				MovingTo(2);
+				break;
+			case "portal":
+				MovingTo(17);
+				MovingTo(16);
+				MovingTo(2);
+				break;
+		}
+
+		// Update the current position flag
+		_position="kashya";
+
+		// Move to the final position
+		DM_MoveTo(_Kashya.x,_Kashya.y);
+	}
+
+	// Path fully corrected
+	function MoveToWarriv() {
+
+		switch(_position) {
+
+			case "kashya":
+			case "stash":
+			case "cain":
+			case "start":
+				MovingTo(2);
+				break;
+			case "charsi":
+				MovingTo(9);
+				MovingTo(10);
+				MovingTo(2);
+				break;
+			case "gheed":
+				MovingTo(4);
+				MovingTo(7);
+				MovingTo(8);
+				MovingTo(2);
+				break;
+			case "akara":
+				MovingTo(14);
+				MovingTo(13);
+				MovingTo(12);
+				MovingTo(11);
+				MovingTo(2);
+				break;
+			case "waypoint":
+				if (_upperwp) { MovingTo(10); }
+		        	else {
+		        		MovingTo(12);
+		        		MovingTo(11);
+		        	}
+				MovingTo(2);
+				break;
+			case "portal":
+				MovingTo(17);
+				MovingTo(16);
+				MovingTo(2);
+				break;
+		}
+
+		// Update the current position flag
+		_position="warriv";
+
+		// Move to the final position
+		DM_MoveTo(_Stash.x,_Stash.y);
+	}
+
+	// Path fully corrected
+	function MoveToCain() {
+
+		switch(_position) {
+
+			case "kashya":
+			case "stash":
+			case "warriv":
+			case "start":
+				MovingTo(2);
+				break;
+			case "charsi":
+				MovingTo(9);
+				MovingTo(10);
+				MovingTo(2);
+				break;
+			case "gheed":
+				MovingTo(4);
+				MovingTo(7);
+				MovingTo(8);
+				MovingTo(2);
+				break;
+			case "akara":
+				MovingTo(14);
+				MovingTo(13);
+				MovingTo(12);
+				MovingTo(11);
+				MovingTo(2);
+				break;
+			case "waypoint":
+				if (_upperwp) { MovingTo(10); }
+		        	else {
+		        		MovingTo(12);
+		        		MovingTo(11);
+		        	}
+				MovingTo(2);
+				break;
+			case "portal":
+				MovingTo(17);
+				MovingTo(16);
+				MovingTo(2);
+				break;
+		}
+
+		// Update the current position flag
+		_position="cain";
+
+		// Move to the final position
+		DM_MoveTo(_Stash.x,_Stash.y);
+	}
+
+	// Path fully corrected
+	function MoveToStart() {
+
+		switch(_position) {
+
+			case "kashya":
+			case "stash":
+			case "cain":
+			case "warriv":
+				MovingTo(2);
+				break;
+			case "charsi":
+				MovingTo(9);
+				MovingTo(10);
+				MovingTo(2);
+				break;
+			case "gheed":
+				MovingTo(4);
+				MovingTo(7);
+				MovingTo(8);
+				MovingTo(2);
+				break;
+			case "akara":
+				MovingTo(14);
+				MovingTo(13);
+				MovingTo(12);
+				MovingTo(11);
+				MovingTo(2);
+				break;
+			case "waypoint":
+				if (_upperwp) { MovingTo(10); }
+		        	else {
+		        		MovingTo(12);
+		        		MovingTo(11);
+		        	}
+				MovingTo(2);
+				break;
+			case "portal":
+				MovingTo(17);
+				MovingTo(16);
+				MovingTo(2);
+				break;
+		}
+
+		// Update the current position flag
+		_position="start";
+
+		// Move to the final position
+		DM_MoveTo(_Stash.x,_Stash.y);
+	}
+
+	// Path fully corrected
+	function MoveToStash() {
+
+		switch(_position) {
+
+			case "warriv":
+			case "kashya":
+			case "cain":
+			case "start":
+				MovingTo(2);
+				break;
+			case "charsi":
+				MovingTo(9);
+				MovingTo(10);
+				MovingTo(2);
+				break;
+			case "gheed":
+				MovingTo(4);
+				MovingTo(7);
+				MovingTo(8);
+				MovingTo(2);
+				break;
+			case "akara":
+				MovingTo(14);
+				MovingTo(13);
+				MovingTo(12);
+				MovingTo(11);
+				MovingTo(2);
+				break;
+			case "waypoint":
+				if (_upperwp) { MovingTo(10); }
+		        	else {
+		        		MovingTo(12);
+		        		MovingTo(11);
+		        	}
+				MovingTo(2);
+				break;
+			case "portal":
+				MovingTo(17);
+				MovingTo(16);
+				MovingTo(2);
+				break;
+		}
+
+		// Update the current position flag
+		_position="stash";
+
+		// Move to the final position
+		DM_MoveTo(_Stash.x,_Stash.y);
+	}
+};
+
+commonLib.PathAct3 = function() {
+
+	// Private variables
+	var _position="start";
+
+	// Functions
+	this.GotoStash = MoveToStash;
+	this.GotoWP = MoveToWP;
+	this.GotoOrmus = MoveToOrmus;
+	this.GotoCain = MoveToCain;
+	this.GotoStart = MoveToStart;
+
+	function _UpdatePosition() {
+
+		if (me.y > 5150) {
+
+			_position = "start";
+		}
+
+		else if (me.y < 5100 && me.y > 5080) {
+
+			_position = "ormus";
+		}
+
+		else if (me.y < 5080 && me.y > 5060) {
+
+			_position = "cain";
+		}
+
+		else {
+
+			if (me.x < 5150) {
+
+				_position = "stash";
+			}
+
+			else {
+
+				_position = "waypoint";
+			}
+		}
+
+	}
+
+	function MoveToStash() {
+
+		_UpdatePosition();
+
+		switch(_position) {
+
+			case "start":
+				DM_MoveTo(5129,5164);
+				DM_MoveTo(5133,5146);
+				DM_MoveTo(5133,5128);
+				DM_MoveTo(5133,5110);
+				DM_MoveTo(5133,5092);
+				DM_MoveTo(5145,5088);
+				DM_MoveTo(5145,5073);
+				DM_MoveTo(5145,5058);
+				break;
+			case "waypoint":
+				DM_MoveTo(5145,5058);
+				break;
+			case "cain":
+				DM_MoveTo(5145,5058);
+				break;
+			case "ormus":
+				DM_MoveTo(5145,5088);
+				DM_MoveTo(5145,5073);
+				DM_MoveTo(5145,5058);
+				break;
+
+		}
+
+		_position="stash";
+	}
+
+	function MoveToWP() {
+
+		_UpdatePosition();
+
+		switch(_position) {
+
+			case "start":
+				DM_MoveTo(5129,5164);
+				DM_MoveTo(5133,5146);
+				DM_MoveTo(5133,5128);
+				DM_MoveTo(5133,5110);
+				DM_MoveTo(5133,5092);
+				DM_MoveTo(5145,5088);
+				DM_MoveTo(5152,5074);
+				DM_MoveTo(5155,5060);
+				DM_MoveTo(5159,5049);
+				break;
+			case "stash":
+				DM_MoveTo(5159,5049);
+				break;
+			case "cain":
+				DM_MoveTo(5151,5058);
+				DM_MoveTo(5159,5049);
+				break;
+			case "ormus":
+				DM_MoveTo(5145,5088);
+				DM_MoveTo(5152,5074);
+				DM_MoveTo(5155,5060);
+				DM_MoveTo(5159,5049);
+				break;
+		}
+
+    		_position="waypoint";
+	}
+
+	function MoveToOrmus() {
+
+		_UpdatePosition();
+
+		switch(_position) {
+
+			case "start":
+				DM_MoveTo(5129,5164);
+				DM_MoveTo(5133,5146);
+				DM_MoveTo(5133,5128);
+				DM_MoveTo(5133,5110);
+				DM_MoveTo(5133,5092);
+				break;
+			case "waypoint":
+				DM_MoveTo(5155,5060);
+				DM_MoveTo(5152,5074);
+				DM_MoveTo(5145,5088);
+				DM_MoveTo(5133,5092);
+				break;
+			case "stash":
+				DM_MoveTo(5145,5073);
+			case "cain":
+				DM_MoveTo(5145,5088);
+				DM_MoveTo(5133,5092);
+				break;
+		}
+
+    		_position="ormus";
+	}
+
+	function MoveToCain() {
+
+		_UpdatePosition();
+
+		switch(_position) {
+
+			case "start":
+				DM_MoveTo(5129,5164);
+				DM_MoveTo(5133,5146);
+				DM_MoveTo(5133,5128);
+				DM_MoveTo(5133,5110);
+				DM_MoveTo(5133,5092);
+				DM_MoveTo(5145,5088);
+				DM_MoveTo(5145,5073);
+				break;
+			case "waypoint":
+				DM_MoveTo(5151,5058);
+				DM_MoveTo(5145,5073);
+				break;
+			case "stash":
+				DM_MoveTo(5145,5073);
+				break;
+			case "ormus":
+				DM_MoveTo(5145,5088);
+				DM_MoveTo(5145,5073);
+				break;
+
+		}
+
+    		_position="cain";
+	}
+
+	function MoveToStart() {
+
+		_UpdatePosition();
+
+		switch(_position) {
+
+			case "stash":
+				DM_MoveTo(5145,5073);
+				DM_MoveTo(5145,5088);
+				DM_MoveTo(5133,5092);
+				DM_MoveTo(5133,5110);
+				DM_MoveTo(5133,5128);
+				DM_MoveTo(5133,5146);
+				DM_MoveTo(5129,5164);
+				DM_MoveTo(5117,5169);
+				DM_MoveTo(5118,5168);
+				break;
+			case "waypoint":
+				DM_MoveTo(5155,5060);
+				DM_MoveTo(5152,5074);
+				DM_MoveTo(5145,5088);
+				DM_MoveTo(5133,5092);
+				DM_MoveTo(5133,5092);
+				DM_MoveTo(5133,5110);
+				DM_MoveTo(5133,5128);
+				DM_MoveTo(5133,5146);
+				DM_MoveTo(5129,5164);
+				DM_MoveTo(5117,5169);
+				DM_MoveTo(5118,5168);
+				break;
+			case "cain":
+				DM_MoveTo(5145,5088);
+				DM_MoveTo(5133,5092);
+				DM_MoveTo(5133,5110);
+				DM_MoveTo(5133,5128);
+				DM_MoveTo(5133,5146);
+				DM_MoveTo(5129,5164);
+				DM_MoveTo(5117,5169);
+				DM_MoveTo(5118,5168);
+				break;
+			case "ormus":
+				DM_MoveTo(5133,5110);
+				DM_MoveTo(5133,5128);
+				DM_MoveTo(5133,5146);
+				DM_MoveTo(5129,5164);
+				DM_MoveTo(5117,5169);
+				DM_MoveTo(5118,5168);
+				break;
+		}
+
+    		_position="start";
+	}
+};
+
+commonLib.PathAct4 = function() {
+
+	// Private variables
+	var _position="start";
+
+	// Functions
+	this.GotoStash = MoveToStash;
+	this.GotoWP = MoveToWP;
+	this.GotoTyrael = MoveToTyrael;
+	this.GotoCain = MoveToCain;
+	this.GotoStart = MoveToStart;
+	this.GotoJamella = MoveToJamella;
+	this.GotoHalbu = MoveToHalbu;
+
+	function _UpdatePosition() {
+
+		if (me.x > 5040 && me.x < 5060) {
+
+			if (me.y < 5030) {
+
+				_position = "waypoint";
+			}
+
+			else {
+
+				_position = "start";
+			}
+		}
+
+		else if (me.x < 5040 && me.x > 5025) {
+
+			_position = "cain";
+		}
+
+		else if (me.x < 5025) {
+
+			if (me.y < 5030) {
+
+				_position = "tyrael";
+			}
+
+			else {
+
+				_position = "stash";
+			}
+		}
+
+		else {
+
+			if (me.y < 5030) {
+
+				_position = "halbu";
+			}
+
+			else {
+
+				_position = "jamella";
+			}
+		}
+
+	}
+
+	function MoveToStash() {
+
+		_UpdatePosition();
+
+		switch(_position) {
+
+			case "tyrael":
+			case "cain":
+				DM_MoveTo(5022,5042);
+				break;
+			case "start":
+			case "waypoint":
+				DM_MoveTo(5033,5036);
+				DM_MoveTo(5022,5042);
+				break;
+			case "jamella":
+			case "halbu":
+				DM_MoveTo(5070,5042);
+				DM_MoveTo(5052,5040);
+				DM_MoveTo(5033,5042);
+				DM_MoveTo(5022,5042);
+				break;
+
+		}
+
+		_position="stash";
+	}
+
+	function MoveToTyrael() {
+
+		_UpdatePosition();
+
+		switch(_position) {
+
+			case "stash":
+			case "cain":
+				DM_MoveTo(5022,5022);
+				break;
+			case "start":
+			case "waypoint":
+				DM_MoveTo(5033,5036);
+				DM_MoveTo(5022,5022);
+				break;
+			case "jamella":
+			case "halbu":
+				DM_MoveTo(5070,5042);
+				DM_MoveTo(5050,5040);
+				DM_MoveTo(5033,5036);
+				DM_MoveTo(5022,5022);
+				break;
+
+		}
+
+    		_position="tyrael";
+	}
+
+	function MoveToCain() {
+
+		_UpdatePosition();
+
+		switch(_position) {
+
+			case "stash":
+			case "tyrael":
+				break;
+			case "start":
+			case "waypoint":
+				DM_MoveTo(5033,5036);
+				break;
+			case "jamella":
+			case "halbu":
+				DM_MoveTo(5070,5042);
+				DM_MoveTo(5050,5040);
+				DM_MoveTo(5033,5036);
+				break;
+
+		}
+
+    		_position="cain";
+	}
+
+	function MoveToWP() {
+
+		_UpdatePosition();
+
+		switch(_position) {
+
+			case "stash":
+			case "tyrael":
+			case "cain":
+				DM_MoveTo(5033,5036);
+				DM_MoveTo(5044,5020);
+				break;
+			case "start":
+				DM_MoveTo(5033,5036);
+				break;
+			case "jamella":
+			case "halbu":
+				DM_MoveTo(5070,5042);
+				DM_MoveTo(5050,5040);
+				DM_MoveTo(5044,5022);
+				break;
+
+		}
+
+    		_position="waypoint";
+	}
+
+	function MoveToStart() {
+
+		_UpdatePosition();
+
+		switch(_position) {
+
+			case "stash":
+			case "tyrael":
+			case "cain":
+				DM_MoveTo(5033,5036);
+				DM_MoveTo(5048,5040);
+				break;
+			case "waypoint":
+				DM_MoveTo(5048,5040);
+				break;
+			case "jamella":
+			case "halbu":
+				DM_MoveTo(5070,5042);
+				DM_MoveTo(5050,5040);
+				break;
+
+		}
+
+    		_position="start";
+	}
+
+	function MoveToHalbu() {
+
+		_UpdatePosition();
+
+		switch(_position) {
+
+			case "stash":
+			case "tyrael":
+			case "cain":
+				DM_MoveTo(5033,5036);
+				DM_MoveTo(5048,5040);
+				DM_MoveTo(5070,5042);
+				DM_MoveTo(5082,5032);
+				break;
+			case "start":
+				DM_MoveTo(5050,5040);
+				DM_MoveTo(5070,5042);
+				DM_MoveTo(5082,5032);
+				break;
+			case "waypoint":
+				DM_MoveTo(5050,5040);
+				DM_MoveTo(5070,5042);
+				DM_MoveTo(5082,5032);
+				break;
+			case "jamella":
+				DM_MoveTo(5082,5032);
+				break;
+
+		}
+
+   		_position="halbu";
+	}
+
+	function MoveToJamella() {
+
+		_UpdatePosition();
+
+		switch(_position) {
+
+			case "stash":
+			case "tyrael":
+			case "cain":
+				DM_MoveTo(5033,5036);
+				DM_MoveTo(5048,5040);
+				DM_MoveTo(5070,5046);
+				DM_MoveTo(5082,5055);
+				break;
+			case "start":
+				DM_MoveTo(5050,5040);
+				DM_MoveTo(5070,5046);
+				DM_MoveTo(5082,5055);
+				break;
+			case "waypoint":
+				DM_MoveTo(5050,5040);
+				DM_MoveTo(5070,5046);
+				DM_MoveTo(5082,5055);
+				break;
+			case "halbu":
+				DM_MoveTo(5082,5055);
+				break;
+
+		}
+
+    		_position="jamella";
+	}
+
+};
+
+/*
+// act 3
+function MoveToOrmus() {
+    if (!nooverheads) me.overhead(pcText(514) + ORMUS.name + " !");
+    switch(position) {
+        case "waypoint":
+        case "cain":
+        case "stash":
+            walkto(5149, 5061);
+        case "portal":
+            walkto(5147, 5079);
+            walkto(5146, 5095);
+            walkto(5134, 5091);
+            break;
+        case "start":
+            walkto(5131, 5168);
+            walkto(5133, 5151);
+            walkto(5133, 5136);
+            walkto(5133, 5122);
+            walkto(5132, 5104);
+            walkto(5133, 5092);
+            break;
+    }
+    position="ormus";
+}
+
+function MoveToWPact3() {
+    if (!nooverheads) me.overhead(pcText(512));
+    switch(position) {
+        case "start":
+            walkto(5131, 5168);
+            walkto(5133, 5151);
+            walkto(5133, 5136);
+            walkto(5133, 5122);
+            walkto(5132, 5104);
+        case "ormus":
+            walkto(5134, 5091);
+            walkto(5146, 5095);
+            walkto(5147, 5079);
+            walkto(5149, 5061);
+            break;
+        case "portal":
+        case "cain":
+        case "stash":
+            walkto(5149, 5061);
+            break;
+    }
+    position="waypoint";
+}
+
+};
+*/
+
+commonLib.PathAct5 = function() {
+
+	// Variables
+	this.Version = DM_Version;
+	_position = "";
+
+	// functions
+	this.GotoMalah = MoveToMalah;
+};
+
+//////////////////////////////////////////////////////////////////////
+// Private functions
+//////////////////////////////////////////////////////////////////////
+
+function _DM_GetStairs(lo,hi,area) {
+
+	var _tile = DC_getTile();
+
+	// Loop until the right tile is found
+	if (_tile) { do {
+
+		// If the tile is in the right classid range
+		if (_tile.classid >= lo && _tile.classid <= hi) {
+
+			// If the right tile is found, return the tile object
+			if ( !area || _tile.area == area ) { return _tile; }
+		}
+
+	} while (_tile.getNext()); }
+
+	return false;
+}
+
+function _DM_Dist2(x1, y1, x2, y2) { return Math.floor((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2)); }
+
+function _DM_CheckWP(wpHex) {
+
+    for (var x=0; x<39; x+=1) {
+
+        if (wpHex == _DM_Waypoints[x]) {
+
+            if (getWaypoint(x)) { return true; }
+            else { return false; }
+        }
+    }
+}
+
+function _DM_FindCorrectPortal(blueportal, ownername) {
+
+    	var portal = getUnit(2,"Portal");
+    	if (!portal) { return -1; } // no portal found
+
+    	// look for a blue portal
+    	if (blueportal) {
+
+                if (portal) { do {
+
+			if (portal.getParent() && portal.getParent() == ownername) { return portal; }
+
+                } while (portal.getNext()); }
+
+                return -2; // no portal with the correct owner found
+        }
+
+   	// look for a red portal
+    	if (portal) { do {
+
+       		if (!portal.getParent()) { return portal; }
+
+    	} while (portal.getNext()); }
+
+   	 return -3; // no red portal found
+}
+
+// Function from Muellsammler, modified by Xizeta
+function _DM_UseScroll(scroll) {
+
+	clickItem(1,scroll);
+
+	DC_DoDel(DM_AreaChangeDel);
+
+	return true;
+}
+
+// ToDo : Transform these functions in a class function
+/*******************************************************************************
+*                                                                              *
+*                              Vector Coord lib                                *
+*                                    v0.9                                      *
+*                                                                              *
+* ---------------------------------------------------------------------------- *
+* Copyright (C) 2002 Jan Onno Tuinenga (Scavenger) - tha_scavenger@hotmail.com *
+* ---------------------------------------------------------------------------- *
+*                                                                              *
+* This program is free software; you can redistribute it and/or modify         *
+* it under the terms of the GNU General Public License as published by         *
+* the Free Software Foundation; either version 2 of the License, or            *
+* (at your option) any later version.                                          *
+*                                                                              *
+* This program is distributed in the hope that it will be useful,              *
+* but WITHOUT ANY WARRANTY; without even the implied warranty of               *
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                *
+* GNU General Public License for more details.                                 *
+*                                                                              *
+********************************************************************************/
+
+/*******************************************************************************
+* HISTORY:                                                                     *
+* ---------------------------------------------------------------------------- *
+* 1.0: - Some minor changes                                                    *
+* 0.9: - Fixed vector.rotate()                                                 *
+* 0.8: - Added data property to coord.                                         *
+* 0.7: - Length of a vector is now restored back to it's original length after *
+*        rotate                                                                *
+*      - Changed the comments for coord.move                                   *
+*      - Fixed assignment of setlength in constructor (tnx 'Disturbed')        *
+* 0.6: - Added coord.data                                                      *
+*      - Fixed bug in coord.dist2                                              *
+* 0.5: - First release                                                         *
+*******************************************************************************/
+
+// Constructor accepts x and y value or a vector
+
+function vector() {
+
+	if(arguments.length == 2) {
+		this.x = arguments[0];
+		this.y = arguments[1];
+	}
+	else if (arguments.length == 1) {
+		this.x = arguments[0].x;
+		this.y = arguments[0].y;
+	}
+	else {
+		this.x = 0;
+		this.y = 0;
+	}
+	
+	this.rotate = vector_rotate;
+	this.normalize = vector_normalize;
+	this.length = vector_length;
+	this.setlength = vector_setlength;
+	this.toString = vector_toString;
+	this.set = vector_set;
+	this.angle = vector_angle;
+}
+
+
+// returns false when failed (empty vector: 0,0)
+
+function vector_rotate(degree) {
+
+	if (!degree) { return true; }
+	
+	var l = this.length();
+	if (!l) { return false; }
+		
+	this.normalize();
+	
+	rad = degree * (Math.PI/180);
+	
+	nx = this.x * Math.cos(rad) - this.y * Math.sin(rad);
+	ny = this.x * Math.sin(rad) + this.y * Math.cos(rad);
+	
+	this.x = nx;
+	this.y = ny;
+	
+	this.normalize();
+	if (l != 1) { this.setlength(l); }
+	return true;
+}
+
+
+// returns angle with vector v (float)
+
+function vector_angle(v) {
+
+	rad_degree = 180/Math.PI;
+	return Math.acos((this.x * v.x) + (this.y * v.y)) * rad_degree;
+}
+
+
+// returns length of vector (float)
+
+function vector_length() {
+
+	return Math.sqrt((this.x * this.x) + (this.y * this.y));
+}
+
+// set the length of the vector to 'length'
+
+function vector_setlength(length) {
+
+	this.normalize();
+	this.x *= length;
+	this.y *= length;
+}
+
+
+// returns false when failed -> empty vector: 0,0
+
+function vector_normalize() {
+
+	l = this.length();
+	if (!l) { return false; }
+
+	this.x /= l;
+	this.y /= l;
+	
+	return true;
+}
+
+
+
+// return the vector as string rouded to 3 digits
+
+function vector_toString() {
+
+	str = "(";
+	str += Math.round(this.x*1000)/1000;
+	str += " , ";
+	str += Math.round(this.y*1000)/1000;
+	str += ") : ";
+	str += Math.round(this.length()*1000)/1000;
+	
+	return str;
+}
+
+function vector_set(tx, ty) {
+
+	if (arguments.length == 1) {
+		this.x = tx.x;
+		this.y = tx.y;
+	}
+	else if (arguments.length == 2) {
+		this.x = tx;
+		this.y = ty;
+	}
+	else {
+		print("ERROR: vector.set -> invalid param count");
+		stop();
+	}
+}
+
+
+
+/**************************************************
+*                                                 *
+*                  Coord Object                   *
+*                                                 *
+**************************************************/
+
+function coord() {
+
+	this.data = null;
+	
+	if (arguments.length == 3) {
+		this.x = arguments[0];
+		this.y = arguments[1];
+		this.data = arguments[2];
+	}
+	if (arguments.length == 2) {
+		this.x = arguments[0];
+		this.y = arguments[1];
+	}
+	else if(arguments.length == 1) {
+		this.x = arguments[0].x;
+		this.y = arguments[0].y;
+	}
+	else {
+		this.x = 0;
+		this.y = 0;
+	}
+	
+	this.dist = coord_dist;
+	this.dist2 = coord_dist2;
+	this.dir = coord_dir;
+	this.move = coord_move;
+	this.set = coord_set;
+	this.toString = coord_toString;
+}
+
+
+function coord_set(tx, ty, d) {
+	if (arguments.length == 1) {
+		this.x = tx.x;
+		this.y = tx.y;
+		if (tx.data) { this.data = tx.data; }
+		else { this.data = null; }
+	}
+	else if (arguments.length == 2) {
+		this.x = tx;
+		this.y = ty;
+		this.data = null;
+	}
+	else if (arguments.length == 3) {
+		this.x = tx;
+		this.y = ty;
+		this.data = d;
+	}
+	else {
+		print("ERROR: coord.set -> invalid param count");
+		stop();
+	}
+}
+
+// returns distance to coord (int)
+
+function coord_dist(tx, ty) {
+
+	if (arguments.length == 1) {
+		vx = this.x - tx.x;
+		vy = this.y - tx.y;
+		return Math.round(Math.sqrt((vx*vx) + (vy*vy)));	
+	}
+	else if (arguments.length == 2) {
+		vx = this.x - tx;
+		vy = this.y - ty;
+		return Math.round(Math.sqrt((vx*vx) + (vy*vy)));
+	}
+	else {
+		print("ERROR: coord.dist -> invalid param count");
+		stop();
+	}
+}
+
+//return Math.floor((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2)); }
+
+function coord_dist2(tx, ty) {
+
+	if (arguments.length == 1) {
+		vx = this.x - tx.x;
+		vy = this.y - tx.y;
+		
+		return Math.floor((vx * vx) + (vy * vy));
+	}
+	else if (arguments.length == 2) {
+		vx = this.x - tx;
+		vy = this.y - ty;
+		
+		return Math.floor((vx * vx) + (vy * vy));
+	}
+	else {
+		print("ERROR: coord.dist2 -> Invalid param count");
+	}
+}
+
+
+// return normalized direction vector (vector)
+
+function coord_dir(tx, ty) {
+
+	if (arguments.length == 1) {
+		v = new vector(tx.x - this.x, tx.y - this.y);
+		v.normalize();
+		return v;
+	}
+	else if (arguments.length == 2) {
+		v = new vector(tx - this.x, ty - this.y);
+		v.normalize();
+		return v;
+	}
+	else {
+		print("ERROR: coord.dir -> invalid param count");
+		stop();
+	}
+}
+
+
+// moves coord by vector multiplied by scalar d or length of vector is 'd' = 0
+// returns false when d = 0 and vec.length() = 0
+
+function coord_move(vec, d) {
+
+	if (d) {
+		this.x += Math.round(vec.x * d);
+		this.y += Math.round(vec.y * d);
+		return true;
+	}
+	else if (vec.length()) {
+		this.x += Math.round(vec.x);
+		this.y += Math.round(vec.y);
+		return true;
+	}
+	
+	return false;
+}
+
+function coord_toString() {
+
+	return "( " + this.x + " , " + this.y + " ) " + this.data;
+}

@@ -1,0 +1,793 @@
+//////////////////////////////////////////////////////////////////////
+//
+// Xizeta's AndyXP script
+// Andariel runs bot script.
+//
+// The script will use any char excepted Assassins (for now).
+//
+// It is suggested to keep a Tome of Identification in
+// inventory to make it work better.
+//
+// Version 1.08 BETA
+// Updated on 2004/07/26
+//
+// Original authors : LordOfMars, FruitBar and HPB_Forever
+// Collaboration : Ven0m, Muellsammler, Darien, Killkeeper, Damoon, HellNucleus,
+//                 DaBeerMan, Gill_105, Syadasti, Smoke and others :)
+//
+// Legal stuff :
+// This program is free software; You can redistrubute freely as long as this
+// header and contents stays intact. Modifications for redistribution can only
+// be done by submitting to the core scripters team for approval. If you don't
+// want to submit the modifications and wanted to redistribute this script, you
+// must rename it by remplacing d2jsp with your own name to avoid conflicts.
+//
+// This program is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY
+// or FITNESS FOR A PARTICULAR PURPOSE.
+//
+//////////////////////////////////////////////////////////////////////
+var AXP_Version = "1.08";
+
+//////////////////////////////////////////////////////////////////////
+// Please edit AXP_Config.d2l in the libs folder for your needs.
+//////////////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////////////////////
+// Settings for multiple chars of the same class
+//////////////////////////////////////////////////////////////////////
+// Change the below file to point to different setting files if you need 2 setups for different chars
+// Within the same class.
+// To edit the settings for both chars, make a copy of the AXP_Config.d2l, and change the below
+// character selection to that character and file.
+//
+// This is only needed if you have 2 characters of the same type! If you are not sure, don't touch!!
+//--------------------------------------------------------------------
+
+// First char of the same class
+if (me.name=="Your Character name here") { AXP_CharConfigFile="AXP_Config.d2l"; }
+
+// Second char of the same class
+else if (me.name=="Your Other Character name here") { AXP_CharConfigFile="AXP_Config.d2l"; }
+
+// Default for all chars
+else { AXP_CharConfigFile="AXP_Config.d2l"; }
+
+
+//////////////////////////////////////////////////////////////////////
+// ***** NO EDITION BELOW THIS POINT *****
+// MESSING WITH THE CODE BELOW WILL MAKE THE SCRIPT
+// WORK DIFFERENTLY, WITH BAD RESULTS !!
+//////////////////////////////////////////////////////////////////////
+
+
+
+
+
+
+
+
+
+
+//////////////////////////////////////////////////////////////////////
+// Script public variables
+//////////////////////////////////////////////////////////////////////
+
+// General variables
+var AXP_SkipCredits=true;	// Show the credits at the start of runs
+var AXP_UseTaunts=true;		// Will Andy taunt you :)
+var AXP_FormatHTML=true;	// Build a HTML log for PXP
+var AXP_UseOverheads=false;	// Use overheads to show actions
+var AXP_UseBeltManager=false;	// Set to true to use belt management
+var AXP_UseConsole = true;	// Set to true to display the upper console
+var AXP_ShowInnerExceptions=false; // Set to true to show the inner exceptions
+var AXP_UseVigor = false;	// If you are a pally and want to cast Vigor in town
+
+// Shopping and gambling
+var AXP_ShopIt=true;		// Enable or disable shopping at NPC
+var AXP_GambleIt=false;		// Enable or disable gambling at NPC
+var AXP_AlwaysGamble=false;	// Flag to always gamble each run
+var AXP_GambleMinGold=250000;	// Min gold amount to start gambling
+
+// NPC interactions
+var AXP_AlwaysAkara=false;	// Always visit Malah no matter what
+var AXP_AlwaysCharsi=false;	// Always visit Larzuk no matter what
+var AXP_VisitGheed=false;	// Visit Gheed before portal ?
+var AXP_RandomNPC=false;	// Randomly visit NPC each run
+
+// Run variables
+var AXP_StopFullInv=true;	// Stop the script if inventory is full
+var AXP_Automule=false;		// Use Sicojola's Automule script when inv is full
+var AXP_StartGameDelay=0;	// Delay to stall at the start of game
+var AXP_MaxGameLength=60;	// Length of the run before aborting, 0 to stay indefinitely
+
+// Class variables to make use of OO libs
+var commPather = null;
+var commTown = null;
+
+
+//////////////////////////////////////////////////////////////////////
+// Script private variables
+//////////////////////////////////////////////////////////////////////
+
+var _AXP_RunLogPath="output\\" + me.name + "-AXP-RunLog.html";
+var _AXP_Position="start";
+var _AXP_KeyPressed = false;
+var _AXP_NeedPotions = false;
+
+
+//////////////////////////////////////////////////////////////////////
+// AndyXP functions
+//////////////////////////////////////////////////////////////////////
+
+function AXP_ShowCredits() {
+
+	if (!AXP_SkipCredits) {
+
+		DC_Print("ÿc9******************** AndyXP version " + AXP_Version + " by Xizeta ********************");
+		DC_Print("ÿc7Extra thanks to : Mattlant, Muellsammler, Darien, Killkeeper, ");
+		DC_Print("ÿc7.................. DaBeerMan, gzin and others...");
+		DC_Print("ÿc7Testers : bballpaul, Lucifer20, eternaltorment2, RamasseTonDrum and others...");
+		DC_Print("ÿc1D2JSP.DLL core created and coded by nJaguar! Support him by donating :)");
+	}
+	var _successpercent=String((DL_Kills / (DL_Total-1)) * 100).substring(0,5);
+	if (DL_Kills === 0) { DC_Print("ÿc9*** AndyXP version " + AXP_Version + " by Xizeta ***"); }
+	else { DC_Print("ÿc9*** AndyXP version " + AXP_Version + " by Xizeta *** ÿc1Total runs:  " + (DL_Total-1) + "  Total kills:  " + DL_Kills + "  With a " + _successpercent +"% success rate!"); }
+}
+
+function AXP_AndyTaunt() {
+
+	switch (parseInt(Math.random() * 22)) {
+
+		case 0: DC_Print("ÿc4Andariel : ÿc@HELP!! I'm being humped by a MULE!!"); break;
+		case 1: DC_Print("ÿc4Andariel : ÿc@Damn, I cannot play cards without being disturbed"); break;
+		case 2: DC_Print("ÿc4Andariel : ÿc@Eat shit, NOOB"); break;
+		case 3: DC_Print("ÿc4Andariel : ÿc@Oh FFS, just take what you want and leave me the fuck alone"); break;
+		case 4: DC_Print("ÿc4Andariel : ÿc@You know if DClone spawns your fucked, right?"); break;
+		case 5: DC_Print("ÿc4Andariel : ÿc@Fuck me your Merc is lazy, what a slack fuck"); break;
+		case 6: DC_Print("ÿc4Andariel : ÿc@A little lag and i'll rape your sorry ass"); break;
+		case 7: DC_Print("ÿc4Andariel : ÿc@You call yourself " + me.name + " ? Where the hell did you find such a stupid name?"); break;
+		case 8: DC_Print("ÿc4Andariel : ÿc@Here comes the PAIN BABY"); break;
+		case 9: DC_Print("ÿc4Andariel : ÿc@Yo Mama was tighter than your SISTER!!"); break;
+		case 10: DC_Print("ÿc4Andariel : ÿc@You'll never get a SoJ out of me!!"); break;
+  		case 11: DC_Print("ÿc4Andariel : ÿc@Tyrael's Might ?  Ha!  The only might you'll feel is my foot in your ass!"); break;
+  		case 12: DC_Print("ÿc4Andariel : ÿc@Tell your mom I said hi!"); break;
+  		case 13: DC_Print("ÿc4Andariel : ÿc@PKPKPKPK COME COME POTAL!"); break;
+  		case 14: DC_Print("ÿc4Andariel : ÿc@Bring it beotch!"); break;
+  		case 15: DC_Print("ÿc4Andariel : ÿc@You want a Grandfather, go bother cain, you want a POS +1 light radius charm then we'll talk business"); break;
+  		case 16: DC_Print("ÿc4Andariel : ÿc@If I weren't already dead, I might care!"); break;
+  		case 17: DC_Print("ÿc4Andariel : ÿc@I'm gonna pwn your a$$!  If I don't though, please forward these gifts to Xizeta for me"); break;
+  		case 18: DC_Print("ÿc4Andariel : ÿc@Kiss my shriveled undead posterior!"); break;
+  		case 19: DC_Print("ÿc4Andariel : ÿc@Come on down and give aunt Andy a big hug!"); break;
+		case 20: DC_Print("ÿc4Andariel : ÿc@Damn Xizeta, another update to AndyXP!"); break;
+		default: DC_Print("ÿc4Andariel : ÿc@I might as well set my ass on fire now"); break;
+	}
+}
+
+function AXP_FormatLog() {
+
+	if (AXP_FormatHTML) {
+
+		// Tell the user that formatting is running
+		DC_Print("Now formatting the HTML log...");
+
+		// Start the chrono
+		DC_ChronoMe();
+
+		// Open the new log file for formatting
+		file = fileOpen("output/"+me.name+"-AXP-Log.html", 1);		
+		if (file) {
+
+			// Start the html log
+			DHL_OpenLog(file);
+
+			// Add run log info
+			DHL_AddSection(file,_AXP_RunLogPath,"Run Log for " + me.name);
+
+			// Integrate error logging if there is a error log available
+			DHL_AddSection(file,DC_ErrorLogPath,"Error Log for " + me.name);
+
+			// Add the logged items section
+			DHL_AddItemLogSection(file);
+
+			// Close the log
+			DHL_CloseLog(file);
+			file.close();
+		}
+		else {
+			DC_Print("Unable to open " + me.name + "-AXP-Log.html for writing!");
+		}
+
+		// Stop the chrono and display the total time (add a suggestion if formatting take too much time)
+		var _formattime=DC_ChronoMe();
+		if (_formattime > 1000) {
+
+			DC_Print("Formatting done in " + _formattime + " ms!! To reduce the time, reset or trim the item log");
+		}
+		else {
+			DC_Print("Formatting done in " + _formattime + " ms");
+		}
+	}
+	else {
+		DC_Print("Ignoring HTML formatting");
+	}
+}
+
+function keypressHandler(key) { AXP_CheckKey(key); }
+
+function AXP_CheckKey(key) {
+
+	// Get the entered key in the global var
+	_AXP_KeyPressed = key;
+
+	// stopping main script (when i'm in town), started tools (eg. pwnlifewatch) will continue
+	if (_AXP_KeyPressed == 88) { // "X" was pressed
+
+ 		if (DC_InTown(me)) {
+
+  			DC_Print("ÿc;Key 'X' is pressed, stopping the main script");
+  			delay(500);
+ 			stop(1);
+		}
+        }
+
+	// Toggling the console on and off
+	if (_AXP_KeyPressed == 85) { // "U" was pressed
+
+		if (AXP_UseConsole) {
+
+			DC_Print("ÿc;Key 'U' is pressed, toggling the console off");
+			DC_DoDel(50);
+			XP_DestroyConsole();
+			AXP_UseConsole = false;
+		}
+		else {
+			DC_Print("ÿc;Key 'U' is pressed, toggling the console on");
+			DC_DoDel(50);
+			XP_CreateConsole("AndyXP");
+			AXP_UseConsole = true;
+		}
+        }
+
+	// stopping all scripts (when i'm in town)
+	if (_AXP_KeyPressed == 191) { // "#" was pressed
+
+ 		if (DC_InTown(me)) {
+
+  			DC_Print("ÿc;Key '#' is pressed, stopping all scripts");
+  			delay(500);
+  			stop();
+        	}
+	}
+}
+
+function AXP_NPCinteract(npc) {
+
+	// If the npc object is not present, abort the game
+	if (!npc) {
+
+		DL_AddAbort();
+		DC_QuitMessage("No NPC available!");
+	}
+
+	// Interact with the npc
+	if (!DT_DoInteract(npc)) {
+
+		DL_AddAbort();
+		DC_QuitMessage("Unable to interact with " + npc.name + "!");
+	}
+
+	// Do stuff depending on which npc
+	switch (npc.classid) {
+
+		// Kashya
+		case 150:
+			if (!DT_ReviveMerc(npc)) {
+
+				DC_Print("Failed to revive the mercenary!");
+			}
+			break;
+
+		// Charsi
+		case 154:
+			DT_DoTrade(npc);
+			DT_RepairItems(npc);
+			if (DT_CheckAmmo()) { DT_BuyAmmo(npc); }
+			break;
+
+		// Akara
+		case 148:
+			if (_XP_GetNumUnId > 0) { XP_DoCheckItems(npc); }
+			if (AXP_UseBeltManager && _AXP_NeedPotions) { DT_DoTrade(npc); DT_FillBelt(npc); }
+			break;
+
+		// Gheed
+		case 147:
+			if (AXP_GambleIt) {
+
+				if (DC_MyGold() > AXP_GambleMinGold) {
+
+					DT_DoTrade(npc,1);
+					DT_GambleIt(npc);
+					DT_MenuCancel(npc,1);
+					DT_DoInteract(npc);
+				}
+			}
+			break;
+
+		// Stash
+		case 267:
+			DT_ManageStash();
+			break;
+	}
+
+	// If shopping is enabled and it is not Kashya or stash, stop the npc
+	if (AXP_ShopIt && npc.classid!=150 && npc.classid!=267) {
+
+		if (!getUIFlag(0x0c)) {	DT_DoTrade(npc); }
+		DT_ShopIt(npc);
+	}
+
+	// Use the right cancel method depending if it is a npc or object
+	if (npc.classid==267) { DT_MenuCancel(npc,0); }
+	else { DT_MenuCancel(npc,1); }
+}
+
+function AXP_CheckAct() {
+
+	if (me.act != 1)	{
+
+		DC_Print("You are not in act 1!  Going from act #" + me.act + " to act #1.");
+		if (AXP_UseOverheads) { me.overhead("Walking to Waypoint"); }
+
+		switch (me.act)	{
+
+			case 2:	commPather.GotoDest(5069, 5086);
+				break;
+
+			case 3:	commPather.GotoDest(5159, 5049);
+				break;
+
+			case 4: commPather.GotoDest(5044, 5019);
+				break;
+
+			case 5: commPather.GotoDest(5115, 5070);
+		}
+
+		// Mod the info so it use the way to act1-wp1
+		DM_UsePortal("Waypoint",1);
+	}
+	else { return true; }
+
+	// If we didn't change of act, there is a problem so abort
+	if (me.act != 1) { DC_QuitMessage("You're not in act 1!"); }
+}
+
+function AXP_PathToAkara() {
+
+	if (AXP_UseOverheads) { me.overhead("Walking to Akara"); }
+
+	commTown.GotoAkara();
+}
+
+function AXP_PathToCharsi() {
+
+	if (AXP_UseOverheads) { me.overhead("Walking to Charsi"); }
+	
+	commTown.GotoCharsi();
+}
+
+function AXP_PathToStash() {
+
+	if (AXP_UseOverheads) { me.overhead("Walking to Stash"); }
+
+	commTown.GotoStash();
+}
+
+function AXP_PathToKashya() {
+
+	if (AXP_UseOverheads) { me.overhead("Walking to Kashya"); }
+
+	commTown.GotoKashya();
+}
+
+function AXP_PathToGheed() {
+
+	if (AXP_UseOverheads) { me.overhead("Walking to Gheed"); }
+
+	commTown.GotoGheed();
+}
+
+function AXP_PathToWaypoint() {
+
+	if (AXP_UseOverheads) { me.overhead("Walking to WayPoint"); }
+
+	commTown.GotoWP();
+}
+
+// ToDo : Add coords of Andy's sweet spot.
+function AXP_GoToAndy() {
+
+	// Display a overhead while moving
+	if (AXP_UseOverheads) { me.overhead("Going to Andariel's lair"); }
+
+	// Move from Catacombs 2 waypoint to Andariel's lair
+	DC_Print("ÿc9    This must be the WP to find Andy! Good thing mattlant knows where I'm going!");
+    	commPather.GotoLevel(36,20,false);
+    	DM_TakeStairs(18,18);
+	DC_Print("ÿc1    Ahhhhh This must be level 3! Hold onto that SoJ I'll be right there Babe!");
+    	commPather.GotoLevel(37,20,false);
+    	DM_TakeStairs(18,18);
+	DC_Print("ÿc4    Hehe Your mine now! Give it up Biotch!");
+
+	// Move to the final spot
+	if (DM_CheckTeleport()) {
+
+		DSN_UsePathing=false;
+		DM_MoveTo(22582,9614);
+		DM_MoveTo(22570,9591);
+		DM_MoveTo(22557,9574);
+		DM_MoveTo(22547 + AXP_OffsetX, 9553 - AXP_OffsetY);
+	}
+	else {
+		// Go to the final spot using user offsets
+		commPather.GotoDest(22547 + AXP_OffsetX, 9553 - AXP_OffsetY);
+	}
+}
+
+function AXP_AttackAndy() {
+
+	// Detecting Andariel with 3 retries to be sure to get the target
+	for (var i = 0; i < 3; i+=1) {
+
+		var target = DC_FindMonster(156);
+		if (target) { break; }
+	}
+
+	// If Andy is detected, 
+	if (target) {
+
+		var _andyname = target.name;
+
+		// If the target has a enchantment i want to chicken, log and quit
+		if (DA_CheckImmunities(target)) { 
+
+			// Increase the chicken counter
+			DL_AddChicken();
+
+			// Leave the game
+			DC_DDC_Print("Now leaving the game due to a bad immunity/enchantment/aura!!! See the log for the exact data");
+			quit();
+		}
+
+		XP_Attack(target);
+
+		DC_Print("ÿc0" + _andyname + " killed!");
+
+		if (AXP_UseTaunts) { 
+
+			DC_Print("ÿc4" + _andyname + "ÿc@: AAAAaaaaaarrrgghh...!!!");
+			DC_Print("ÿc4" + me.name + "ÿc@: Pwned !!!");
+		}
+
+		target=false;
+	}
+
+	else {
+
+		DL_AddAbort();
+		DC_QuitMessage("Andariel not found!! Aborting the run...");
+	}
+}
+
+function AXP_TownManager() {
+
+	// First move a little below to avoid being struck at the tent sometimes
+	//DM_MoveTo(me.x +10, me.y);
+
+	// If randomNPC is true, pick a npc number
+	if (AXP_RandomNPC) { NPCnum=parseInt(Math.random() * 11); }
+
+	// Else, set npc at 0
+	else { NPCnum=0; }
+
+	// Check if we need to go to Akara
+	_XP_GetNumUnId = DT_CheckUnids();
+	if (AXP_UseBeltManager) { _AXP_NeedPotions = DT_CheckBelt(); }
+	if (AXP_AlwaysAkara || DT_CheckHeal() || _XP_GetNumUnId > 0 || _AXP_NeedPotions || NPCnum>=rnd(2,9)) {
+
+		AXP_PathToAkara();
+		AXP_NPCinteract(DC_getNPC(148));
+	}
+
+	// Check if we need to go to Charsi
+	if (AXP_AlwaysCharsi || DT_CheckRepair(DT_RepairPercent) || DT_CheckAmmo() || NPCnum>=rnd(2,9)) {
+
+		AXP_PathToCharsi();
+		AXP_NPCinteract(DC_getNPC(154));
+	}
+
+	// If we need to revive the merc, go to Kashya
+	if (DT_CheckMerc()) {
+
+		DC_Print("Need to revive the merc, going to Kashya.");
+		AXP_PathToKashya();
+		AXP_NPCinteract(DC_getNPC(150));
+	}
+
+	// If we got items to stash, go to the stash
+	if (DT_CheckInventory()) {
+
+		AXP_PathToStash();
+		AXP_NPCinteract(DC_getObject(267));
+		DSN_CheckGround(); // Check the ground to see if any nice item is dropped by accident
+		//DM_MoveTo(me.x +14, me.y); // Move back to the right spot to avoid being struck at the tent corner
+	}
+
+	// If we want to gamble or visit Gheed, go to Gheed
+	if ((AXP_AlwaysGamble && DC_MyGold() > AXP_GambleMinGold) || ((AXP_VisitGheed || NPCnum>=rnd(2,9)) && AXP_ShopIt)) { 
+
+		AXP_PathToGheed();
+		AXP_NPCinteract(DC_getNPC(147));
+	}
+
+	//At the end of in-town stuff, if the eth weapon refill is not finished, let it finish
+	if (DT_CheckRecharge()) {
+
+		DT_DoRecharge();
+		if (AXP_UseOverheads) { me.overhead("Recharing done!"); }
+	}
+
+	// Do precasts before goind into the portal
+	XP_Precasts();
+
+	// If it is a sorceress, switch to the right tab and set the sorceress skills
+	if (me.classid == 1) { XP_SorcSetSkills(); }
+
+	// If we switched weapons on kill, switch back to the attack tab
+	if (XP_SwitchOnKill) { DC_SelectTab(1); }
+
+	// Display taunts if set to true and show MF info
+	if (AXP_UseTaunts) { AXP_AndyTaunt(); }
+	DT_DisplayMF();
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// AndyXP libs loading
+//////////////////////////////////////////////////////////////////////
+
+function AXP_LoadIncludes() {
+
+	// Load the d2jsp common libs files
+	DC_LoadInclude("common/d2jsp-attack.d2l");
+	DC_LoadInclude("common/d2jsp-town.d2l");
+	DC_LoadInclude("common/d2jsp-move.d2l");
+	DC_LoadInclude("common/d2jsp-pathing.d2l");
+	DC_LoadInclude("common/d2jsp-htmllog.d2l");
+	DC_LoadInclude("common/d2jsp-logging.d2l");
+	DC_LoadInclude("common/d2jsp-snagit.d2l");
+	DC_LoadInclude("common/d2jsp-console.d2l");
+
+	// Load the XP scripts common include
+	DC_LoadInclude("XP_Include.d2l");
+
+	// Load the configuration info
+	DC_LoadInclude(AXP_CharConfigFile);
+	
+	// Initialize the new classes
+	//commConsole = new oConsole();
+	commPather = new commonLib.Pathing();
+	commTown = new commonLib.PathAct1();
+
+	// Pass the new initialized console to the d2jsp-common one so all prints point to the right console
+	//DC_Console = commConsole;
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// AndyXP main section
+//////////////////////////////////////////////////////////////////////
+
+// Main function
+function AndyXP() {
+
+	// If the core is less than 0.41, stop the script
+	if (parseFloat(me.version)<0.41) {
+
+		DC_StopMessage("This is only for donators!  Please redownload and install d2jsp 0.41+!");
+	}
+
+	// Register the events to watch
+	//registerEvent( EVENT_KEYUP, keypressHandler );
+
+	// Add the title to the screen
+	var _sh = getScreenHook(null,20,500,-1);
+	_sh.x = 228;
+	_sh.y = 30;
+	_sh.font = 8;
+	_sh.color = 4;
+	_sh.text = "===== AndyXP version " + AXP_Version + " running =====";
+
+	// Load the libs files
+	AXP_LoadIncludes();
+
+	// Initialise the XI_Include with user variables
+	XP_InitInclude();
+
+	// Set the maximum game delay before aborting with the user setting
+	me.gamelength=AXP_MaxGameLength*1000;
+
+	// set the teleport vars with the user setting
+	commPather.UseTeleport = XP_UseTeleport;
+	commPather.UseTeleSorc = XP_UseTeleSorc;
+
+	// Lets setup the Top console
+	XP_CreateConsole("AndyXP");
+	DC_Print("Thanks Killkeeper for the SUPER new console!");
+
+	// Configure the item log path
+	DL_ItemLogPath = "output/" + me.name + "AXP-ItemLog.html";
+
+	// Get the configured run log path
+	DL_RunLogPath = _AXP_RunLogPath;
+
+	// Init the run logging
+	DL_LoadRun();
+
+	// show the credits to the user
+	AXP_ShowCredits();
+
+	// If the user want to stall at the start until the game settle, wait a fixed amount of time
+	if (AXP_StartGameDelay > 0) {
+
+		DC_Print("Waiting " + (parseInt(AXP_StartGameDelay / 1000)) + " seconds for game initialization...");
+		DC_DoDel(AXP_StartGameDelay);
+	}
+
+	// Preload the snagit.ini file
+	DIM_getINI("settings/" + DSN_SnagItINIFile);
+
+	// Format the html log file
+	AXP_FormatLog();
+
+	// Check if we have a body then get it if yes
+	DT_getCorpses();
+	if (DT_HaveCorpse) { DL_AddDeath(); }
+
+	// Load the life watch script
+	load("tools/lifewatchXP.d2j");
+
+	// Clear the cursor of any item
+	DC_ClearCursor();
+
+	// If we use a pally and want to use Vigor for faster town movement, cast it
+	if (me.classid = 3 && AXP_UseVigor) { DC_PutSkill(115,0); }
+
+	// Check if we are in the right act, if not, change act
+	AXP_CheckAct();
+
+	// Do a cleaning of the inventory of any useless items
+	DT_CleanPotions();
+	DT_TossItem(100, "isc");
+	DT_TossItem(100, "tsc");
+	DT_TossItem(100, "aqv");
+	DT_TossItem(100, "cqv");
+
+	// Initialize the town pathing class to make it work
+	commTown.Initialize();
+
+	// Do town stuff
+	AXP_TownManager();
+
+	// If the inventory is full and we want to stop on full inv, stop the script
+	// ToDo : If inv is full, return to stash to retry to stash items in case last attempt failed
+	if (AXP_StopFullInv) {
+
+        	if ( DT_CountFreeSpaces() >= (DT_FreeSpace * 4)) {
+
+          		DC_Print("Got some space in my inventory, let's go :)");
+		}
+
+        	else {
+
+			var freespaces = DT_CountFreeSpaces();
+                	DC_Print("freespaces = " + freespaces);
+        		DC_Print("Don't take the red portal now, I can't clear my inventory :-/");
+
+			if (AXP_Automule) {
+
+				DC_Print("BUT WAIT! I HAVE SICOJOLA'S AUTOMULE! LET'S SEE IF I HAVE ANY FREE MULES...");
+				DC_LoadInclude("automule.d2l");
+
+			}
+			if (!AXP_Automule || !Automule()) {
+
+				DL_AddAbort();
+				DC_Print("To avoid stopping, set AXP_StopFullInv to false");
+				DC_StopMessage("Inventory is full and AXP_StopFullInv is set to true !");
+			}
+        	}
+	}
+
+	// If the merc is not found, AXP_AbortNoMerc is set to true and we use a merc, abort the game
+	if (DT_UseMerc && !DC_GetMerc() && AXP_AbortNoMerc) {
+
+		DL_AddAbort();
+		DC_QuitMessage("AXP : Mercenary not found and AXP_AbortNoMerc is set to true !");
+	}
+
+	// Go to the waypoint area
+	AXP_PathToWaypoint();
+
+	// Use the WP to go to Cats level 2
+	DM_UsePortal("Waypoint",35);
+
+	// Do precasts after goind into the portal
+	XP_Precasts();
+
+	// Path to the Andariel's lair
+	AXP_GoToAndy();
+
+	// Go attack Andariel
+	AXP_AttackAndy();
+
+	// Increase the kills counter then leave the game
+	DL_AddKill();
+
+	// Pick the dropped items
+	DSN_PickItems();
+
+	// Quit the game
+	quit();
+}
+
+// Error handling
+function main() {
+
+	// Include the base d2jsp lib
+	include("common/d2jsp-common.d2l");
+
+	// Set the maximum game delay before aborting
+	me.gamelength=AXP_MaxGameLength*1000;
+
+	// configure the debug and error log paths
+	DC_DebugLogPath = "output/" + me.name + "AXP-DebugLog.html";
+	DC_ErrorLogPath = "output/" + me.name + "AXP-ErrorLog.html";
+
+	// Call the main function to check for exceptions
+    	try { AndyXP(); }
+
+	// Then catch and log any exception throwed by the script before quitting
+	catch (AXP_Exception) {
+
+		if (AXP_ShowInnerExceptions && AXP_Exception.inner) {
+
+			DC_LogError("Inner Exceptions Attached - details below");
+			var einner = AXP_Exception.inner;
+			while (einner) {
+				DC_LogError("Name: " + einner.name);
+				DC_LogError("Error code: " + einner.number);
+				DC_LogError("Message: " + einner.message);
+				DC_LogError("lineNumber: " + einner.lineNumber);
+				DC_LogError("fileName: " + einner.fileName);
+				var einstack = einner.stack;
+				if(!(einstack instanceof Array)) {
+					einstack = einstack.split("\n");
+					einstack.pop();
+					einstack.pop();
+					einstack.reverse();
+				}
+					
+				for(var i = 0; i < einstack.length; i+=1) {
+					DC_LogError("Stack Trace -> function[" + (i+1) + "]: " + einstack[i]);
+				}
+				einner = einner.inner;
+			}
+
+		}
+
+		// Got a exception so quit the game after writing the error in the file
+		DC_QuitMessage("AXP_Exception : name = " + AXP_Exception.name + ", message = " + AXP_Exception.message);
+    	}
+}

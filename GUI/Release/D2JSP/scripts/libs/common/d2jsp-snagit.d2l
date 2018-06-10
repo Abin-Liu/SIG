@@ -1,0 +1,677 @@
+//////////////////////////////////////////////////////////////////////
+//
+// d2jsp-snagit.d2l SnagIt! functions library
+//
+// Thanks to mattlant, bluemind, HolyCoitus and Ven0m for the original code
+//
+// Core scripters team : Xizeta, Muellsammler, Darien, Killkeeper
+// Version 1.1
+// Updated on 2004/07/16
+//
+// Legal stuff :
+// This program is free software; You can redistrubute freely as long as this
+// header and contents stays intact. Modifications for redistribution can only
+// be done by submitting to the core scripters team for approval. If you don't
+// want to submit the modifications and wanted to redistribute this script, you
+// must rename it by remplacing d2jsp with your own name to avoid conflicts.
+//
+// This program is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY
+// or FITNESS FOR A PARTICULAR PURPOSE.
+//
+//////////////////////////////////////////////////////////////////////
+var DSN_Version = "1.1";
+include("common/d2jsp-common.d2l");
+include("common/d2jsp-im.d2l");
+
+
+//////////////////////////////////////////////////////////////////////
+// Public global variables
+//////////////////////////////////////////////////////////////////////
+var DSN_SnagDelay = 150;		// Delay to wait before starting picking items
+var DSN_SnagRange = 60; 		// Radius to check for dropped items
+var DSN_SnagItINIFile="snagit.ini";	// File name of the SnagIT INI file
+var DSN_MinGoldStack=0;			// Minimum gold stack amount to pickup (ignore small stacks), set to 0 to ignore all gold stacks
+var DSN_PickPotions=false;		// Set to true to include potions in the checking
+var DSN_UseTK=true;			// Set to true to use Telekinesis on certain items
+var DSN_MaxTKRange=20;			// Maximum range for using TK, if it is over this, force a movement
+var DSN_MinTKRange=5;			// Minimum range for using TK, closer than this is at arm length
+var DSN_SnagType=0;			// Type of pickup, 0 = Best item first and 1 = Closest item first
+var DSN_LogGold=false;			// Set to true to log gold stacks pickup
+var DSN_LogRunes=false;			// Set to true to log runes for the rune console
+var DSN_UsePathing=true;		// Set to true to use the pathing call instead of the normal call
+
+
+//////////////////////////////////////////////////////////////////////
+// Private global variables
+//////////////////////////////////////////////////////////////////////
+var _DSN_ItemQueue = null;
+var _DSN_IgnoredList = "";
+var _DSN_PickRejuves=true;
+var _DSN_commPather = null;
+
+//////////////////////////////////////////////////////////////////////
+// Public Functions
+//////////////////////////////////////////////////////////////////////
+
+// Function from Pwnage Pindle, modified by Xizeta
+// Return value : None, utilitary items to check the drops and pick good items
+function DSN_PickItems() {
+
+	var _totaltime=0;
+
+	DC_DoDel(DSN_SnagDelay);
+
+	// Stall while the player is doing something, up to 1 second
+	// This is to avoid d2 exceptions when the char is drinking and picking items at the same time
+	while (me.mode == 7 || me.mode == 8 || (me.mode >= 10 && me.mode <= 16) || me.mode == 18) { 
+
+		DC_DoDel(20);
+		_totaltime+=20;
+		if (_totaltime >= 1000) { break; }
+	}
+
+	//SnagIt("settings/" + DSN_SnagItINIFile);
+	DSN_SnagIt("settings/" + DSN_SnagItINIFile);
+}
+
+// Function from Pwnage Pindle, modified by Xizeta
+// Return value : None, utilitary items to check the ground for good items
+//                which is accidentially dropped
+// Is the function needed ? We can call DSN_SnagIt like if we are in the wild and it will work
+function DSN_CheckGround() {
+
+	// Save the old value then set all to false
+	var _oldvalue = DSN_PickPotions;
+	DSN_PickPotions = false;
+	_DSN_PickRejuves = false;
+
+	// Empty the ignored list so we rebuild it
+	_DSN_IgnoredList.length = 0;
+
+	var _snagitem = getUnit(4);
+	delay(20);
+	if (_snagitem) { do {
+
+		// If the item is on the ground, being dropped and not in the ignored list, pick it
+		if((_snagitem.mode == 3 || _snagitem.mode == 5) && !_DSN_IsItemIgnored(_snagitem.code) && _snagitem.code != "gld" && _snagitem.code != "rvs" && _snagitem.code != "rvl") {
+
+			// If the item is not identified and has a snagit entry, get it
+			if (CheckItem(_snagitem, "settings/" + DSN_SnagItINIFile) && !DIM_Validate) {
+
+				// Create a parameter so we can enter false in the log parameter
+				var _nolog=false;
+
+				// Create a pather object if it is not undefined
+				if (DSN_UsePathing && typeof(DP_version) != 'undefined') { _DSN_commPather = new commonLib.Pathing(); }
+
+				// Pick the item
+				if (!_DSN_PickUpItem(_snagitem,_nolog)) { continue; }
+			}
+		}
+
+	} while(_snagitem.getNext()); }
+
+	// Put back the initial value
+	DSN_PickPotions = _oldvalue;
+	_DSN_PickRejuves = true;
+
+	// Empty the ignored list so we rebuild it normally
+	_DSN_IgnoredList.length = 0;
+}
+
+// Function by mattlant, modified by Xizeta
+// Parameter :
+// -snagini	INI file to check the items against
+function DSN_SnagIt(snagini) {
+
+	// Create a pather object if it is not undefined
+	if (DSN_UsePathing && typeof(DP_version) != 'undefined') { _DSN_commPather = new commonLib.Pathing(); }
+
+	// If no arguments is entered, use the default snagit file
+	if (arguments.length < 1) { snagini = "settings/" + DSN_SnagItINIFile; }
+
+	DC_DPrint("//////////////////////////////////////////////////////////////////////");
+	DC_DPrint("DSN_SnagIt() : Starting loop!");
+
+	// Create the new array object then update the contents
+	_DSN_ItemQueue = new _DSN_ItemList(null, DSN_SnagRange, snagini);
+	_DSN_ItemQueue.Update();
+
+	// Get the first item to be snagged, depending on the pickup type
+	var _itemtosnag = null;
+	if (DSN_SnagType == 1) { _itemtosnag = _DSN_ItemQueue.getClosest(); }
+	else { _itemtosnag = _DSN_ItemQueue.getBest(); }
+
+	if (_itemtosnag) { do {
+
+		var _itemname = DL_GetItemName(_itemtosnag.Item);
+		var _itemqual = _itemtosnag.Item.quality;
+
+		DC_DPrint("DSN_SnagIt() : Going to snag " + _itemname + " (" + _itemtosnag.Item.code + ") !");
+
+		// Mark the items as being snagged
+		_itemtosnag.HasBeenSnagged = true;
+
+		// If the item is a gold stack, check if we still need it then pick it
+		if (_itemtosnag.ShouldSnag == 1) {
+
+                        var currgold = me.getStat(14);
+			var goldstack = _itemtosnag.Item.getStat(14);
+
+			_itemtosnag.HasBeenSnagged = true;
+
+                        if( me.classid != 1 || !_DSN_TKItem(_itemtosnag.Item)) {
+
+                            DM_MoveTo(_itemtosnag.Item.x, _itemtosnag.Item.y);
+                            if (_itemtosnag.Item.mode == 3 || _itemtosnag.Item.mode == 5) { _itemtosnag.Item.interact(); }
+                        }
+
+			// Stall until the stack is picked
+                        for (var tr = 0; tr < 50 && currgold == me.getStat(14); tr+=1) { DC_DoDel(10); }
+
+			if (DSN_LogGold) { DL_LogItem(_itemname,2,"[Snagged]"); }
+		}
+
+		// Use normal pickup
+		// ToDo : Add inventory check to see if the item fit inside
+		else {
+			if (DT_CheckSpace(DT_GetXSize(_itemtosnag.Item),DT_GetYSize(_itemtosnag.Item))) {
+
+				var _itemtype = _itemtosnag.Item.itemtype;
+				var _itemcode = _itemtosnag.Item.code;
+
+				if (_DSN_PickUpItem(_itemtosnag.Item)) {
+
+					if (_itemtosnag.Log) {
+
+						if (_itemtosnag.Validate) {
+
+							if (DL_LogMode > 1) { DL_LogItem(_itemname,_itemqual,"[Snagged for validation]"); }
+						}
+						else {
+
+							DL_LogItem(_itemname,_itemqual,"[Snagged]");
+						}
+					}
+
+					if (DSN_LogRunes && _itemtype == 74) { DL_AddRune(_itemcode,2); }
+				}
+
+				else {
+					if (_itemtosnag.Log) { DL_LogItem(_itemname,_itemqual,"[Failed, snag error]"); }
+				}
+			}
+
+			else {
+				if (_itemtosnag.Log) { 
+
+					DL_LogItem(_itemname,_itemqual,"[Failed, no space]");
+				}
+			}
+		}
+
+		// Get the next item to be snagged
+		if (DSN_SnagType == 1) { _itemtosnag = _DSN_ItemQueue.getClosest(); }
+		else { _itemtosnag = _DSN_ItemQueue.getBest(); }
+
+	} while(_itemtosnag); }
+
+	else {
+
+		DC_DPrint("DSN_SnagIt() : No item for pickup is listed!");
+	}
+
+	DC_DPrint("DSN_SnagIt() : Loop done!");
+	DC_DPrint("//////////////////////////////////////////////////////////////////////");
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// Private Functions
+//////////////////////////////////////////////////////////////////////
+
+// ItemList class by mattlant, modified by Xizeta
+function _DSN_ItemList(_items, _range, _snagini) {
+
+	// Class variables and user settings
+	this._list = new Array();
+	this._mylastarea = me.area;
+	this.Range = _range;
+
+	// Link parameters to functions
+	this.Update = _DSN_ItemList_update;
+	this.getClosest = _DSN_ItemList_getclosest;
+	this.getBest = _DSN_ItemList_getBest;
+	this.getLength = _DSN_ItemList_getlength;
+
+	// If we entered a item array from another class, use this as a list instead
+	if(_items instanceof Array) {
+
+		this._list = _items;
+	}
+
+	// If no range is entered, use 70 as default value
+	if (!this.Range) { this.Range = 70; }
+
+	// Update the item array
+	// ToDo : Fix the remove section so it remove elements from the array correctly
+	function _DSN_ItemList_update(type) {
+
+		// Update the distance of all the objects
+		//for (var i = 0; i < this._list.length; i+=1) { this._list[i].Update(); }
+
+		// If we changed area, flush the item array
+		//if (this._mylastarea != me.area) {
+
+			this._list.length = 0;
+			this._mylastarea = me.area;
+		//}
+
+		// Add items in the array
+		var _grounditem = getUnit(4);
+
+		// Gather all the items on ground or being dropped
+		if (_grounditem) { do {
+
+			// If the item is on the ground or being dropped, consider it
+			if (_grounditem.mode==3 || _grounditem.mode==5) {
+
+				// If the item is in the ignored list, skip it
+				if (_DSN_IsItemIgnored(_grounditem.code)) { continue; }
+
+				// If the item is already in the array, skip it
+				var _skipitem=false;
+				for (var jj = 0; jj < this._list.length; jj+=1) {
+
+					if (this._list[jj].Item.gid == _grounditem.gid) { _skipitem = true; }
+				}
+
+				if (_skipitem) { continue; }
+
+				// If the item is in the specified range, add to the list
+				if (_DSN_Dist(me.x, me.y, _grounditem.x, _grounditem.y) < this.Range) {
+
+					this._list.push(new _DSN_Item(0, _grounditem, _snagini));
+				}
+			}
+
+		} while(_grounditem.getNext()); }
+
+		/*
+		// Remove items from the array
+		for (var i = 0; i < this._list.length; i+=1) {
+
+			// If the item is not on ground, not being dropped, outside range or already snagged, remove from the array
+			if (this._list[i].Item.mode != 3 || this._list[i].Item.mode != 5 ||
+			    this._list[i].Distance > this.Range || this._list[i].HasBeenSnagged) {
+
+				// If the index is at 0, shift the array
+				if (!i) { this._list.shift(); }
+
+				// Else if the index is at the end, pop it
+				else if(i == this._list.length-1) { this._list.pop(); }
+
+				// Else, remove the item then concatenate the array
+				else { this._list = this._list.slice(0, i-1).concat(this._list.slice(i+1)); i-=1; }
+			}
+		}
+		*/
+
+	}
+
+	// Function to return the length of the item array
+	function _DSN_ItemList_getlength() {
+
+		return this._list.length;
+	}
+
+	// Function to get the closest item in the array
+	// Parameters :
+	// -range	Maximum range to pick items, not to be confused with this.Range, which is the radius of detect only
+	// -x,y		Coords of the center of the pickup radius (me.x and me.y by defaut if none is entered)
+	function _DSN_ItemList_getclosest(range,x,y) {
+
+		// Display a debug print
+		DC_DPrint("_DSN_ItemList() : Doing getClosest() loop");
+
+		// Parameters edit
+		if (!x) { x = me.x; }
+		if (!y) { y = me.y; }
+
+		var _itemdist = 999;
+		var _itemindex = null;
+
+		// If a range is given, limit to the items within this range
+		if (range) {
+
+			// Loop thru the list of items for the closest item
+			for (var j = 0; j < this._list.length; j+=1) {
+
+				// If the item is within range and closer than the previous item, this is the closest
+				if(this._list[j].Distance < _itemdist && _distance < range && this._list[j].ShouldSnag > 0 && !this._list[j].IsBeingSnagged) {
+
+					_itemdist = this._list[j].Distance;
+					_itemindex = j;
+				}
+			}
+		}
+
+		// If not, just return the closest item
+		else {
+
+			// Loop thru the list of items for the closest item
+			for (j = 0; j < this._list.length; j+=1) {
+
+				// If the item is closer than the previous, this is now the closest item
+				if(this._list[j].Distance < _itemdist && this._list[j].ShouldSnag > 0 && !this._list[j].IsBeingSnagged) {
+
+					_itemdist = this._list[j].Distance;
+					_itemindex = j;
+				}
+			}
+		}
+
+		
+		// If there is a item, return the item object
+		if(_itemindex !== null) {
+
+			this._list[_itemindex].IsBeingSnagged = true;
+			return this._list[_itemindex];
+		}
+
+		// There is no item found so return false
+		else { return null; }
+	}
+
+	// Function to get the best item in the array
+	function _DSN_ItemList_getBest() {
+
+		// Display a debug print
+		DC_DPrint("_DSN_ItemList() : Doing getBest() loop");
+
+		var _itemindex = null;
+		var _bestquality = 0;
+		var _bestclass = 0;
+
+		// First check the array to see if we have a item with the Godly flag set
+		for (j = 0; j < this._list.length; j+=1) {
+
+			if (this._list[j].Item.Godly && this._list[j].ShouldSnag > 0 && !this._list[j].IsBeingSnagged) {
+
+				this._list[j].IsBeingSnagged = true;
+				return this._list[j];
+			}
+		}
+
+		// Loop thru the list of items for the best item
+		for (j = 0; j < this._list.length; j+=1) {
+
+			// If the item is flagged to be snagged and is not being snagged
+			if (this._list[j].ShouldSnag > 0 && !this._list[j].IsBeingSnagged) {
+
+				// If the quality is better than the best one, this is the best now
+				if (this._list[j].Item.quality > _bestquality) {
+
+					_bestquality = this._list[j].Item.quality;
+					_bestclass = this._list[j].Class;
+					_itemindex = j;
+				}
+
+				// If the quality is the same but the class is better than the best, this is the best now
+				else if (this._list[j].Item.quality == _bestquality && this._list[j].Class > _bestclass) {
+
+					_bestquality = this._list[j].Item.quality;
+					_bestclass = this._list[j].Class;
+					_itemindex = j;
+				}
+			}
+		}
+
+		// If there is a item, return the item object
+		if(_itemindex !== null) {
+
+			this._list[_itemindex].IsBeingSnagged = true;
+			return this._list[_itemindex];
+		}
+
+		// There is no item found so return false
+		else { return null; }
+	}
+
+	// Function to get the first item to pick in the array (no quality or distance check)
+	function _DSN_ItemList_getQuick() {
+
+		// Display a debug print
+		DC_DPrint("_DSN_ItemList() : Doing getQuick() loop");
+
+		// First check the array to see if we have a item to pick
+		for (j = 0; j < this._list.length; j+=1) {
+
+			if (this._list[j].ShouldSnag > 0 && !this._list[j].IsBeingSnagged) {
+
+				this._list[j].IsBeingSnagged = true;
+				return this._list[j];
+			}
+		}
+
+		// There is no item found so return false
+		return null;
+	}
+}
+
+// Item class by mattlant, modified by Xizeta
+function _DSN_Item(_p, _item, _snagini) {
+
+	//member properties
+	this.Item = null;
+	this._remove = false;
+	this.Item = copyUnit(_item);
+
+	this.p = _p;
+	this.Direction = 0;
+	this.Distance = 0; //d
+	this.ItemType = 0;
+	this.Class = _DSN_getClass(_item);
+	this.ShouldSnag = 0;
+	this.IsBeingSnagged = false;
+	this.HasBeenSnagged = false;
+	this.Validate = false;
+	this.Godly = false;
+
+	this.Update = _DSN_Item_update;
+
+	this.Update();
+
+	// Log if it is a rune in the dropped column
+	if (DSN_LogRunes && this.Item.itemtype == 74) { DL_AddRune(this.Item.code,1); }
+
+	// If it is a gold stack, check if we have space in the gold stash and the amount exceed the minimum
+        if(this.Item.code=="gld") {
+
+		if (me.getStat(14) != (me.getStat(12) * 10000) && (DSN_MinGoldStack > 0 && this.Item.getStat(14) >= DSN_MinGoldStack)) {
+
+			this.ShouldSnag = 1;
+		}
+	}
+
+	else if(CheckItem(this.Item, _snagini, 5))  {
+
+		if (DIM_IgnoreItem && DIM_LogItem) {
+
+			if (DL_LogMode > 0) { DL_LogItem(DL_GetItemName(this.Item),this.Item.quality,"[Ignored]"); }
+		}
+
+		else {
+
+			this.ShouldSnag = 10;
+			this.Log = DIM_LogItem;
+			if (DIM_Validate) { this.Validate = true; }
+			if (DIM_GodlyItem) { this.Godly = true; }
+		}
+	}
+
+	function _DSN_Item_update() {
+
+		//this.Direction = Math.abs(Math.floor((Math.atan2(this.Item.x-me.x ,this.Item.y-me.y)) * 180 / 3.1415) - 180);
+		this.Distance = _DSN_Dist(me.x, me.y, this.Item.x, this.Item.y); //d
+	}
+}
+
+// Function by bluemind, modified by Xizeta
+// ToDo : Make a new loop, more compact that the one here
+function _DSN_PickUpItem(snagitem,tocursor) {
+
+	// Clear the cursor of any items
+	DC_ClearCursor();
+
+	// If the item can be picked with Telekinesis, use it
+	if(DSN_UseTK && me.classid == 1 && getBaseStat(0,snagitem.classid,D2JSP_BASE_ITEMS_TYPE)>=76 && getBaseStat(0,snagitem.classid,D2JSP_BASE_ITEMS_TYPE)<=81) {
+
+		if (_DSN_TKItem(snagitem)) {
+
+			for(var tr = 0; snagitem.mode != 2 && snagitem.mode !== 0 && tr< 10; tr += 1) {
+
+				DC_DoDel(10);
+			}
+
+			DC_DPrint("_DSN_PickUpItem() :  (" + snagitem.code + ") snagged with TK");
+			return true;
+		}
+		else {
+			DC_DPrint("_DSN_PickUpItem() :  Failed to snag (" + snagitem.code + ") with TK, now attemping manually");
+		}
+	}
+
+	// If pathfinding is used, call the pathfinding function
+	if (DSN_UsePathing && typeof(DP_version) != 'undefined') { _DSN_commPather.GotoDest(snagitem.x, snagitem.y); }
+	else { DM_MoveTo(snagitem.x, snagitem.y); }
+
+	// If the item is being dropped or in the ground, snag it
+	if (snagitem.mode==3 || snagitem.mode==5) {
+
+		if(!tocursor) {
+
+			DC_DoClick(0,0,snagitem);
+		}
+		else {
+			snagitem.interact(1);
+		}
+	}
+
+	// Wait a little
+	DC_DoDel(50);
+
+	// Retry until the item is snagged
+	attemptnum=0;
+	tryagain=20;
+	while (snagitem.mode==3 || snagitem.mode==5) {
+
+		DC_DoDel(20);
+		attemptnum+=1;
+
+		// If we made over 200 tries, we cannot pick it
+		if(attemptnum>=200) { return false; }
+
+		if(attemptnum>=tryagain) {
+
+			tryagain+=20;
+			if(snagitem.mode==3 || snagitem.mode==5) {
+
+				DC_ClearCursor();
+				if(snagitem.mode==3 || snagitem.mode==5) {
+
+					if(!tocursor) { DC_DoClick(0,0,snagitem); }
+					else { snagitem.interact(1); }
+
+				}
+			}
+		}
+	}
+
+	DC_DPrint("_DSN_PickUpItem() : " + snagitem.name + " (" + snagitem.code + ") snagged");
+	return true;
+}
+
+// Function by Xizeta
+function _DSN_IsItemIgnored(itemcode) {
+
+	// If the array is not built, create it
+	if (_DSN_IgnoredList.length === 0) {
+
+		// Array of items to be ignored
+		var _ignoredarray = new Array();
+		_ignoredarray.push("aqv"); // Arrows quiver
+		_ignoredarray.push("cqv"); // Bolts quiver
+		_ignoredarray.push("key"); // Keys
+		_ignoredarray.push("tbk"); // Tome of Town Portal
+		_ignoredarray.push("ibk"); // Tome of Identify
+		_ignoredarray.push("tsc"); // Scroll of Town Portal
+		_ignoredarray.push("isc"); // Scroll of Identify
+		_ignoredarray.push("yps"); // Antidote potion
+		_ignoredarray.push("vps"); // Stamina potion
+		_ignoredarray.push("wms"); // Thawing potion
+		_ignoredarray.push("gps"); // Rancid Gas Pot
+		_ignoredarray.push("ops"); // Oil Potion
+		_ignoredarray.push("gpm"); // Choking Gas Pot
+		_ignoredarray.push("opm"); // Exploding Pot
+		_ignoredarray.push("gpl"); // Strangling Gas
+		_ignoredarray.push("opl"); // Fulminating Pot
+ 
+		// If the user doesn't want to pick potions, add the potions in the ignored list
+		if (!DSN_PickPotions) {
+
+			_ignoredarray.push("hp1");
+			_ignoredarray.push("hp2");
+			_ignoredarray.push("hp3");
+			_ignoredarray.push("hp4");
+			_ignoredarray.push("hp5");
+			_ignoredarray.push("mp1");
+			_ignoredarray.push("mp2");
+			_ignoredarray.push("mp3");
+			_ignoredarray.push("mp4");
+			_ignoredarray.push("mp5");
+		}
+
+		if (!_DSN_PickRejuves) {
+
+			_ignoredarray.push("rvs");
+			_ignoredarray.push("rvl");
+		}
+
+		// Make a string with this array
+		_DSN_IgnoredList = _ignoredarray.join();
+	}
+
+	// If the code is in the list, return true
+	if (_DSN_IgnoredList.indexOf(itemcode) != -1) { return true; }
+	else { return false; }
+}
+
+// ToDo : Add a list of items pickable with TK
+// Maybe move the code inside PickUp because it is just called by this function
+function _DSN_TKItem(item) {
+
+	// If the item is too close/too far, the char doesn't have TK or if the random value outside the min TK value (this is pointless ?)
+	if(!DC_CheckSkill(43) || me.mp<20 || _DSN_Dist(me.x,me.y,item.x,item.y) > DSN_MaxTKRange || _DSN_Dist(me.x,me.y,item.x,item.y) < DSN_MinTKRange) { return false; }
+
+	// Cast TK on the item
+	if (DC_DoCast(43,0,item)) { return true; }
+	else { return false; }
+}
+
+function _DSN_getClass(item) {
+
+	var _itemcodes=[getBaseStat(0,item.classid,D2JSP_BASE_ITEMS_NORMCODE),
+				getBaseStat(0,item.classid,D2JSP_BASE_ITEMS_UBERCODE),
+				getBaseStat(0,item.classid,D2JSP_BASE_ITEMS_ULTRACODE)];
+
+	for (var k=0; k < _itemcodes.length; k+=1) {
+
+		if (getBaseStat(0,item.classid,D2JSP_BASE_ITEMS_CODE) == _itemcodes[k]) { return k; }
+	}
+}
+
+function _DSN_Dist(x1, y1, x2, y2) { return Math.floor(Math.sqrt(_DSN_Dist2(x1, y1, x2, y2))); }
+
+function _DSN_Dist2(x1, y1, x2, y2) { return Math.floor((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2)); }

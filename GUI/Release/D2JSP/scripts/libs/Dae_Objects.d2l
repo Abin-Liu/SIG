@@ -1,0 +1,267 @@
+//IchLiebDich
+//0.43
+//History:
+//0.43: added Well support
+//0.48g (SteveH6479) fixed an error where telekinesis was casted on same chest/well twice
+//0.54 joint Dae_Obj.d2l and Dae_Objects.d2l together,much faster! (Killkeeper)
+
+sets["open_barrel"] = false;
+
+function CheckObjects( bShrine, ShrineMoveFunc, bSpecialChest ) 
+{
+	var CurX=me.x;
+	var CurY=me.y;
+	
+	var obj = getUnit(2);
+	var bOpened = false;
+    
+	if (obj) 
+    	do {
+		if ( bShrine && sets["use_shrine"] && IsShrine( obj.classid ) ) {
+			DebugWrite("Shrine found");
+			ShrineLib_CheckForShrine( obj, ShrineMoveFunc );
+			DebugWrite("ShrineLib_CheckForShrine end");
+			continue;
+		};
+		
+		if (sets["use_wells"] && obj.name.indexOf("well")!=-1)
+		{
+			DebugWrite("Well found");
+			
+			var mymaxlife=me.hpmax;
+			var mymaxnama=me.mpmax;
+							
+			while((me.hp<mymaxlife || me.mp<me.mymaxmana) && obj.mode<2)
+			{
+				
+				if (ShrineLib_GetRange(me, obj) > ShrineLib["shrineMaxDistance"]) break;
+				else
+				{
+					if (me.classid==1)
+					{
+						if (ShrineLib_GetRange(me, obj)>18) ShrineMoveFunc(obj.x,obj.y);
+						DoCasting("Telekinesis",0, obj);
+						DoDel(100);
+					}
+					else
+					{
+						ShrineMoveFunc(obj.x,obj.y);
+						ClickMap(obj.x,obj.y);
+						ClickMap(obj);
+					}
+					bprint("Use Well to recharge your life/mana");
+				}
+			}
+			DebugWrite("Drink water from Well done");
+		}
+
+					
+//		if ( !bSpecialChest )
+//			continue;
+		var TypeChest = IsChest( obj );
+		if ( TypeChest ) {
+			if ( !( ( TypeChest == 2 && !sets["chest_with_monster"] ) ||
+				    ( TypeChest == 3 && !sets["open_barrel"] ) ) || TypeChest==4 ) { 
+				DebugWrite("Chest found");
+				if ( OpenChest( obj, bSpecialChest, TypeChest==4 ) )
+					bOpened = true;
+				DebugWrite("OpenChest end");
+			};
+		};
+	  
+	} while (obj.getNext());
+
+	if ( bOpened )
+	{
+    		Pick( sets["snag_delay_chest"] );
+//		Teleport(CurX,CurY,10,5);
+		return true;
+	}
+};
+
+function OpenChest( chest, bSpecialChest , bIsDoor ) {
+    if (!chest)
+	    return false;
+    
+    if (!bIsDoor)
+    	sets["current_dist"]=getWarpDist(me.area);
+    else
+    	sets["current_dist"]=4;
+
+    var opened = false;
+    var key = GetKeys();
+
+/*    if ( ( chest.classid == 397 ) || 
+		 ( chest.classid == 455 ) || myDist( chest.x, chest.y ) <= sets["chest_max_dist"] )*/ 
+    if ( ( bSpecialChest && ( ( chest.classid == 397 ) || ( chest.classid == 455 ) || ( myDist( chest.x, chest.y ) < 15 ) ) ) 
+		 || myDist( chest.x, chest.y ) <= sets["current_dist"] ) 
+    {
+        if (chest.mode) //opened
+            return false;
+
+	var enemy = DaeObj_CheckEnemyNear(chest,sets["safe_chest_setting"][0]);
+        if ( (enemy.count>=sets["safe_chest_setting"][1] || enemy.bBad) && !bIsDoor )
+        {
+        	bprint("I found monsters in dangerous types! Run away!");
+        	return false;
+        }
+            
+        if (chest.status==2) // locked
+        	if ( !key || ( key.getStat(70) < 1) ) { // no keys 
+            	bprint("This chest is locked but i have no key !");
+                return false;
+            };
+
+		bprint( "Try to open "+chest.name+" ("+chest.classid+")" );
+
+		if ( me.classid == 1 ) {
+           		if ( myDist( chest.x, chest.y ) > 20 ) Teleport( chest.x, chest.y, 15, 1 );
+		}
+		else
+		{
+			if (bIsDoor) 
+			{
+					if (myDist(chest.x,chest.y)<3) walkto(chest.x,chest.y);
+			}
+			else 
+				if (!checkCollision(me,chest,1)) MoveTo( chest.x,chest.y,1);  //0.51,check LOS before move
+		}
+
+	        //check again
+        enemy = DaeObj_CheckEnemyNear(me,sets["safe_chest_setting"][0]);
+        if ( (enemy.count>=sets["safe_chest_setting"][1] || enemy.bBad) && !bIsDoor )
+        {
+        	bprint("I found monsters in dangerous types! Run away!");
+        	return false;
+        }
+        var retry = 0;
+        
+        while ( ( chest.mode == 0 ) && ( retry++ < 5 ) ) {
+			if ( me.classid == 1 )
+			{
+               			if (bSpecialChest && (chest.classid==397 || chest.classid==455) && sets["switch_for_shiny_chests"]){
+               			  	doWeaponSwitch();
+               				delay(100);
+               			}
+               			DoCasting( "Telekinesis",0, chest );
+               			
+               			if (bSpecialChest && (chest.classid==397 || chest.classid==455) && sets["switch_for_shiny_chests"]){
+               				doWeaponSwitch();
+               				delay(100);
+               			}
+			}
+			else {
+				ClickMap(chest.x,chest.y);
+				delay(500);
+				ClickMap(chest);
+			};
+
+			var wait = 0;
+        		while ( ( chest.mode == 0 ) && ( wait++ < 20 ) ) DoDel(10);
+			CheckMe();
+        };
+        return  ( retry < 5 );
+	};
+    return false;
+}
+
+// count ennemy near target in the radius from target
+// and check if one ennemy (or more) is in sets["skip_uniquetype"]
+function DaeObj_CheckEnemyNear(target, radius)
+{
+	var count = 0;
+	var pos = new coord(target);
+	var e = getUnit(1);
+	var bBad = false;
+	do {
+		if ( CheckMonster( e ) > 0 && pos.dist(e) <= radius ) {
+			if ( DaeObj_CheckIsWrongType(e) )
+				bBad = true;
+			count++;
+		}
+	}while(e && e.getNext());
+	
+	return { count:count, bBad:bBad };
+}
+
+function DaeObj_CheckIsWrongType( npc ) {
+	for(var i=0;i<sets["skip_uniquetype"].length;i++) {
+		if (npc.classid == sets["skip_uniquetype"][i])
+			return true;
+	}
+}
+
+function getWarpDist(area)
+{
+	switch (me.classid)
+	{
+		case 0:
+			if (sets["disable_all_chests_zon"])
+				return -1;
+			break;
+		case 1:
+			if (sets["disable_all_chests_sorc"])
+				return -1;
+			break;
+		case 4:
+			if (sets["disable_all_chests_barb"])
+				return -1;
+			break;
+	}
+	if ((area>=21 && area<=25) || area==6) return sets["chest_tower_dist"];
+	else if ((area>=110 && area<=112) || area==107 || area==79 || area==78 || area==38 || (area>=4 && area<=6) || area==103 || area==105 || area==39) return sets["chest_openair_dist"];
+	else if (area==101 || area==102 || (area>=129 && area<=132) || area==55 || area==59) return sets["chest_hall_dist"];
+	else if (area>=34 && area<=37) return sets["chest_catacombs_dist"];
+	else return sets["chest_cave_dist"];
+}
+
+//=============================This line below is original Dae_Obj.d2l!==============
+
+// v0.42b
+// written from the scratch by IchLiebeDich
+// improved in 0.54 by Killkeeper.
+
+// check if like a chest
+// 0 = it is not a chest
+// 1 = it is a normal chest
+// 2 = it is a chest with monster(s) (evil urne)
+// 3 = it is a barrel
+// 4 = it is a door
+function IsChest( obj ) {
+	if ( ( obj.classid < 0 ) || ( obj.classid > 564 ) )
+	    return 0;
+	
+	if (obj.name=="dummy" || obj.name=="Dummy") return false;
+	
+	var OpFn=getBaseStat(4,obj.classid,150); 
+		//D2JSP_BASE_OBJECTS_OPERATEFN
+    	
+	if ( OpFn == 68 )
+	    	return 2;
+	if ( OpFn == 5 || OpFn == 7 || OpFn == 3 )
+	    	return 3;
+	if ( OpFn == 8 && me.classid!=1)
+	    	return 4;
+	if ( OpFn == 1 || OpFn== 4 || OpFn == 14 || OpFn == 19 || OpFn == 20 || OpFn == 33 || OpFn == 51 || OpFn == 48 || OpFn==68)
+		return 1;
+	
+	return 0;
+
+};
+
+function IsShrine( classid ) {
+	if ( ( classid < 0 ) || ( classid > 564 ) )
+	    return 0;
+	if (getBaseStat(4,classid,150)==2) return 1;
+	else return 0;
+	//D2JSP_BASE_OBJECTS_OPERATEFN
+};
+
+function IsWayPoint( classid ) {
+	if ( ( classid < 0 ) || ( classid > 564 ) )
+	    return 0;
+	
+	if (getBaseStat(4,classid,150)==23) return 1;
+	else return 0;
+	//D2JSP_BASE_OBJECTS_OPERATEFN
+};

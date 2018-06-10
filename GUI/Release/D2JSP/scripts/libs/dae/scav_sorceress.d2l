@@ -1,0 +1,1526 @@
+/*******************************************************************************
+*                                                                              *
+*                                The Multi MF                                  *
+*                                   v1.25a                                     *
+*                                                                              *
+* ---------------------------------------------------------------------------- *
+* Copyright (C) 2003 Jan Onno Tuinenga (Scavenger) - tha_scavenger@hotmail.com *
+* ---------------------------------------------------------------------------- *
+*                                                                              *
+* This program is free software; you can redistribute it and/or modify         *
+* it under the terms of the GNU General Public License as published by         *
+* the Free Software Foundation; either version 2 of the License, or            *
+* (at your option) any later version.                                          *
+*                                                                              *
+* This program is distributed in the hope that it will be useful,              *
+* but WITHOUT ANY WARRANTY; without even the implied warranty of               *
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                *
+* GNU General Public License for more details.                                 *
+*                                                                              *
+********************************************************************************/
+
+/////////////////////////////////////////////////////////////////////
+//                                                                 //
+//                           WARNING!                              //
+//                                                                 //
+//      ONLY CHANGE THIS FILE IF YOU KNOW WHAT YOU ARE DOING       //
+//                                                                 //
+/////////////////////////////////////////////////////////////////////
+
+include("vec_coord.d2l");
+
+var character = new Object;
+character["protect_skills"] = null;
+character["protect_timer"] = 0;
+character["min_attack_dist"] = 5;
+character["max_attack_dist"] = 15;
+character["primary_skill"] = "";
+character["primary_skill_time"] = 0
+character["primary_skill_delay"] = 0;
+character["secondary_skill"] = "";
+character["static_field"] = false;
+character["recharging"] = false;
+character["dodged_missile"] = 0;
+character["dodged_missile_timer"] = 0;
+
+var safe_spots = new Object();
+safe_spots["pindle"] = new coord(10068,13306);
+safe_spots["zombies"] = new coord(10058,13213);
+safe_spots["shenk"] = new coord(3838,5117);
+
+/*
+var enchantmentTypes = {
+"Extra Strong":         5,
+"Extra Fast":           6,
+"Cursed":               7,
+"Magic Resistant":      8,
+"Fire Enchanted":       9,
+"Champion":            16,
+"Lightning Enchanted": 17,
+"Cold Enchanted":      18,
+"Thief":               24,
+"Mana Burn":           25,
+"Teleportation":       26,
+"Spectral Hit":        27,
+"Stone Skin":          28,
+"Multiple Shots":      29,
+"Ghostly":             36,
+"Fanatic":             37,
+"Possessed":           38,
+"Berserker":           39
+};
+
+var auraTypes =        {
+"Conviction":          28,
+"Might":               33,
+"Holy Fire":           35,
+"Blessed Aim":         40,
+"Holy Freeze":         43,
+"Holy Shock":          46,
+"Fanaticism":          49
+ };
+
+ var immunityTypes =    {
+"Physical":            36,
+"Magic":               37,
+"Fire":                39,
+"Lightning":           41,
+"Cold":                43,
+"Poison":              45
+}
+*/
+
+function CharIsSupported(quest)
+{
+	switch(quest) {
+		case "countess":
+			return true;
+		case "andy":
+			return true;
+		case "meph":
+			return true;
+		case "pindle":
+			return true;
+		case "zombies":
+			return true;
+		case "shenk":
+			return true;
+		case "baal":
+			return true;
+		default:
+			return false;
+	}
+}
+
+function CheckChar()
+{
+	if (character["recharging"])
+		return;
+	
+	if (settings["recharge_mana"] && ((me.mp*100) / globals["mpmax"]) < settings["recharge_mana_percent"]) {
+		if (safe_spots[globals["quest"]]) {
+			CharManaRecharge(safe_spots[globals["quest"]]);
+		}
+	}
+}
+
+function CharManaRecharge(spot)
+{
+	if (!spot) {
+		DebugWrite(" * ERROR: No spot for recharging mana");
+		return;
+	}
+	
+	Teleport(spot.x, spot.y, 5);
+	
+	character["recharging"] = true;
+	while(me.mp < (globals["mpmax"] * 0.75)) {
+		me.overhead("Waiting till mana is recharged");
+		CheckSelf();
+		CharDefend();
+		delay(100);		
+	}
+	character["recharging"] = false;
+	me.overhead("recharge done");
+}
+
+function CharPrecast()
+{
+	while(me.mode == 10) { 
+		delay(50); 
+	}
+	
+	if (me.getSkill("Frozen Armor")) {
+		while(me.mode == 10)
+			delay(50);			
+		Sc_SetSkill("Frozen Armor", right_hand);
+		me.useSkill(right_hand);
+		delay(50);
+	}
+	else if (me.getSkill("Shiver Armor")) {
+		while(me.mode == 10)
+			delay(50);
+		Sc_SetSkill("Shiver Armor", right_hand);
+		me.useSkill(right_hand);
+		delay(50);
+	}
+	else if (me.getSkill("Chilling Armor")) {
+		while(me.mode == 10)
+			delay(50);
+		Sc_SetSkill("Chilling Armor", right_hand);
+		me.useSkill(right_hand);
+		delay(50);
+	}
+
+	if (me.getSkill("Energy Shield")) {
+		while(me.mode == 10)
+			delay(50);
+		Sc_SetSkill("Energy Shield", right_hand);
+		me.useSkill(right_hand);
+		delay(50);
+	}
+	
+	if (me.getSkill("Thunder Storm")) {
+		while(me.mode == 10)
+			delay(50);
+		Sc_SetSkill("Thunder Storm", right_hand);
+		me.useSkill(right_hand);
+		delay(50);
+	}
+	
+	if (me.getSkill("Enchant")) {
+		var merc = GetMerc();
+		if (merc)
+		{
+			while(me.mode == 10)
+				delay(50);
+			Sc_SetSkill("Enchant", right_hand);
+			merc.useSkill(right_hand);
+			delay(50);
+		}
+	}
+}
+
+function CharPindleAttack(pindle)
+{
+	if (!pindle) {
+		DebugWrite(" * ERROR: No pindleskin");
+		Abort();
+	}
+	
+	if (!ChooseSkills(pindle)) {
+		DebugWrite(" * ERROR: ChooseSkills for Pindleskin failed");
+		Abort();
+	}
+	
+	while(pindle.hp > 0) {
+		CheckSelf();
+		CheckPindleDist(pindle);	
+		Attack(pindle);
+		delay(50);
+	}
+}
+
+function CheckPindleDist(pindle)
+{
+	if (!pindle) {
+		DebugWrite(" * ERROR: CheckPindleDist: No Pindleskin");
+		Abort();
+	}
+	
+	var pos = new coord(pindle);
+	var dist = pos.dist(me);
+	
+	if (dist > character["max_attack_dist"] || dist < character["min_attack_dist"]) {
+		var spot1 = new coord(10059, 13236);
+		var spot2 = new coord(10059, 13214);
+		var spot = spot1;
+		if (pos.dist(spot1) > pos.dist(spot2)) {
+			var dir = pos.dir(spot1);
+			pos.move(dir, character["max_attack_dist"]);
+			Teleport(pos.x, pos.y, 5, 5);
+		}
+		else {
+			var dir = pos.dir(spot2);
+			pos.move(dir, character["max_attack_dist"]);
+			Teleport(pos.x, pos.y, 5, 5);
+		}
+	}
+}
+
+function CharAttack(e, aggressive)
+{
+	if (!e) {
+		DebugWrite("CharAttack: No enemy");
+		return false;
+	}
+
+	if (!ChooseSkills(e)) {
+		DebugWrite("ChooseSkills failed");
+		return false;
+	}
+	
+	var life = e.hp;
+	var d = new Date();
+	var timer = d.getTime();
+	
+	CheckEnemyDist(e, aggressive);
+	while(e && e.hp > 0) {	
+		if (Attack(e)) {
+			if (e.hp >= life) {
+				d = new Date();
+				if ((d.getTime() - timer) >= 5000) {
+					Teleport(e.x, e.y, 5, 2);
+				}
+			}
+		}
+		CheckEnemyDist(e, aggressive);
+
+		delay(50);
+		CheckSelf();
+	}
+	return true;
+}
+
+function CharShenkAttack(e)
+{
+	while(1) {
+		CheckSelf();
+		
+		// find and kill enemies
+		var e = FindShenkEnemy();
+		
+		if (e) {
+			CharAttack(e);
+		}
+		else {
+			e = getUnit(1, Lang.NPC.Shenk);
+			if (!e) {
+				DebugWrite(" * ERROR: Shenk not detected");
+				return false;
+			}
+			if (e.hp > 0) {
+				CharAttack(e);
+			}
+			if (e.hp > 0) {
+				DebugWrite(" * ERROR: Couldn't kill shenk");
+				Abort();
+			}
+			break;
+		}
+		
+		delay(50);
+	}
+	
+	return true;
+}
+
+function CharZombieAttack()
+{
+	Teleport(10063,13266, 5);
+	while(1) {
+		CheckSelf();
+		var e = FindEnemy("Prowling Dead");
+		if (!e)
+			break;
+		
+		if (!ChooseSkills(e)) {
+			DebugWrite("ChooseSkills failed");
+			return false;
+		}
+		character["min_attack_dist"] = 0;
+		character["max_attack_dist"] = 7;
+
+		var life = e.hp;
+		var d = new Date();
+		var timer = d.getTime();
+		
+		while(e && e.hp > 0) {	
+			CheckEnemyDist(e, 2);
+			if (Attack(e)) {
+				if (e.hp >= life) {
+					d = new Date();
+					if ((d.getTime() - timer) >= 5000) {
+						Teleport(e.x, e.y, 5, 1);
+					}
+				}
+			}
+	
+			delay(50);
+			CheckSelf();
+		}
+		delay(50);
+	}
+}
+
+function CharClearThroneRoom()
+{
+	var bp = new Array();
+	bp[0] = new coord(15094,5066);
+	bp[1] = new coord(15080,5057);
+	bp[2] = new coord(15080,5042);
+	bp[3] = new coord(15080,5028);
+	bp[4] = new coord(15110,5026);
+	bp[5] = new coord(15110,5041);
+	bp[6] = new coord(15110,5056);
+
+/*
+	var bp = new Array();
+	bp[0] = new coord(15094, 5058);
+	bp[1] = new coord(15080, 5027);
+	bp[2] = new coord(15108, 5027);
+*/
+
+	while(1) {
+		if (!CharThroneAttack(bp))
+			return false;
+
+		Teleport(15095, 5030, 5, 5);
+		PickItOn();
+		Teleport(15095, 5045, 5, 5);
+		PickItOn();
+		Teleport(15095, 5060, 5, 5);
+		PickItOn();
+		
+		if (rnd(0,3) >= 2)
+			Teleport(15117, 5071, 3);
+		else
+			Teleport(15074, 5071, 3);
+			
+		CheckInvForPots();
+			
+		while((me.hp < globals["heal_hp"] && GetHealthPot()) || ((me.mp/globals["mpmax"]) * 100 < 70)) { 
+			me.overhead("Healing/recovering mana");
+			CharDefend();
+			if (!CheckSelf()) {
+				delay(500);
+				Sc_TownHeal(true, true);
+			}
+			delay(250);
+		}
+		
+		while(!FindThroneEnemy() && getUnit(1, Lang.NPC.Baal)) {
+			me.overhead("Waiting for enemies");
+			CharDefend();
+			if (!CheckSelf()) {
+				delay(500);
+				Sc_TownHeal(true, true);
+			}
+			delay(250);
+		}
+		
+		if (!getUnit(1, Lang.NPC.Baal)) {
+			me.overhead("Baal is leaving. Going after him");
+			if (!CheckSelf()) {
+				delay(500);
+				Sc_TownHeal(true, true);
+			}
+			break;
+		}
+		
+		// check enchants
+		var e = getUnit(1);
+		do {
+			if (e && e.hp > 0 && e.mode != 12 && ValidEnemy(e)) {
+				var p = e.getParent();
+				if (!p || p.name != me.name) {
+					CheckEnchants(e);
+				}
+			}
+		}while(e && e.getNext());
+		
+		CharPrecast();
+	}
+	
+	return true;
+}
+
+function CharCountessAttack(countess, layout)
+{
+	if (!countess) {
+		Error("Countess not detected");
+		DebugWrite(" * ERROR: Countess not detected");
+	}
+	
+	if (!ChooseSkills(countess)) {
+		Error("Failed to choose skills for countess");
+		return false;
+	}
+	
+	DebugWrite("Countess attack started, enemy: " + countess.name);
+	
+	var bpc = new Array();
+	var bpl = new Array();
+	var bpr = new Array();
+	var poly = new Array();	
+	var left = new coord();
+	var right = new coord();
+	
+	if (layout) { // top left
+		bpc[0] = new coord(12546,11081);
+		bpc[1] = new coord(12546,11058);
+		bpc[2] = new coord(12519,11058);
+		bpc[3] = new coord(12519,11081);
+		bpl[0] = new coord(12540,11101);
+		bpr[0] = new coord(12538,11033);
+		
+		poly[0] = new coord(12546,11081);
+		poly[1] = new coord(12546,11058);
+		poly[2] = new coord(12519,11058);
+		poly[3] = new coord(12519,11081);
+		//poly[4] = new coord(12546,11081);
+		
+		left.set(12540,11101);
+		right.set(12538,11033);
+		DebugWrite("Top Left layout deteected");
+	}
+	else { // top right
+		bpc[0] = new coord(12555,11014);
+		bpc[1] = new coord(12575,11014);
+		bpc[2] = new coord(12575,11040);
+		bpc[3] = new coord(12555,11040);
+		bpl[0] = new coord(12531,11032);
+		bpr[0] = new coord(12600,11034);
+
+		poly[0] = new coord(12555,11040);
+		poly[1] = new coord(12555,11014);
+		poly[2] = new coord(12575,11014);
+		poly[3] = new coord(12575,11040);
+		//poly[4] = new coord(12555,11040);
+		
+		left.set(12531,11032);
+		right.set(12600,11034);
+		DebugWrite("Top Right layout deteected");
+	}
+	
+	var life = countess.hp;
+	var d = new Date();
+	var timer = d.getTime();
+	
+	CheckEnemyBPDist(countess, bpc);
+	while(countess && countess.hp > 0) {
+		if (Attack(countess)) {
+			DebugWrite("Attack successfull");
+			if (countess.hp >= life) {
+				d = new Date();
+				if ((d.getTime() - timer) >= 5000)
+					Teleport(countess.x, countess.y, 5, 2);
+			}
+		}
+		else 
+			DebugWrite("Attack returned false");
+		
+		DebugWrite("CheckSelf during countess attack");
+		CheckSelf();		
+		DebugWrite("CheckSelf during countess attack done");
+		
+		if (layout) { // top left
+			if (countess.y >= 11084) { // left
+				if (me.y < 11084)
+					Teleport(bpl[0].x, bpl[0].y, 5, 5);
+				else
+					CheckEnemyBPDist(countess, bpl, true);
+			}
+			else if (countess.y <= 11055) { // right
+				if (me.y > 11055)
+					Teleport(bpr[0].x, bpr[0].y, 5, 5);
+				else
+					CheckEnemyBPDist(countess, bpr, true);
+			}
+			else { // center
+				if (me.y > 11084 || me.y < 11055)
+					Teleport(bpc[0].x, bpc[0].y, 5, 5);
+				else
+					CheckEnemyBPDist(countess, bpc, true);
+			}
+		}
+		else { // top right
+			if (countess.x <= 12548) { // left
+				if (me.x > 12548)
+					Teleport(bpl[0].x, bpl[0].y, 5, 5);
+				else
+					CheckEnemyBPDist(countess, bpl, true);
+			}
+			else if (countess.x >= 12581) { // right
+				if (me.x < 12581)
+					Teleport(bpr[0].x, bpr[0].y, 5, 5);
+				else
+					CheckEnemyBPDist(countess, bpr, true);
+			}
+			else { // center
+				if (me.x > 12581 || me.x < 12548)
+					Teleport(bpc[0].x, bpc[0].y, 5, 5);
+				else
+					CheckEnemyBPDist(countess, bpc, true, poly);
+			}
+		}
+		
+		delay(50);
+	}
+	
+	DebugWrite("Countess attack done");
+	return true;
+}
+
+
+function CharKillBaal(baal)
+{
+	if (!baal) {
+		Error("Baal not detected");
+		DebugWrite(" * ERROR: Baal not detected");
+		return false;
+	}
+	
+	if (!ChooseSkills(baal)) {
+		Error("Failed to choose skills for baal");
+		return false;
+	}
+	
+	DebugWrite("Baal attack started");
+	
+	var bp1 = new Array();
+	bp1[0] = new coord(15136,5897);
+	bp1[1] = new coord(15136,5936);
+	var bp2 = new Array();
+	bp2[0] = new coord(15152,5946);
+	bp2[1] = new coord(15134,5967);
+	bp2[2] = new coord(15108,5943);
+	
+	Teleport(15166, 5900, 5);
+	Teleport(15137, 5897, 5);
+	
+	var life = baal.hp;
+	var d = new Date();
+	var timer = d.getTime();
+	CheckEnemyBPDist(baal, bp1);
+	while(baal && baal.hp > 0) {		
+		if (Attack(baal)) {
+			DebugWrite("Attack successfull");
+			if (baal.hp >= life) {
+				d = new Date();
+				if ((d.getTime() - timer) >= 5000)
+					Teleport(baal.x, baal.y, 5, 2);
+			}
+		}
+		
+		if (!CheckSelf()) {// townheal
+			delay(50);
+			if (!CheckSelf()) {
+				DebugWrite("Going to town to heal");
+				// go to town to heal
+				var spot = null;
+				if (baal.y < 5936)
+					spot = CalcSafestSpot(bp2);
+				else
+					spot = CalcSafestSpot(bp1);
+					
+				if (!spot) {
+					BebugWrite("No safe spot calculated");
+					return false;
+				}
+				Teleport(spot.x, spot.y, 5, 3);
+				while(me.mode == 10 || me.mode == 19)
+					delay(50);
+				
+				delay(500);
+				Sc_TownHeal(true, true);	
+				DebugWrite("Townheal done");
+				
+				baal = getUnit(1, Lang.NPC.Baal);
+				if (!baal) {
+					DebugWrite("Failed to detect baal after heal");
+					Teleport(15135, 5939, 5, 5);
+					delay(250);
+					baal = getUnit(1, Lang.NPC.Baal);
+					if (!baal) {
+						DebugWrite("Failed to detect baal after heal and teleport");
+						return false;
+					}
+				}
+			}
+		}
+			
+		if (baal.y < 5936)
+			CheckEnemyBPDist(baal, bp1, true);
+		else
+			CheckEnemyBPDist(baal, bp2, true);
+		
+		delay(50);
+	}
+	
+	DebugWrite("Baal killed");
+	
+	return true;
+}
+
+function CharThroneAttack(bp)
+{
+	Teleport(15095, 5045, 5);
+	var enemy = FindThroneEnemy();
+	while(enemy && enemy.hp > 0 && enemy.mode != 12) {
+		if (!BattlePointsAttack(enemy, bp))
+			return false;
+		delay(50);
+		enemy = FindThroneEnemy();
+	}
+
+	DebugWrite("Throne attack done");
+	return true;
+}
+
+function BattlePointsAttack(enemy, bp)
+{
+	if (!enemy || enemy.hp <= 0 || enemy.mode == 12) {
+		DebugWrite("BattlePointsAttack: No enemy or dead enemy");
+		return true; // retrurn, continue attack
+	}
+
+	if (!ChooseSkills(enemy)) {
+		DebugWrite("ChooseSkills failed");
+		return false;
+	}
+	
+	DebugWrite("Battlepoints Attack, enemy: " + enemy.name);
+	
+	var life = enemy.hp;
+	var d = new Date();
+	var timer = d.getTime();
+	var misses = 0; // 43 misses is abort attack and retry
+	
+	var test;
+	var as;		// attack successfull
+	
+	CheckEnemyBPDist(enemy, bp);
+	while(enemy && enemy.hp > 0 && enemy.mode != 12) {
+		me.overhead("Attacking " + enemy.name + "("+enemy.hp+")");
+		DebugWrite("Launching attack");
+		as = Attack(enemy);
+		DebugWrite("Attack returned " + as);
+		test = CheckEnemyBPDist(enemy, bp);
+		
+		DebugWrite("Enemy distance checked, returned: " + test);
+		if (life <= enemy.hp) {
+			DebugWrite("Life higher then start life");
+			d = new Date();
+			if ((d.getTime() - timer) >= 3000) {
+				DebugWrite("Enemy life is higher then previous life for 3 seconds");
+				Teleport(enemy.x, enemy.y, 3, 3);
+				timer = d.getTime();
+				misses++;
+			}
+			if (misses >= 3) {
+				DebugWrite("To many misses");
+				return true;
+			}
+			DebugWrite("Timer check done");
+		}
+		else {
+			DebugWrite("Enemy life is lower");
+			life = enemy.hp;
+			d = new Date();
+			timer = d.getTime();
+			misses = 0;
+			DebugWrite("Updated timer and life");			
+		}
+		
+		DebugWrite("Going to check self while attacking");
+		if (!CheckSelf()) {
+			DebugWrite("Going to town to heal");
+			// go to town to heal
+			var spot = CalcSafestSpot(bp);
+			if (!spot) {
+				BebugWrite("No safe spot calculated");
+				return false;
+			}
+			Teleport(spot.x, spot.y, 5, 3);
+			while(me.mode == 10 || me.mode == 19)
+				delay(50);
+			delay(500);
+			Sc_TownHeal(true, true);	
+			DebugWrite("Townheal done");
+			return true;
+		}
+		DebugWrite("Self check done");
+		
+		delay(50);
+	}
+	
+	DebugWrite("Battlepoints Attack done");
+	
+	return true;
+}
+
+function CheckEnemyBPDist(enemy, bp, ignore_close, poly)
+{
+	var pos = new coord(enemy);
+	var dist = pos.dist(me);
+
+	DebugWrite("Checking enemy distance (" + dist + "): me(" + me.x + "," + me.y + ") enemy(" + enemy.x + "," + enemy.y + ")");
+
+	if (dist > character["max_attack_dist"] || dist < character["min_attack_dist"] || (!ignore_close && FindEnemyNear(me, 5))) {
+		var spot = CalcNewSpot(pos, bp, poly);
+		if (!spot || !spot.x || !spot.y) {
+			Error("No Spot");
+			delay(2000);
+			DebugWrite("CheckEnemyBPDist() -> No Spot");
+			Abort();
+		}
+		
+		DebugWrite("Need to move to " + spot.toString());
+		Teleport(spot.x, spot.y, 5);
+		DebugWrite("Move done me(" + me.x + "," + me.y + ")");
+		return true;
+	}
+	
+	DebugWrite("Distance is ok");
+	
+	return false;
+}
+
+function CalcNewSpot(pos, bp, poly)
+{
+	if (!pos) {
+		DebugWrite("CalcNewSpot() -> No pos");
+		Abort();
+	}
+	if (!bp || !bp.length) {
+		DebugWrite("CalcNewSpot() -> No battlepoints");
+		Abort();
+	}
+	
+	DebugWrite("Calculating new spot for pos (" + pos.x + "," + pos.y + ")");
+	
+	var spots = new Array();
+	
+	for (var i = 0; i < bp.length; i++) {
+		spots[i] = new coord(pos);
+		var dir = spots[i].dir(bp[i]);
+		spots[i].move(dir, character["max_attack_dist"] - 2);
+		var closest_enemy = FindClosestEnemyNear(spots[i]);
+		if (closest_enemy && closest_enemy.x && closest_enemy.y)
+			spots[i].data = spots[i].dist(closest_enemy);
+		else
+			spots[i].data = 32767; // no enemy near spot!
+		
+		if (poly && !PointInPoly(poly, spots[i]))
+			spots[i].data = -1; // invalid point
+	}		
+	
+	var best = new coord();
+	for (var j = 0; j < spots.length; j++) {
+		if (!best.x && !best.y) {
+			best.set(spots[j]);
+		}
+		if (spots[j].data > best.data) {
+			best.set(spots[j]);
+		}
+	}
+	
+	if (best.data == -1) {
+		DebugWrite("Best has data -1, returning (me.x,me.y)");
+		return new coord(me.x,me.y);
+	}
+	
+	DebugWrite("New calculated spot: " + best.toString());
+	return best;
+}
+
+function CalcSafestSpot(bp)
+{
+	if (!bp || !bp.length) {
+		DebugWrite("CalcNewSpot() -> No battlepoints");
+		Abort();
+	}
+	
+	DebugWrite("Calculating safest spot: " + bp.length + " points");
+	
+	var best = null;
+	for (var i = 0; i < bp.length; i++) {
+		if (!best) {
+			best = new coord(bp[i]);
+			var closest_enemy = FindClosestEnemyNear(best);
+			if (closest_enemy && closest_enemy.x && closest_enemy.y)
+				best.data = best.dist(closest_enemy);
+			else
+				best.data = 32767;
+			DebugWrite("No best, best set to: " + best.toString());
+		}
+		else {
+			DebugWrite("Going to check bp["+i+"]");
+			var closest_enemy = FindClosestEnemyNear(bp[i]);
+			var dist = 32767;
+			if (closest_enemy && closest_enemy.x && closest_enemy.y)
+				dist = bp[i].dist(closest_enemy);
+			if (dist > best.data) {
+				best.set(bp[i]);
+				best.data = dist;
+				DebugWrite("Best changed to: " + best.toString());
+			}
+		}
+	}
+	
+	return best;
+}
+
+function CharDefend()
+{
+	var e = FindEnemy();
+	if (e) {
+		var pos = new coord(e);
+		if (pos.dist(me) < 10) {
+			Attack(e);
+		}
+	}
+}
+
+function Attack(e)
+{	
+	if (!e) {
+		DebugWrite("Warning: Attack: no enemy");
+		return false;
+	}
+		
+	var dt = new Date();
+	var time = dt.getTime();
+
+	// merc kill
+	
+	// check static
+	if (character["static_field"] && ((e.hp * 100) / e.hpmax) <= 60)
+		character["static_field"] = false;
+	
+	// dont attack when last attack still casting
+	var pos = new coord(e);
+	
+	if (me.mode == 10)
+		return false;
+
+	DebugWrite("Attack: " + character["primary_skill"] + " and " + character["secondary_skill"]);
+	
+	if (character["primary_skill"] && (time - character["primary_skill_time"]) >= character["primary_skill_delay"]) {
+		DebugWrite("Primary attack");
+		Sc_SetSkill(character["primary_skill"], left_hand);
+		e.useSkill(left_hand);
+		
+		character["primary_skill_time"] = time;
+		delay(50);
+		if (me.mode != 10)
+			return false;
+	}
+	else if ((character["static_field"] || character["secondary_skill"]) && me.mode != 10)
+	{
+		DebugWrite("Secondary attack");
+		if (character["static_field"]) {
+			Sc_SetSkill("Static Field", right_hand);
+			e.useSkill(right_hand);
+			delay(50);
+			if (me.mode != 10)
+				return false;
+		}
+		else if (character["secondary_skill"]) {
+			if (character["secondary_skill"] == "Nova" && pos.dist(me) >= character["max_attack_dist"])
+				return false;
+			Sc_SetSkill(character["secondary_skill"], right_hand);
+			e.useSkill(right_hand);
+			delay(50);
+			if (me.mode != 10)
+				return false;
+		}
+	}
+	else
+		return false;
+	
+	return true;
+}
+
+
+function ChooseSkills(e, no_secondary)
+{
+	if (!e) {
+		DebugWrite("Warning: No enemy in ChooseSkills");
+		return false;
+	}
+	
+	character["primary_skill"] = "";
+	character["secondary_skill"] = "";
+	
+	var fire_immune = (e.getStat(39) > 99) ? true : false;
+	var light_immune = (e.getStat(41) > 99) ? true : false;
+	var cold_immune = (e.getStat(43) > 99) ? true : false;
+	
+// check for skills
+	var fire_wall = me.getSkill("Fire Wall");
+	var meteor = me.getSkill("Meteor");
+	var hydra = me.getSkill("Hydra");
+	var blizzard = me.getSkill("Blizzard");
+	var frozen_orb = me.getSkill("Frozen Orb");
+	
+// check secondary skills
+	var inferno = me.getSkill("Inferno");
+	var fire_ball = me.getSkill("Fire Ball");
+	var frost_nova = me.getSkill("Frost Nova");
+	var ice_blast = me.getSkill("Ice Blast");
+	var glacial_spike = me.getSkill("Glacial Spike");
+	var charged_bolt = me.getSkill("Charged Bolt");
+	var telekinesis = me.getSkill("Telekinesis");
+	var lightning = me.getSkill("Lightning");
+	var nova = me.getSkill("Nova");
+	var chail_lightning = me.getSkill("Chain Lightning");
+	
+	character["static_field"] = me.getSkill("Static Field");
+	
+	if (!character["static_field"]) character["static_field"] = false; else character["static_field"] = true;
+	if (!fire_wall) fire_wall = 0;
+	if (!meteor) meteor = 0;
+	if (!hydra) hydra = 0;
+	if (!blizzard) blizzard = 0;
+	if (!frozen_orb) frozen_orb = 0;
+
+	if (!inferno) inferno = 0;
+	if (!fire_ball) fire_ball = 0;
+	if (!frost_nova) frost_nova = 0;
+	if (!ice_blast) ice_blast = 0;
+	if (!glacial_spike) glacial_spike = 0;
+	if (!charged_bolt) charged_bolt = 0;
+	if (!telekinesis) telekinesis = 0;
+	if (!lightning) lightning = 0;
+	if (!nova) nova = 0;
+	if (!chail_lightning) chail_lightning = 0;
+
+	var ps = 0; // primary skill
+	var ss = 0; // secondary skill
+	
+	var fire_penalty = 0;
+	
+	if (e.getEnchant(6) || e.getEnchant(9) || e.getEnchant(25)) { // extra fast
+		fire_penalty += 3;
+	}
+	
+	// choose primary skill
+	if (!cold_immune) {
+		if (frozen_orb && frozen_orb >= blizzard) {
+			character["primary_skill"] = "Frozen Orb";
+			ps = frozen_orb;
+		}
+		else if (blizzard) {
+			character["primary_skill"] = "Blizzard";
+			ps = blizzard;			
+		}
+	}
+	
+	if (!fire_immune) {
+		if (fire_wall && fire_wall >= meteor && fire_wall >= hydra) {
+			if (!ps || ps < (fire_wall - fire_penalty) || (character["primary_skill"] == "Blizzard" && ps < (fire_wall+ 5 ))) {
+				ps = fire_wall;
+				character["primary_skill"] = "Fire Wall";
+			}
+		}
+		else if (meteor && meteor >= fire_wall && meteor >= hydra) {
+			if (!ps || ps < (meteor - fire_penalty) || (character["primary_skill"] == "Blizzard" && ps < meteor + 5)) {
+				ps = meteor;
+				character["primary_skill"] = "Meteor";
+			}
+		}
+		else {
+			if (hydra && (!ps || ps < (hydra - fire_penalty)) || (character["primary_skill"] == "Blizzard" && ps < hydra + 5)) {
+				ps = hydra;
+				character["primary_skill"] = "Hydra";
+			}
+		}
+	}
+
+	if (!light_immune) {
+		if (!ps) { // no primary skill
+			if (nova && nova >= 20) {
+				ps = nova;
+				character["primary_skill"] = "Nova";
+			}
+			else if (charged_bolt >= 20) {
+				ps = charged_bolt;
+				character["primary_skill"] = "Charged Bolt";
+			}
+		}
+		else {
+			if (nova >= 20) {
+				ss = nova;
+				character["secondary_skill"] = "Nova";
+			}
+			else if (charged_bolt >= 20) {
+				ss = charged_bolt;
+				character["secondary_skill"] = "Charged Bolt";
+			}
+			
+		}
+	}
+	else
+		character["static_field"] = false;
+
+	if (no_secondary) {
+		character["secondary_skill"] = "";
+		ss = 0;
+	}
+
+	if (character["primary_skill"] == "Nova") {
+		character["min_attack_dist"] = 4;
+		character["max_attack_dist"] = 9;
+	}
+	else if (character["secondary_skill"] == "Nova") {
+		character["min_attack_dist"] = 5;
+		character["max_attack_dist"] = 11;
+	}
+	else {
+		character["min_attack_dist"] = 8;
+		character["max_attack_dist"] = 16;
+	}
+	
+	if (!ps && !ss) {
+		immune = "";
+		if (cold_immune) immune += "cold ";
+		if (light_immune) immune += "light ";
+		if (fire_immune) immune += "fire ";
+		DebugWrite(" * WARNING: No good primary and secondary attack skill found: Enemy " + e.name + " is immune to " + immune);
+		print(color_red + "No good primary and secondary attack skill found.");
+		return false;
+	}
+	
+	character["primary_skill_delay"] = GetCastDelay(character["primary_skill"]);
+	
+	return true;
+}
+
+function CheckEnemyDist(e, aggressive)
+{
+	var pos = new coord(e);
+	var dist = pos.dist(me);
+
+	if (dist > character["max_attack_dist"]) {
+		var dir = pos.dir(me);
+		if (aggressive == 2)
+			pos.move(dir, character["max_attack_dist"] - 5)
+		else
+			pos.move(dir, character["max_attack_dist"] - 2)
+		if (!Teleport(pos.x, pos.y, 5, 3)) {
+			dir.rotate();
+			dir.rotate(rnd(150, 210));
+			pos.set(e);
+			pos.move(dir, character["max_attack_dist"] - 3);
+			Teleport(pos.x, pos.y, 5, 3);
+		}
+	}
+	else if (dist < character["min_attack_dist"] && aggressive != 2) {
+		var dir = pos.dir(me);
+		pos.move(dir, character["max_attack_dist"] - 3);
+		if (!Teleport(pos.x, pos.y, 3, 2)) {
+			dir.rotate(rnd(150, 210));
+			pos.set(e);
+			pos.move(dir, character["max_attack_dist"] - 3);
+			Teleport(pos.x, pos.y, 3, 2);
+		}
+	}
+	else {
+		if (aggressive) {
+			return;
+		}
+			
+		e = FindClosestEnemy();
+		if (!e)
+			return;
+			
+		pos.set(e);
+		if (dist < character["min_attack_dist"]) {
+			var dir = pos.dir(me);
+			pos.move(dir, character["max_attack_dist"] - 3);
+			if (!Teleport(pos.x, pos.y, 3, 2)) {
+				dir.rotate(180);
+				pos.set(e);
+				pos.move(dir, character["max_attack_dist"] - 3);
+				Teleport(pos.x, pos.y, 3, 2);
+			}
+		}
+	}
+}
+
+function CharMephAttack(meph)
+{
+	if (!meph) {
+		DebugWrite(" * ERROR: CharMephAttack: No mephisto");
+		return false;
+	}
+	
+	if (!ChooseSkills(meph)) {
+		DebugWrite(" * ERROR: CharMephAttack: No skill to kill mephisto");
+		return false;
+	}
+	
+	/*
+	var bp = new Array();
+	bp[0] = new coord(17534,8050);
+	bp[1] = new coord(17535,8058);
+	bp[2] = new coord(17536,8068);
+	bp[3] = new coord(17536,8077);
+	bp[4] = new coord(17549,8079);
+	bp[5] = new coord(17547,8069);
+	bp[6] = new coord(17547,8059);
+	bp[7] = new coord(17551,8050);
+	bp[8] = new coord(17562,8057);
+	bp[9] = new coord(17562,8070);
+	bp[10] = new coord(17563,8080);
+	bp[11] = new coord(17574,8075);
+	bp[12] = new coord(17573,8059);
+	*/
+	
+	/*
+	var bp = new Array();
+	bp[0] = new coord(17570, 8078);
+	bp[1] = new coord(17571, 8057);
+	bp[2] = new coord(17536, 8064);
+	*/
+	
+	/*
+	var bp = new Array();
+	bp[0] = new coord(17550, 8047);
+	bp[1] = new coord(17550, 8081);
+	bp[2] = new coord(1563, 8068);
+	*/
+	
+	var bp = new Array();
+	bp.push(new coord(17549, 8049));
+	bp.push(new coord(17573, 8070));
+	bp.push(new coord(17549, 8082));
+	bp.push(new coord(17565, 8079));
+	bp.push(new coord(17565, 8059));
+	
+	var m = new Array();
+	m[0] = 276;
+	m[1] = 367;
+
+	while(meph && meph.hp > 0) {
+		if (!CheckMissiles(m, meph, bp))
+			CheckEnemyBPDist(meph, bp);				
+		
+		Attack(meph);
+		delay(50);
+		if (!CheckSelf()) {
+			delay(500);
+			Sc_TownHeal(true, true);
+		}
+	}
+	return true;
+}
+
+function CharAndyAttack(andy)
+{
+	if (!andy) {
+		DebugWrite(" * ERROR: CharAndyAttack: No Andariel");
+		return false;
+	}
+	
+	if (!ChooseSkills(andy, true)) {
+		DebugWrite(" * ERROR: CharAndyAttack: No skill to kill Andariel");
+		return false;
+	}
+	
+	var bp = new Array();
+	bp[0] = new coord(22546,9515);
+	bp[1] = new coord(22554,9524);
+	bp[2] = new coord(22539,9523);
+	bp[3] = new coord(22548,9531);
+	bp[4] = new coord(22556,9538);
+	bp[5] = new coord(22541,9538);
+	bp[6] = new coord(22549,9546);
+	bp[7] = new coord(22557,9555);
+	bp[8] = new coord(22541,9553);
+	bp[9] = new coord(22548,9561);
+	bp[10] = new coord(22556,9568);
+	bp[11] = new coord(22542,9567);
+	bp[12] = new coord(22547,9576);
+	
+	var m = new Array();
+	m[0] = 32;
+	m[1] = 203;
+	
+	while(andy && andy.hp > 0) {
+		//if (!CheckMissiles(m, andy, bp))
+		CheckUniDist(andy, bp);
+		
+		Attack(andy);
+		delay(40);
+		CheckSelf();
+	}
+	return true;
+}
+
+function CheckUniDist(e, bp)
+{
+	var pos = new coord(me);
+	var dist = pos.dist(e);
+	
+	if (bp) {
+		if (dist > character["max_attack_dist"] || dist < character["min_attack_dist"]) {
+			var point = GetBestBattlePoint(e, bp);
+			if (!point.x && !point.y) {
+				return;
+			}
+			pos.set(e);
+			var dir = pos.dir(point);
+			pos.move(dir, character["max_attack_dist"] - 2);
+			Teleport(pos.x, pos.y, 5, 2);
+			return;
+		}
+	}
+	else {
+		if (dist > character["max_attack_dist"]) {
+			var dir = pos.dir(e);
+			pos.move(dir, character["max_attack_dist"] + dist - 3);
+			if (!Teleport(pos.x, pos.y, 5, 2)) {
+				dir.rotate(180);
+				pos.set(e);
+				pos.move(dir, character["max_attack_dist"] - 3);
+				Teleport(pos.x, pos.y, 5, 2);
+				return;
+			}
+		}
+		else if (dist < character["min_attack_dist"]) {
+			var dir = pos.dir(e);
+			pos.move(dir, character["max_attack_dist"] + dist - 3);
+			if (!Teleport(pos.x, pos.y, 5, 2)) {
+				dir.rotate(180);
+				pos.set(e);
+				pos.move(dir, character["max_attack_dist"] - 3);
+				Teleport(pos.x, pos.y, 5, 2);
+				return;
+			}
+		}
+	}
+	
+	if (GetEnemyCountNear(me, 8)) {
+		point = GetBestBattlePoint(e, bp);
+		if (!point.x && !point.y) {
+			return;
+		}
+		Teleport(point.x, point.y, 5, 2);
+	}
+}
+
+function GetBestBattlePoint(e, bp)
+{
+	var best = null;
+	var best_dist = 32767;
+	var enemycount = 32767;
+	
+	for (var i = 0; i < bp.length; i++) {
+		if (!best) {
+			best = bp[i];
+		}
+		else {
+			dist = bp[i].dist(e);
+			if (dist > character["min_attack_dist"] && dist < character["max_attack_dist"]) {
+				count = GetEnemyCountNear(bp[i], 5);
+				if (dist >= best_dist && count <= enemycount) {
+					best = bp[i];
+					best_dist = bp[i].dist(me);
+					enemycount = count;
+				}
+			}
+		}
+	}
+	
+	return new coord(best);
+}
+
+function GetBestDodgePoint(e, bp, min_angle, max_angle)
+{
+	var pos = new coord(e);
+	var dir = pos.dir(me);
+	var best = null;
+	var best_dist = 0;
+	var enemycount = 32767;
+	if (e.name == "Andariel") {
+		for (var i = 0; i < bp.length; i++) {
+			var dir2 = pos.dir(bp[i]);
+			var angle = dir.angle(dir2);
+			if (angle > min_angle  && angle < max_angle) {
+				if (!best) {
+					var best = bp[i];
+					var best_dist = best.dist(e);
+					var enemycount = GetEnemyCountNear(bp[i], 5);
+				}
+				else {
+					var dist = bp[i].dist(e);
+					if (dist > character["min_attack_dist"] && dist < character["max_attack_dist"]) {
+						var count = GetEnemyCountNear(bp[i], 5);
+						if (count < enemycount) {
+							best = bp[i];
+							best_dist = best.dist(e);
+							enemycount = count;
+						}
+						else if(dist > best_dist) {
+							best = bp[i];
+							best_dist = best.dist(e);
+							enemycount = count;
+						}
+					}
+				}
+			}
+		}
+	}
+	else {
+		for (var i = 0; i < bp.length; i++) {
+			var dir2 = pos.dir(bp[i]);
+			var angle = dir.angle(dir2);
+			if (angle > min_angle && angle < max_angle) {
+				if (!best) {
+					best = bp[i];
+					best_dist = best.dist(e);
+				}
+				else {
+					dist = bp[i].dist(e);
+					if (dist >= character["min_attack_dist"] && dist <= character["max_attack_dist"]) {
+						best = bp[i];
+						best_dist = best.dist(e);
+						break;
+					}
+				}
+			}
+		}
+	}
+	
+	var c = new coord(e);
+	var dir = c.dir(best);
+	c.move(dir, character["max_attack_dist"] - 2);
+	return c;
+}
+
+function CheckMissiles(m, e, bp)
+{
+	var d = new Date();
+	var time = d.getTime();
+	if ((time - character["dodged_missile_timer"]) < 2000)
+		return;
+		
+	var pos = new coord(e);
+	var dir = pos.dir(me);
+	var missile = getUnit(8);
+	do {
+		if (missile && missile.id != character["dodged_missile"]) {
+			for (var i = 0; i < m.length; i++) {
+				if (missile.classid == m[i]) {
+					character["dodged_missile"] = missile.id;
+					character["dodged_missile_timer"] = time;
+					DodgeMissile(m[i], e, bp);
+					return true;
+				}
+			}
+		}
+	}while(missile && missile.getNext());
+	
+	return false;
+}
+
+function DodgeMissile(type, e, bp)
+{
+	switch(type) {
+		case 32:
+		case 203:
+			if (me.mode != 10) {
+				point = GetBestDodgePoint(e, bp, 90, 180);
+				Teleport(point.x, point.y, 5, 5);
+			}
+			////else {
+				//DodgeMove();
+			//}
+			return;
+		case 276:
+		case 367:
+		// mephisto:
+			print(color_yellow + "Meph missile")
+			
+//			if (me.mode != 10) {
+				point = GetBestDodgePoint(e, bp, 20, 180);
+				Teleport(point.x, point.y, 5, 5);
+	/*		}
+//			else {
+				point = new coord(me);
+				dir = point.dir(e);
+				dir.rotate(110);
+				point.move(dir, 5);
+				DodgeMove(point);
+//			}*/
+			return;
+	}
+}
+
+function DodgeMove(target)
+{
+	var pos = new coord(me);
+	me.move(target.x, target.y);
+	delay(100);
+	while(me.mode == 2)
+		delay(100);
+	return true;
+}
+
+function IsImmuneTo(e, type)
+{
+	if (!e) {
+		DebugWrite(" * ERROR: IsImmuneTo: No enemy");
+		return false;
+	}
+		
+	switch(type) {
+		case "fire":
+			if (e.getStat(39) > 99) return true;
+			break;
+		case "light":
+			if (e.getStat(41) > 99) return true;
+			break;
+		case "cold":
+			if (e.getStat(43) > 99) return true;
+			break;
+		case "none":
+			return true;
+			break;
+	}
+	
+	return false;
+}
+
+function GetSkillDamageType(skill)
+{
+	switch (skill)
+	{
+		case "Fire Bolt" :
+		case "Inferno" :
+		case "Blaze" :
+		case "Fire Ball" :
+		case "Fire Wall" :
+		case "Enchant" :
+		case "Hydra" :
+		case "Meteor" :
+			return "fire";
+
+		case "Chain Lightning" :
+		case "Lightning" :
+		case "Thunder Storm" :
+		case "Nova" :
+		case "Telekinesis" :
+		case "Static Field" :
+		case "Charged Bolt" :
+			return "light";
+
+		case "Frozen Orb" :
+		case "Blizzard" :
+		case "Frost Nova" :
+		case "Ice Blast" :
+		case "Glacial Spike" :
+		case "Ice Bolt" :
+		case "Chilling Armor" :
+		case "Shiver Armor" :
+		case "Frozen Armor" :
+			return "cold";
+
+		default:
+			DebugWrite(" * ERROR: GetSkillDamageType: " + skill + " is no damage skill");
+			return "none";
+	}
+}
